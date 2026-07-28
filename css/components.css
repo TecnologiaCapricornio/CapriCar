@@ -1,0 +1,803 @@
+/* Estrutura da aplicação, cartões, reservas, caronas, passageiros e modais */
+/* ============ App shell / header ============ */
+  .app-screen{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .app-header{
+    position:sticky;
+    top:0;
+    z-index:80;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    padding:14px 28px;
+    background:rgba(16,31,48,0.75);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--card-border);
+  }
+
+  .header-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-shrink:0;
+  }
+
+  .logo-img{
+    height:56px;
+    width:auto;
+    filter:drop-shadow(0 4px 10px rgba(111,168,216,0.35));
+  }
+
+  .header-title{
+    display:flex;
+    flex-direction:column;
+    line-height:1.15;
+  }
+
+  .brand{
+    font-family:'Poppins',sans-serif;
+    font-weight:800;
+    font-size:1.25rem;
+    background:linear-gradient(90deg,#fff,#cfe0ee);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+
+  .brand-sub{
+    font-size:0.72rem;
+    color:var(--texto-muted);
+    letter-spacing:0.3px;
+  }
+
+  .tabs{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%, -50%);
+    display:flex;
+    gap:6px;
+    background:rgba(255,255,255,0.04);
+    padding:5px;
+    border-radius:999px;
+    border:1px solid var(--card-border);
+    max-width:calc(100% - 460px);
+    overflow-x:auto;
+  }
+
+  .tab-btn{
+    border:none;
+    background:transparent;
+    color:var(--texto-muted);
+    font-weight:600;
+    font-size:0.85rem;
+    padding:9px 16px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:background .2s ease, color .2s ease, transform .15s ease;
+    white-space:nowrap;
+  }
+
+  .tab-btn:hover{
+    color:#fff;
+    transform:translateY(-1px);
+  }
+
+  .tab-btn.active{
+    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
+    color:#fff;
+    box-shadow:0 6px 16px rgba(58,106,149,0.4);
+  }
+
+  .header-right{
+    display:flex;
+    align-items:center;
+    flex-shrink:0;
+  }
+
+  .profile-btn{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--card-border);
+    padding:6px 14px 6px 6px;
+    border-radius:999px;
+    cursor:pointer;
+    color:var(--texto);
+    font-weight:600;
+    font-size:0.85rem;
+    transition:background .2s ease, transform .15s ease;
+  }
+
+  .profile-btn:hover{
+    background:rgba(255,255,255,0.09);
+    transform:translateY(-1px);
+  }
+
+  .avatar{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.78rem;
+    font-weight:700;
+    flex-shrink:0;
+  }
+
+  /* ============ Main / cards ============ */
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+    width:100%;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .tab-panel{
+    animation:fadeIn .35s ease;
+    width:100%;
+  }
+
+  .card{
+    background:var(--card-bg);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--sombra);
+    padding:30px 26px;
+    margin-bottom:24px;
+    transition:box-shadow .25s ease;
+  }
+
+  .card h2{
+    margin-top:0;
+    margin-bottom:20px;
+    font-size:1.2rem;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .form-hint{
+    background:rgba(111,168,216,0.12);
+    border:1px solid rgba(111,168,216,0.28);
+    color:#d4e6f5;
+    font-size:0.85rem;
+    padding:10px 14px;
+    border-radius:var(--radius-sm);
+    margin-bottom:18px;
+  }
+
+  form{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  /* ============ Reservation lists ============ */
+  .reservations-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .empty-state{
+    color:var(--texto-muted);
+    font-size:0.9rem;
+    text-align:center;
+    padding:26px 0;
+  }
+
+  .reservation-item{
+    border:1px solid var(--card-border);
+    border-left:4px solid var(--azul-claro);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    background:rgba(255,255,255,0.03);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    transition:transform .15s ease, background .2s ease;
+  }
+
+  .reservation-item:hover{
+    background:rgba(255,255,255,0.06);
+    transform:translateY(-1px);
+  }
+
+  .reservation-info{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .reservation-route{
+    font-weight:700;
+    color:#fff;
+    font-size:0.95rem;
+  }
+
+  .reservation-car{
+    display:inline-block;
+    background:rgba(111,168,216,0.18);
+    color:#bcd9f0;
+    font-size:0.7rem;
+    font-weight:700;
+    padding:2px 9px;
+    border-radius:999px;
+    margin-top:2px;
+    width:fit-content;
+  }
+
+  .reservation-details{
+    font-size:0.82rem;
+    color:var(--texto-muted);
+  }
+
+  .reservation-name{
+    font-size:0.82rem;
+    color:#8fbadb;
+    font-weight:600;
+  }
+
+  .delete-btn{
+    background:none;
+    border:1px solid rgba(239,91,106,0.35);
+    color:var(--vermelho);
+    cursor:pointer;
+    font-size:0.78rem;
+    padding:7px 12px;
+    border-radius:999px;
+    flex-shrink:0;
+    transition:background .2s ease;
+  }
+
+  .delete-btn:hover{
+    background:rgba(239,91,106,0.15);
+  }
+
+  .leave-btn{
+    background:none;
+    border:1px solid rgba(255,145,60,0.45);
+    color:#ff9c3c;
+    cursor:pointer;
+    font-size:0.78rem;
+    padding:7px 12px;
+    border-radius:999px;
+    flex-shrink:0;
+    transition:background .2s ease;
+  }
+
+  .leave-btn:hover{
+    background:rgba(255,145,60,0.15);
+  }
+
+  .reservation-actions{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+    flex-shrink:0;
+  }
+
+  .reservation-occupants{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-size:0.78rem;
+    color:#8fbadb;
+    font-weight:600;
+  }
+
+  .role-badge{
+    display:inline-block;
+    font-size:0.68rem;
+    font-weight:700;
+    padding:2px 9px;
+    border-radius:999px;
+    width:fit-content;
+  }
+
+  .role-badge.creator{
+    background:rgba(111,168,216,0.18);
+    color:#bcd9f0;
+  }
+
+  .role-badge.passenger{
+    background:rgba(51,212,136,0.16);
+    color:#8fe9bf;
+  }
+
+  /* ---- Caronas disponíveis (compartilhamento de vagas) ---- */
+  .rides-section{
+    margin-top:20px;
+    padding-top:20px;
+    border-top:1px dashed rgba(111,168,216,0.25);
+    animation:fadeIn .3s ease;
+  }
+
+  .rides-section.hidden{
+    display:none;
+  }
+
+  .rides-header{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:700;
+    color:#fff;
+    font-size:0.95rem;
+    margin-bottom:12px;
+  }
+
+  .rides-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .ride-card{
+    position:relative;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:16px 18px;
+    border-radius:var(--radius-md);
+    background:linear-gradient(135deg, rgba(51,212,136,0.14), rgba(111,168,216,0.10));
+    border:1.5px solid rgba(51,212,136,0.35);
+    box-shadow:0 8px 20px rgba(6,14,24,0.25);
+    transition:transform .15s ease, box-shadow .2s ease;
+  }
+
+  .ride-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 26px rgba(6,14,24,0.35);
+  }
+
+  .ride-info{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:0;
+  }
+
+  .ride-route{
+    font-weight:700;
+    color:#fff;
+    font-size:0.95rem;
+  }
+
+  .ride-meta{
+    font-size:0.8rem;
+    color:var(--texto-muted);
+  }
+
+  .ride-driver{
+    font-size:0.8rem;
+    color:#8fbadb;
+    font-weight:600;
+  }
+
+  .ride-seats{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:rgba(51,212,136,0.18);
+    color:#9be9c4;
+    font-size:0.75rem;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    width:fit-content;
+    margin-top:2px;
+  }
+
+  .ride-actions{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+    flex-shrink:0;
+  }
+
+  .join-ride-btn{
+    background:linear-gradient(135deg, var(--verde), #1f9d64);
+    color:#0f2417;
+    border:none;
+    padding:9px 16px;
+    font-size:0.82rem;
+    font-weight:700;
+    border-radius:999px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:transform .15s ease, filter .2s ease;
+  }
+
+  .join-ride-btn:hover{
+    filter:brightness(1.08);
+    transform:translateY(-1px);
+  }
+
+  /* ---- Filtros da aba Caronas Disponíveis ---- */
+  .rides-filters{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    margin-bottom:22px;
+    padding-bottom:20px;
+    border-bottom:1px dashed rgba(111,168,216,0.25);
+  }
+
+  .available-ride-card{
+    flex-wrap:wrap;
+  }
+
+  .ride-occupants-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:rgba(111,168,216,0.16);
+    color:#bcd9f0;
+    font-size:0.75rem;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    width:fit-content;
+    margin-top:2px;
+  }
+
+/* ---- Bloco "Quem já está no carro" ---- */
+  .occupants-block{
+    background:rgba(26,48,80,0.55);
+    border:1px solid rgba(58,106,149,0.35);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    margin:10px 0;
+    backdrop-filter:blur(6px);
+  }
+
+  .occupants-toggle{
+    background:none;
+    border:1px solid rgba(58,106,149,0.45);
+    color:var(--azul-claro);
+    font-size:0.8rem;
+    font-weight:600;
+    padding:7px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    margin:6px 0;
+    transition:filter .2s ease, transform .15s ease;
+  }
+
+  .occupants-toggle:hover{
+    filter:brightness(1.2);
+    transform:translateY(-1px);
+  }
+
+  .occupants-title{
+    font-size:0.78rem;
+    font-weight:700;
+    color:var(--texto-muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin-bottom:8px;
+  }
+
+  .occupants-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:8px;
+  }
+
+  .occupant-chip{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:linear-gradient(135deg, #2a4a6a, #1a3050);
+    border:1px solid rgba(111,168,216,0.25);
+    border-radius:999px;
+    padding:4px 10px 4px 4px;
+    font-size:0.78rem;
+    color:var(--texto);
+  }
+
+  .occupant-avatar{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:linear-gradient(135deg, #3a6a95, #2a4a6a);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.72rem;
+    font-weight:700;
+    color:#fff;
+    flex-shrink:0;
+  }
+
+  .occupant-chip.is-driver{
+    background:linear-gradient(135deg, #3a6a95, #1a3050);
+    border-color:rgba(111,168,216,0.45);
+  }
+
+  .occupant-chip .occupant-role{
+    color:var(--azul-claro);
+    font-size:0.7rem;
+    font-weight:600;
+  }
+
+  .occupants-unidentified{
+    font-size:0.78rem;
+    color:var(--texto-muted);
+    margin-bottom:6px;
+  }
+
+  /* ---- Widget de lista de passageiros nomeados ---- */
+  .passenger-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:6px;
+  }
+
+  .passenger-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .passenger-row input[type="text"]{
+    flex:1;
+    background:rgba(26,48,80,0.55);
+    border:1.5px solid rgba(111,168,216,0.3);
+    border-radius:var(--radius-sm);
+    color:var(--texto);
+    padding:10px 12px;
+    font-size:0.9rem;
+  }
+
+  .passenger-row input[type="text"]:focus{
+    outline:none;
+    border-color:var(--azul-claro);
+  }
+
+  .passenger-remove-btn{
+    background:linear-gradient(135deg,#ef5b6a,#c23347);
+    color:#fff;
+    border:none;
+    width:32px;
+    height:32px;
+    flex-shrink:0;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:1rem;
+    line-height:1;
+    transition:transform .15s ease, filter .2s ease;
+  }
+
+  .passenger-remove-btn:hover{
+    filter:brightness(1.1);
+    transform:translateY(-1px);
+  }
+
+  .passenger-add-btn{
+    background:transparent;
+    border:1.5px dashed rgba(111,168,216,0.45);
+    color:var(--azul-claro);
+    border-radius:var(--radius-sm);
+    padding:10px 14px;
+    font-size:0.88rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .2s ease, transform .15s ease;
+    width:100%;
+  }
+
+  .passenger-add-btn:hover{
+    background:rgba(111,168,216,0.1);
+    transform:translateY(-1px);
+  }
+
+  .passenger-list-hint{
+    font-size:0.78rem;
+    color:var(--texto-muted);
+    margin-top:4px;
+  }
+
+  .occupants-empty{
+    font-size:0.82rem;
+    color:var(--texto-muted);
+    font-style:italic;
+    margin-bottom:6px;
+  }
+
+  .occupants-vagas{
+    font-size:0.8rem;
+    font-weight:700;
+    color:var(--verde);
+  }
+
+  /* ---- Modal de confirmação para entrar na carona ---- */
+  .join-confirm-card{
+    max-width:380px;
+    text-align:left;
+  }
+
+  .join-confirm-card h3{
+    text-align:center;
+  }
+
+  .join-confirm-route{
+    text-align:center;
+    color:var(--texto-muted);
+    font-size:0.85rem;
+    margin:-4px 0 16px;
+  }
+
+  .join-confirm-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+
+  .join-confirm-actions button{
+    flex:1;
+  }
+
+  .join-confirm-cancel{
+    background:rgba(169,189,209,0.12);
+    color:var(--texto);
+    border:1px solid rgba(210,228,245,0.2);
+    padding:12px 18px;
+    font-size:0.9rem;
+    font-weight:700;
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    transition:filter .2s ease, transform .15s ease;
+  }
+
+  .join-confirm-cancel:hover{
+    filter:brightness(1.2);
+    transform:translateY(-1px);
+  }
+
+  .reserve-day-btn{
+    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
+    color:#fff;
+    border:none;
+    padding:10px 18px;
+    font-size:0.85rem;
+    font-weight:700;
+    border-radius:999px;
+    cursor:pointer;
+    transition:transform .15s ease, filter .2s ease;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .reserve-day-btn:hover{
+    filter:brightness(1.12);
+    transform:translateY(-1px);
+  }
+
+  /* ---- Modal de reserva rápida pelo calendário ---- */
+  .quick-reserve-card{
+    max-width:420px;
+    text-align:left;
+  }
+
+  .quick-reserve-card h3{
+    margin:0 0 4px;
+    font-size:1.1rem;
+    color:#fff;
+  }
+
+  .quick-reserve-summary{
+    background:rgba(111,168,216,0.12);
+    border:1px solid rgba(111,168,216,0.28);
+    color:#d4e6f5;
+    font-size:0.85rem;
+    padding:10px 14px;
+    border-radius:var(--radius-sm);
+    margin-bottom:16px;
+  }
+
+  .quick-reserve-card form{
+    text-align:left;
+  }
+
+/* ============ Profile modal ============ */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(8,16,26,0.6);
+    backdrop-filter:blur(4px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:200;
+    padding:20px;
+    animation:fadeIn .2s ease;
+  }
+
+  .modal-card{
+    position:relative;
+    width:100%;
+    max-width:340px;
+    background:var(--card-bg-solid);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--sombra);
+    padding:34px 26px 26px;
+    text-align:center;
+    animation:slideUp .25s ease;
+  }
+
+  .modal-close{
+    position:absolute;
+    top:12px;
+    right:14px;
+    background:none;
+    border:none;
+    color:var(--texto-muted);
+    font-size:1.3rem;
+    cursor:pointer;
+    line-height:1;
+  }
+
+  .modal-close:hover{
+    color:#fff;
+  }
+
+  .profile-avatar-lg{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.4rem;
+    font-weight:700;
+    margin:0 auto 14px;
+  }
+
+  .modal-card h3{
+    margin:0 0 4px;
+    font-size:1.1rem;
+    color:#fff;
+  }
+
+  .modal-card p{
+    margin:0 0 20px;
+    color:var(--texto-muted);
+    font-size:0.85rem;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--texto-muted);
+    font-size:0.8rem;
+    padding-bottom:30px;
+  }

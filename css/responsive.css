@@ -1,0 +1,40 @@
+/* Adaptações para tablets e celulares */
+@media (max-width:720px){
+    .app-header{
+      flex-direction:column;
+      align-items:stretch;
+      gap:14px;
+      padding:16px 18px;
+    }
+    .header-left{
+      justify-content:space-between;
+    }
+    .tabs{
+      position:static;
+      transform:none;
+      max-width:100%;
+      justify-content:center;
+      overflow-x:auto;
+    }
+    .header-right{
+      justify-content:center;
+    }
+  }
+
+  @media (max-width:480px){
+    .row{
+      flex-direction:column;
+    }
+    .card{
+      padding:22px 18px;
+    }
+    .login-card{
+      padding:32px 22px;
+    }
+    .date-popup{
+      width:220px;
+    }
+    .logo-img{
+      height:44px;
+    }
+  }

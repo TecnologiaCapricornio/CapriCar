@@ -1,0 +1,20 @@
+/* Variáveis de tema do CapriCar */
+:root{
+    --azul-royal:#1e3a5a;
+    --azul-royal-2:#3a6a95;
+    --azul-claro:#6fa8d8;
+    --bg-1:#101f30;
+    --bg-2:#1a3050;
+    --bg-3:#1e3a5a;
+    --card-bg:rgba(20,38,60,0.55);
+    --card-bg-solid:#1a2f48;
+    --card-border:rgba(210,228,245,0.12);
+    --texto:#f0f4f9;
+    --texto-muted:#a9bdd1;
+    --vermelho:#ef5b6a;
+    --verde:#33d488;
+    --sombra: 0 20px 45px rgba(6,14,24,0.5);
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:10px;
+  }

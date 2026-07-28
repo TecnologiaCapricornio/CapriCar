@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapriCar | Reserva de Carros Corporativos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/calendar.css">
+<link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<!-- ===================== TELA DE LOGIN ===================== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <img src="assets/logo.png" alt="CapriCar" class="login-logo">
+    <h1>CapriCar</h1>
+    <div class="login-sub">Sistema Interno de Reserva de Carros</div>
+    <form id="loginForm" novalidate>
+      <div class="field" id="field-loginNome">
+        <label for="loginNome">Usuário</label>
+        <input type="text" id="loginNome" placeholder="Digite seu usuário">
+        <div class="error-msg" id="error-loginNome"></div>
+      </div>
+      <div class="field" id="field-loginEmail">
+        <label for="loginEmail">Senha</label>
+        <input type="password" id="loginEmail" placeholder="Digite sua senha">
+        <div class="error-msg" id="error-loginEmail"></div>
+      </div>
+      <button type="submit" class="submit-btn">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== APP (pós-login) ===================== -->
+<div class="app-screen hidden" id="appScreen">
+
+  <header class="app-header">
+    <div class="header-left">
+      <img src="assets/logo.png" alt="CapriCar" class="logo-img">
+      <div class="header-title">
+        <span class="brand">CapriCar</span>
+        <span class="brand-sub">Reserva de Carros Corporativos</span>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabsNav">
+      <button type="button" class="tab-btn active" data-tab="nova">Nova Reserva</button>
+      <button type="button" class="tab-btn" data-tab="calendario">Calendário</button>
+      <button type="button" class="tab-btn" data-tab="minhas">Minhas Reservas</button>
+      <button type="button" class="tab-btn" data-tab="caronas">Caronas Disponíveis</button>
+      <button type="button" class="tab-btn hidden" data-tab="admin" id="adminTabBtn">Admin</button>
+    </nav>
+
+    <div class="header-right">
+      <button type="button" class="profile-btn" id="profileBtn">
+        <span class="avatar" id="avatarInitials">--</span>
+        <span id="headerUserName">Usuário</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ---- Nova Reserva ---- -->
+    <section class="tab-panel" id="panel-nova">
+      <div class="card">
+        <h2>Nova Reserva</h2>
+        <div class="form-hint" id="solicitanteHint"></div>
+        <form id="reservaForm" novalidate>
+          <div class="row">
+            <div class="field" id="field-partida">
+              <label for="partida">Local de Partida</label>
+              <select id="partida" name="partida">
+                <option value="">Selecione...</option>
+                <option value="São Paulo">São Paulo</option>
+                <option value="São Carlos">São Carlos</option>
+                <option value="Bragança Paulista">Bragança Paulista</option>
+              </select>
+              <div class="error-msg" id="error-partida"></div>
+            </div>
+
+            <div class="field" id="field-destino">
+              <label for="destino">Destino</label>
+              <select id="destino" name="destino">
+                <option value="">Selecione...</option>
+                <option value="São Paulo">São Paulo</option>
+                <option value="São Carlos">São Carlos</option>
+                <option value="Bragança Paulista">Bragança Paulista</option>
+                <option value="Outro">Outro</option>
+              </select>
+              <input type="text" id="destinoOutro" name="destinoOutro" class="hidden" placeholder="Digite o destino" autocomplete="off">
+              <div class="error-msg" id="error-destino"></div>
+            </div>
+          </div>
+
+          <div class="field hidden" id="field-carro">
+            <label for="carro">Carro (Por localização) </label>
+            <select id="carro" name="carro">
+              <option value="">Selecione...</option>
+            </select>
+            <div class="error-msg" id="error-carro"></div>
+          </div>
+
+          <div class="row">
+            <div class="field" id="field-dataIda">
+              <label for="dataIda">Data de Ida</label>
+              <div class="date-input-wrapper" id="wrap-dataIda">
+                <input type="date" id="dataIda" name="dataIda" readonly autocomplete="off">
+              </div>
+              <div class="error-msg" id="error-dataIda"></div>
+            </div>
+
+            <div class="field" id="field-horarioRetirada">
+              <label for="horarioRetirada">Horário de Retirada</label>
+              <select id="horarioRetirada" name="horarioRetirada">
+                <option value="">Selecione...</option>
+              </select>
+              <div class="error-msg" id="error-horarioRetirada"></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field" id="field-dataVolta">
+              <label for="dataVolta">Data de Volta</label>
+              <div class="date-input-wrapper" id="wrap-dataVolta">
+                <input type="date" id="dataVolta" name="dataVolta" readonly autocomplete="off">
+              </div>
+              <div class="error-msg" id="error-dataVolta"></div>
+            </div>
+
+            <div class="field" id="field-horarioDevolucao">
+              <label for="horarioDevolucao">Horário de Devolução</label>
+              <select id="horarioDevolucao" name="horarioDevolucao">
+                <option value="">Selecione...</option>
+              </select>
+              <div class="error-msg" id="error-horarioDevolucao"></div>
+            </div>
+          </div>
+
+          <div class="field" id="field-passageirosConfirmados">
+            <label>Passageiros que vão com você</label>
+            <div id="passageirosListContainer"></div>
+            <div class="error-msg" id="error-passageirosConfirmados"></div>
+          </div>
+
+          <button type="submit" class="submit-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17 L4.5 11 C5 9 6.5 8 8.5 8 H15.5 C17.5 8 19 9 19.5 11 L21 17" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <rect x="2" y="16" width="20" height="5" rx="2.5" fill="#fff"/>
+              <circle cx="7" cy="21" r="1.8" fill="#1e3a5a"/>
+              <circle cx="17" cy="21" r="1.8" fill="#1e3a5a"/>
+            </svg>
+            Confirmar Reserva
+          </button>
+
+          <div class="confirmation" id="confirmation">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" fill="#33d488"/>
+              <path d="M7 12.5 L10.5 16 L17 8.5" stroke="#0f2417" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <span id="confirmation-text"></span>
+          </div>
+        </form>
+
+        <div class="rides-section hidden" id="ridesSection">
+          <div class="rides-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="8" r="3" stroke="#9be9c4" stroke-width="1.8"/>
+              <path d="M2.5 19c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" stroke="#9be9c4" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="17" cy="8" r="2.6" stroke="#9be9c4" stroke-width="1.8"/>
+              <path d="M14.8 13.7c2.6.3 4.7 2.5 4.7 5.3" stroke="#9be9c4" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            Caronas disponíveis para este trajeto
+          </div>
+          <div class="rides-list" id="ridesList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Calendário ---- -->
+    <section class="tab-panel hidden" id="panel-calendario">
+      <div class="card">
+        <h2>Calendário de Reservas por Carro</h2>
+
+        <div class="car-selector" id="carSelector"></div>
+
+        <div class="calendar-nav">
+          <button type="button" class="calendar-nav-btn" id="calPrevBtn" aria-label="Mês anterior">&#8249;</button>
+          <span class="calendar-month-label" id="calMonthLabel"></span>
+          <button type="button" class="calendar-nav-btn" id="calNextBtn" aria-label="Próximo mês">&#8250;</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="calendar-legend">
+          <span><span class="legend-dot legend-reserved"></span>Dia com reserva deste carro</span>
+          <span><span class="legend-dot legend-today"></span>Hoje</span>
+        </div>
+
+        <div class="confirmation" id="calConfirmation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" fill="#33d488"/>
+            <path d="M7 12.5 L10.5 16 L17 8.5" stroke="#0f2417" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <span id="calConfirmation-text"></span>
+        </div>
+
+        <div class="calendar-day-details hidden" id="calendarDayDetails"></div>
+      </div>
+    </section>
+
+    <!-- ---- Minhas Reservas ---- -->
+    <section class="tab-panel hidden" id="panel-minhas">
+      <div class="card">
+        <h2>Minhas Reservas</h2>
+
+        <div class="confirmation" id="minhasConfirmation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" fill="#33d488"/>
+            <path d="M7 12.5 L10.5 16 L17 8.5" stroke="#0f2417" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <span id="minhasConfirmation-text"></span>
+        </div>
+
+        <div class="reservations-list" id="myReservationsList">
+          <div class="empty-state">Você ainda não fez nenhuma reserva.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Caronas Disponíveis ---- -->
+    <section class="tab-panel hidden" id="panel-caronas">
+      <div class="card">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="3" stroke="#6fa8d8" stroke-width="1.8"/>
+            <path d="M2.5 19c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" stroke="#6fa8d8" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="17" cy="8" r="2.6" stroke="#6fa8d8" stroke-width="1.8"/>
+            <path d="M14.8 13.7c2.6.3 4.7 2.5 4.7 5.3" stroke="#6fa8d8" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Caronas Disponíveis
+        </h2>
+
+        <div class="rides-filters" id="ridesFilters">
+          <div class="row">
+            <div class="field">
+              <label for="filtroPartida">Local de Partida</label>
+              <select id="filtroPartida">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="filtroDestino">Destino</label>
+              <select id="filtroDestino">
+                <option value="">Todos</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="filtroData">Data</label>
+            <input type="date" id="filtroData" name="filtroData" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="confirmation" id="caronasConfirmation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" fill="#33d488"/>
+            <path d="M7 12.5 L10.5 16 L17 8.5" stroke="#0f2417" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <span id="caronasConfirmation-text"></span>
+        </div>
+
+        <div class="rides-list" id="availableRidesList"></div>
+      </div>
+    </section>
+
+    <!-- ---- Admin ---- -->
+    <section class="tab-panel hidden" id="panel-admin">
+      <div class="card">
+        <h2>Painel de Administração</h2>
+
+        <div class="form-hint" id="adminSummary"></div>
+
+        <div class="rides-filters" id="adminFilters">
+          <div class="row">
+            <div class="field">
+              <label for="adminFiltroFilial">Local</label>
+              <select id="adminFiltroFilial">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="adminFiltroCarro">Carro</label>
+              <select id="adminFiltroCarro">
+                <option value="">Todos</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="adminFiltroData">Data</label>
+            <input type="date" id="adminFiltroData" autocomplete="off">
+          </div>
+        </div>
+
+        <button type="button" class="submit-btn admin-new-reservation-btn" id="adminNovaReservaBtn">Nova reserva (como admin)</button>
+
+        <div class="reservations-list" id="adminReservationsList">
+          <div class="empty-state">Nenhuma reserva encontrada.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>&copy; 2026 CapriCar &mdash; Sistema Interno de Reservas</footer>
+</div>
+
+<!-- ===================== Modal de Perfil ===================== -->
+<div class="modal-overlay hidden" id="profileModal">
+  <div class="modal-card">
+    <button type="button" class="modal-close" id="profileCloseBtn">&times;</button>
+    <div class="profile-avatar-lg" id="profileAvatarLg">--</div>
+    <h3 id="profileName"></h3>
+    <button type="button" class="danger-btn" id="logoutBtn">Sair</button>
+  </div>
+</div>
+
+<!-- ===================== Modal de Reserva Rápida (via Calendário) ===================== -->
+<div class="modal-overlay hidden" id="quickReserveModal">
+  <div class="modal-card quick-reserve-card">
+    <button type="button" class="modal-close" id="quickReserveCloseBtn">&times;</button>
+    <h3>Reservar este carro</h3>
+    <div class="quick-reserve-summary" id="quickReserveSummary"></div>
+    <form id="quickReserveForm" novalidate>
+      <div class="field" id="qfield-destino">
+        <label for="qDestino">Destino</label>
+        <select id="qDestino" name="qDestino">
+          <option value="">Selecione...</option>
+        </select>
+        <input type="text" id="qDestinoOutro" class="hidden" placeholder="Digite o destino" autocomplete="off">
+        <div class="error-msg" id="error-qDestino"></div>
+      </div>
+
+      <div class="field" id="qfield-dataVolta">
+        <label for="qDataVolta">Data de Volta</label>
+        <div class="date-input-wrapper" id="wrap-qDataVolta">
+          <input type="date" id="qDataVolta" readonly autocomplete="off">
+        </div>
+        <div class="error-msg" id="error-qDataVolta"></div>
+      </div>
+
+      <div class="row">
+        <div class="field" id="qfield-horarioRetirada">
+          <label for="qHorarioRetirada">Horário de Retirada</label>
+          <select id="qHorarioRetirada">
+            <option value="">Selecione...</option>
+          </select>
+          <div class="error-msg" id="error-qHorarioRetirada"></div>
+        </div>
+
+        <div class="field" id="qfield-horarioDevolucao">
+          <label for="qHorarioDevolucao">Horário de Devolução</label>
+          <select id="qHorarioDevolucao">
+            <option value="">Selecione...</option>
+          </select>
+          <div class="error-msg" id="error-qHorarioDevolucao"></div>
+        </div>
+      </div>
+
+      <div class="field" id="qfield-passageirosConfirmados">
+        <label>Passageiros que vão com você</label>
+        <div id="qPassageirosListContainer"></div>
+        <div class="error-msg" id="error-qPassageirosConfirmados"></div>
+      </div>
+
+      <button type="submit" class="submit-btn">Confirmar Reserva</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== Modal de Confirmação para Entrar na Carona ===================== -->
+<div class="modal-overlay hidden" id="joinConfirmModal">
+  <div class="modal-card join-confirm-card">
+    <button type="button" class="modal-close" id="joinConfirmCloseBtn">&times;</button>
+    <h3>Confirmar entrada na carona</h3>
+    <div class="join-confirm-route" id="joinConfirmRoute"></div>
+    <div id="joinConfirmOccupants"></div>
+    <div class="join-confirm-actions">
+      <button type="button" class="join-confirm-cancel" id="joinConfirmCancelBtn">Cancelar</button>
+      <button type="button" class="submit-btn" id="joinConfirmOkBtn">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Modal de Reserva (Admin: criar/editar) ===================== -->
+<div class="modal-overlay hidden" id="adminReservaModal">
+  <div class="modal-card quick-reserve-card admin-reserve-card">
+    <button type="button" class="modal-close" id="adminReservaCloseBtn">&times;</button>
+    <h3 id="adminReservaTitle">Editar reserva</h3>
+    <div class="error-msg admin-reserve-error" id="adminReservaError"></div>
+    <form id="adminReservaForm" novalidate>
+      <div class="field" id="afield-nome">
+        <label for="aNome">Nome do responsável</label>
+        <input type="text" id="aNome" placeholder="Nome do responsável" autocomplete="off">
+        <div class="error-msg" id="error-aNome"></div>
+      </div>
+
+      <div class="row">
+        <div class="field" id="afield-partida">
+          <label for="aPartida">Local de Partida</label>
+          <select id="aPartida">
+            <option value="">Selecione...</option>
+            <option value="São Paulo">São Paulo</option>
+            <option value="São Carlos">São Carlos</option>
+            <option value="Bragança Paulista">Bragança Paulista</option>
+          </select>
+          <div class="error-msg" id="error-aPartida"></div>
+        </div>
+
+        <div class="field" id="afield-destino">
+          <label for="aDestino">Destino</label>
+          <select id="aDestino">
+            <option value="">Selecione...</option>
+          </select>
+          <input type="text" id="aDestinoOutro" class="hidden admin-destination-other" placeholder="Digite o destino" autocomplete="off">
+          <div class="error-msg" id="error-aDestino"></div>
+        </div>
+      </div>
+
+      <div class="field" id="afield-carro">
+        <label for="aCarro">Carro (filial de partida)</label>
+        <select id="aCarro">
+          <option value="">Selecione...</option>
+        </select>
+        <div class="error-msg" id="error-aCarro"></div>
+      </div>
+
+      <div class="row">
+        <div class="field" id="afield-dataIda">
+          <label for="aDataIda">Data de Ida</label>
+          <input type="date" id="aDataIda" autocomplete="off">
+          <div class="error-msg" id="error-aDataIda"></div>
+        </div>
+
+        <div class="field" id="afield-horarioRetirada">
+          <label for="aHorarioRetirada">Horário de Retirada</label>
+          <select id="aHorarioRetirada">
+            <option value="">Selecione...</option>
+          </select>
+          <div class="error-msg" id="error-aHorarioRetirada"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field" id="afield-dataVolta">
+          <label for="aDataVolta">Data de Volta</label>
+          <input type="date" id="aDataVolta" autocomplete="off">
+          <div class="error-msg" id="error-aDataVolta"></div>
+        </div>
+
+        <div class="field" id="afield-horarioDevolucao">
+          <label for="aHorarioDevolucao">Horário de Devolução</label>
+          <select id="aHorarioDevolucao">
+            <option value="">Selecione...</option>
+          </select>
+          <div class="error-msg" id="error-aHorarioDevolucao"></div>
+        </div>
+      </div>
+
+      <div class="field" id="afield-passageirosConfirmados">
+        <label>Passageiros que vão com você</label>
+        <div id="aPassageirosListContainer"></div>
+        <div class="error-msg" id="error-aPassageirosConfirmados"></div>
+        <div class="passenger-list-hint hidden" id="aLegadoAvisoBox">
+          <span id="aLegadoAvisoTexto"></span>
+          <button type="button" class="passenger-add-btn admin-convert-legacy-btn" id="aConverterLegadoBtn">Converter em nomes</button>
+        </div>
+      </div>
+
+      <div id="adminOcupantesPanel"></div>
+
+      <button type="submit" class="submit-btn">Salvar Reserva</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/rides.js"></script>
+<script src="js/reservations.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/modals.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

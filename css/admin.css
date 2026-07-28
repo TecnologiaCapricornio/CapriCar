@@ -1,0 +1,25 @@
+/* Ajustes exclusivos do painel administrativo */
+.admin-new-reservation-btn{
+  margin-bottom:20px;
+}
+
+.admin-reserve-card{
+  max-width:460px;
+}
+
+.admin-reserve-error{
+  margin-bottom:10px;
+}
+
+.admin-destination-other{
+  margin-top:8px;
+}
+
+.admin-convert-legacy-btn{
+  margin-top:6px;
+}
+
+.admin-edit-btn{
+  width:auto;
+  padding:8px 16px;
+}
