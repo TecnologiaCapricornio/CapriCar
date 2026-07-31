@@ -1,0 +1,21 @@
+{
+  "name": "capricar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema interno de reservas de veículos CapriCar",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "db:migrate": "node server/scripts/migrate.js",
+    "db:seed": "node server/scripts/seed.js",
+    "db:backup": "node server/scripts/backup.js",
+    "db:restore": "node server/scripts/restore.js",
+    "test": "node tests/core.test.js && node tests/xlsx-export.test.js && node tests/permissions.test.js && node tests/backend-security.test.js && node tests/validation.test.js && node tests/vehicle-deletion.test.js",
+    "test:integration": "node tests/api-integration.test.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  }
+}

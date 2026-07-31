@@ -1,0 +1,3 @@
+ALTER TABLE application_state
+  ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 1;
+

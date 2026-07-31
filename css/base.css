@@ -1,12 +1,24 @@
 /* Reset, tipografia, login e elementos de formulário compartilhados */
 *{box-sizing:border-box;}
 
+  html{
+    min-height:100%;
+    background:#07182a;
+  }
+
   body{
     margin:0;
     font-family:'Inter', 'Segoe UI', Arial, sans-serif;
-    background: url('../assets/bg.jpg') no-repeat center top fixed;
+    background-color:#07182a;
+    background-image:
+      linear-gradient(rgba(4,18,32,.48), rgba(4,18,32,.62)),
+      url('../assets/bg.jpg');
+    background-repeat:no-repeat;
+    background-position:center top;
+    background-attachment:fixed;
     background-size: cover;
     min-height:100vh;
+    min-height:100dvh;
     color:var(--texto);
   }
 
@@ -26,6 +38,7 @@
   /* ============ Login Screen ============ */
   .login-screen{
     min-height:100vh;
+    min-height:100dvh;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -112,7 +125,7 @@
     min-width:0;
   }
 
-  select, input[type="text"], input[type="email"], input[type="date"], input[type="password"]{
+  select, textarea, input[type="text"], input[type="email"], input[type="date"], input[type="password"], input[type="number"], input[type="file"]{
     padding:12px 15px;
     border:1.5px solid rgba(255,255,255,0.10);
     border-radius:var(--radius-sm);
@@ -122,6 +135,15 @@
     background:rgba(255,255,255,0.05);
     transition:border-color .2s, box-shadow .2s, background .2s;
     width:100%;
+  }
+
+  textarea{
+    resize:vertical;
+    min-height:72px;
+  }
+
+  input[type="file"]{
+    font-size:0.82rem;
   }
 
   select option{
@@ -148,7 +170,7 @@
     display:none;
   }
 
-  input[type="date"]#filtroData::-webkit-calendar-picker-indicator{
+  input[type="date"]:not([readonly])::-webkit-calendar-picker-indicator{
     display:inline-block;
     filter:invert(0.8);
     cursor:pointer;

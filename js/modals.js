@@ -42,36 +42,26 @@ joinConfirmModal.addEventListener('click', function(e){
   if(e.target === joinConfirmModal) closeJoinConfirmModal();
 });
 
-joinConfirmOkBtn.addEventListener('click', function(){
+joinConfirmOkBtn.addEventListener('click', async function(){
   if(!joinConfirmContext) return;
   const { id, origin } = joinConfirmContext;
   closeJoinConfirmModal();
 
   if(origin === 'available'){
-    joinRideFromAvailable(id);
+    await joinRideFromAvailable(id);
   } else if(origin === 'calendar'){
-    joinRideFromCalendar(id);
+    await joinRideFromCalendar(id);
   } else {
-    joinRide(id);
+    await joinRide(id);
   }
 });
 
 calPrevBtn.addEventListener('click', function(){
-  calViewMonth--;
-  if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
-  calendarDayDetails.classList.add('hidden');
-  calendarDayDetails.innerHTML = '';
-  calSelectedISO = null;
-  renderMainCalendar();
+  shiftCalendarWeek(-7);
 });
 
 calNextBtn.addEventListener('click', function(){
-  calViewMonth++;
-  if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
-  calendarDayDetails.classList.add('hidden');
-  calendarDayDetails.innerHTML = '';
-  calSelectedISO = null;
-  renderMainCalendar();
+  shiftCalendarWeek(7);
 });
 
 /* =========================================================
@@ -86,12 +76,53 @@ const qDestinoOutroInput = document.getElementById('qDestinoOutro');
 const qDataVoltaInput = document.getElementById('qDataVolta');
 const qHorarioRetiradaSelect = document.getElementById('qHorarioRetirada');
 const qHorarioDevolucaoSelect = document.getElementById('qHorarioDevolucao');
+const qMotivoInput = document.getElementById('qMotivo');
+const qResponsavelInput = document.getElementById('qResponsavel');
 const qPassageirosWidget = createPassengerListWidget('qPassageirosListContainer');
 
 let quickReserveContext = null; // { filial, carro, dataIda }
 
 populateHorarioOptions(qHorarioRetiradaSelect);
 populateHorarioOptions(qHorarioDevolucaoSelect);
+
+function refreshQuickAvailableTimeOptions(){
+  if(!quickReserveContext){
+    populateHorarioOptions(qHorarioRetiradaSelect);
+    populateHorarioOptions(qHorarioDevolucaoSelect);
+    return;
+  }
+  const selectedPickup = qHorarioRetiradaSelect.value;
+  const selectedReturn = qHorarioDevolucaoSelect.value;
+  const availability = getAvailableReservationTimeOptions(
+    quickReserveContext.filial,
+    quickReserveContext.carro,
+    quickReserveContext.dataIda,
+    qDataVoltaInput.value,
+    '',
+    null
+  );
+  populateHorarioOptions(qHorarioRetiradaSelect, availability.pickup);
+  if(availability.pickup.includes(selectedPickup)){
+    qHorarioRetiradaSelect.value = selectedPickup;
+  }
+
+  const returnAvailability = getAvailableReservationTimeOptions(
+    quickReserveContext.filial,
+    quickReserveContext.carro,
+    quickReserveContext.dataIda,
+    qDataVoltaInput.value,
+    qHorarioRetiradaSelect.value,
+    null
+  );
+  populateHorarioOptions(qHorarioDevolucaoSelect, returnAvailability.return);
+  if(returnAvailability.return.includes(selectedReturn)){
+    qHorarioDevolucaoSelect.value = selectedReturn;
+  }
+
+  if(qDataVoltaInput.value && !availability.pickup.length){
+    setQError('horarioRetirada', 'Não há horários disponíveis para este carro no período selecionado.');
+  }
+}
 
 function setQError(fieldId, message){
   const field = document.getElementById('qfield-' + fieldId);
@@ -107,7 +138,7 @@ function setQError(fieldId, message){
 }
 
 function clearQErrors(){
-  ['destino','dataVolta','horarioRetirada','horarioDevolucao','passageirosConfirmados'].forEach(id => setQError(id, ''));
+  ['destino','dataVolta','horarioRetirada','horarioDevolucao','passageirosConfirmados','motivo','responsavel'].forEach(id => setQError(id, ''));
 }
 
 function getQDestinoValue(){
@@ -147,7 +178,7 @@ function populateQDestinoOptions(filial){
   toggleQDestinoOutro();
 }
 
-function openQuickReserveModal(dataIda){
+function openQuickReserveModal(dataIda, selectedRange){
   const currentUser = getCurrentUser();
   if(!currentUser){
     showLogin();
@@ -165,9 +196,27 @@ function openQuickReserveModal(dataIda){
   qDataVoltaInput.value = dataIda;
   qHorarioRetiradaSelect.value = '';
   qHorarioDevolucaoSelect.value = '';
+  qMotivoInput.value = '';
+  qResponsavelInput.value = currentUser.nome;
   qPassageirosWidget.clear();
   clearQErrors();
   refreshDatePickers();
+  refreshQuickAvailableTimeOptions();
+  if(selectedRange && selectedRange.horarioRetirada){
+    const pickupOption = Array.from(qHorarioRetiradaSelect.options).some(option =>
+      option.value === selectedRange.horarioRetirada
+    );
+    if(pickupOption){
+      qHorarioRetiradaSelect.value = selectedRange.horarioRetirada;
+      refreshQuickAvailableTimeOptions();
+    }
+    const returnOption = Array.from(qHorarioDevolucaoSelect.options).some(option =>
+      option.value === selectedRange.horarioDevolucao
+    );
+    if(returnOption){
+      qHorarioDevolucaoSelect.value = selectedRange.horarioDevolucao;
+    }
+  }
 
   quickReserveModal.classList.remove('hidden');
 }
@@ -179,10 +228,24 @@ function closeQuickReserveModal(){
 
 quickReserveCloseBtn.addEventListener('click', closeQuickReserveModal);
 quickReserveModal.addEventListener('click', function(e){
-  if(e.target === quickReserveModal) closeQuickReserveModal();
+if(e.target === quickReserveModal) closeQuickReserveModal();
 });
 
-quickReserveForm.addEventListener('submit', function(e){
+qDataVoltaInput.addEventListener('input', function(){
+  setQError('dataVolta', '');
+  refreshQuickAvailableTimeOptions();
+});
+
+qHorarioRetiradaSelect.addEventListener('change', function(){
+  setQError('horarioRetirada', '');
+  refreshQuickAvailableTimeOptions();
+});
+
+qHorarioDevolucaoSelect.addEventListener('change', function(){
+  setQError('horarioDevolucao', '');
+});
+
+quickReserveForm.addEventListener('submit', async function(e){
   e.preventDefault();
   clearQErrors();
 
@@ -198,7 +261,10 @@ quickReserveForm.addEventListener('submit', function(e){
   const dataVolta = qDataVoltaInput.value;
   const horarioRetirada = qHorarioRetiradaSelect.value;
   const horarioDevolucao = qHorarioDevolucaoSelect.value;
-  const validacaoPassageiros = validarListaPassageiros(currentUser.nome, qPassageirosWidget.getNomes());
+  const motivo = qMotivoInput.value.trim();
+  const responsavel = qResponsavelInput.value.trim();
+  const vehicle = getVehicle(quickReserveContext.filial, quickReserveContext.carro);
+  const validacaoPassageiros = validarListaPassageiros(currentUser.nome, qPassageirosWidget.getNomes(), Math.max(0, Number(vehicle && vehicle.capacidade ? vehicle.capacidade : CAPACIDADE_MAXIMA) - 1));
   const dataIda = quickReserveContext.dataIda;
 
   if(!qDestinoSelect.value){
@@ -237,10 +303,21 @@ quickReserveForm.addEventListener('submit', function(e){
     valid = false;
   }
 
+  if(dataIda && dataVolta){
+    const ruleValidation = validateReservationRules(currentUser.nome, dataIda, dataVolta, null);
+    if(!ruleValidation.ok){
+      setQError(ruleValidation.field === 'dataIda' ? 'dataVolta' : ruleValidation.field, ruleValidation.message);
+      valid = false;
+    }
+  }
+
   if(!validacaoPassageiros.ok){
     setQError('passageirosConfirmados', validacaoPassageiros.message);
     valid = false;
   }
+
+  if(!motivo){ setQError('motivo', 'Informe o motivo da viagem.'); valid = false; }
+  if(!responsavel){ setQError('responsavel', 'Informe o responsável.'); valid = false; }
 
   if(valid && horarioRetirada && horarioDevolucao){
     const conflitos = findConflictingReservations(quickReserveContext.filial, quickReserveContext.carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, null);
@@ -249,12 +326,18 @@ quickReserveForm.addEventListener('submit', function(e){
       setQError('horarioDevolucao', 'Verifique o calendário: horários ocupados para este carro.');
       valid = false;
     }
+    const bloqueios = findVehicleBlocks(quickReserveContext.filial, quickReserveContext.carro, dataIda, dataVolta, null);
+    if(bloqueios.length > 0){
+      setQError('dataVolta', 'Veículo indisponível no período: ' + bloqueios.map(b => b.tipo).join(', ') + '.');
+      valid = false;
+    }
   }
 
   if(!valid) return;
 
   const reserva = {
     id: Date.now(),
+    criadorUsuarioId: currentUser.id,
     nome: currentUser.nome,
     email: '',
     partida: quickReserveContext.filial,
@@ -264,29 +347,35 @@ quickReserveForm.addEventListener('submit', function(e){
     dataVolta: dataVolta,
     horarioRetirada: horarioRetirada,
     horarioDevolucao: horarioDevolucao,
+    motivo: motivo,
+    responsavel: responsavel,
+    status: 'confirmada',
+    criadoEm: new Date().toISOString(),
     passageiros: [{ nome: currentUser.nome }].concat(validacaoPassageiros.passageiros),
     passageirosConfirmados: 0
   };
 
   const list = getReservations();
   list.push(reserva);
-  saveReservations(list);
+  try{
+    await saveReservations(list);
+  }catch(error){
+    await hydrateDatabaseState();
+    setQError('horarioRetirada', error.message);
+    return;
+  }
+  logAudit('criou', 'reserva', reserva.id, reserva.partida + ' → ' + reserva.destino + ' · reserva rápida');
 
   closeQuickReserveModal();
 
   const vagasRestantes = getVagasRestantes(reserva);
-  calConfirmationText.textContent = 'Reserva confirmada! ' + reserva.partida + ' → ' + reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '.';
-  calConfirmation.classList.add('show');
+  const successMessage = 'Reserva confirmada! ' + reserva.partida + ' → ' + reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '.';
 
   renderMainCalendar();
   showDayDetails(dataIda);
-  renderMyReservations();
   renderAvailableRides();
   refreshDatePickers();
-
-  setTimeout(() => {
-    calConfirmation.classList.remove('show');
-  }, 6000);
+  showCreatedReservationInMyReservations(successMessage);
 });
 
 /* =========================================================
@@ -294,6 +383,233 @@ quickReserveForm.addEventListener('submit', function(e){
    (bloqueio agora é por carro específico, não por rota)
    ========================================================= */
 const datePickers = [];
+
+function createReservationRangePicker(startInput, endInput, triggerEl, calendarEl, getUnavailableSetFn){
+  let viewYear;
+  let viewMonth;
+  const startLabel = document.getElementById('rangeStartLabel');
+  const endLabel = document.getElementById('rangeEndLabel');
+  const hint = document.getElementById('rangePickerHint');
+
+  function syncView(){
+    const source = startInput.value || todayISO();
+    const [year, month] = source.split('-').map(Number);
+    viewYear = year;
+    viewMonth = month - 1;
+  }
+
+  function shortDate(iso){
+    if(!iso) return 'Selecionar data';
+    const [year, month, day] = iso.split('-').map(Number);
+    return day + ' ' + MESES[month - 1].slice(0, 3).toLowerCase() + ' ' + year;
+  }
+
+  function dispatchDateChange(input){
+    input.dispatchEvent(new Event('input', { bubbles:true }));
+    input.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+
+  function rangeContainsUnavailable(start, end, unavailable){
+    let found = false;
+    eachDateISOInRange(start, end, iso => {
+      if(unavailable.has(iso)) found = true;
+    });
+    return found;
+  }
+
+  function updateSummary(){
+    startLabel.textContent = shortDate(startInput.value);
+    endLabel.textContent = shortDate(endInput.value);
+    triggerEl.classList.toggle('has-selection', !!startInput.value);
+
+    const rules = getReservationRules();
+    if(!startInput.value){
+      hint.textContent = 'Selecione a data de ida e depois a data de volta.';
+    } else if(!endInput.value){
+      hint.textContent = 'Agora selecione a volta — período máximo de ' + rules.maxConsecutiveDays + ' dias.';
+    } else {
+      const total = daysBetweenInclusive(startInput.value, endInput.value);
+      hint.textContent = total + (total === 1 ? ' dia selecionado.' : ' dias selecionados.');
+    }
+  }
+
+  function render(){
+    updateSummary();
+    const unavailable = getUnavailableSetFn();
+    const rules = getReservationRules();
+    const today = todayISO();
+    const advanceLimit = addDaysISO(today, rules.maxAdvanceDays);
+    const selectingEnd = !!startInput.value && !endInput.value;
+    const maxEnd = selectingEnd ? addDaysISO(startInput.value, rules.maxConsecutiveDays - 1) : null;
+
+    let html =
+      '<div class="range-calendar-topline">' +
+        '<div><strong>' + (selectingEnd ? 'Escolha a volta' : 'Escolha a ida') + '</strong>' +
+        '<span>' + (selectingEnd ? 'Até ' + rules.maxConsecutiveDays + ' dias consecutivos' : 'Até ' + rules.maxAdvanceDays + ' dias de antecedência') + '</span></div>' +
+      '</div>' +
+      '<div class="range-calendar-header">' +
+        '<button type="button" class="range-calendar-nav" data-range-nav="prev" aria-label="Mês anterior">‹</button>' +
+        '<strong>' + MESES[viewMonth] + ' de ' + viewYear + '</strong>' +
+        '<button type="button" class="range-calendar-nav" data-range-nav="next" aria-label="Próximo mês">›</button>' +
+      '</div>' +
+      '<div class="range-calendar-grid">';
+
+    DIAS_SEMANA.forEach(day => {
+      html += '<span class="range-calendar-weekday">' + day.charAt(0) + '</span>';
+    });
+
+    const firstWeekday = new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay();
+    const totalDays = daysInMonth(viewYear, viewMonth);
+    const previousDays = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1);
+
+    for(let index = 0; index < 42; index++){
+      const offset = index - firstWeekday + 1;
+      let day;
+      let year;
+      let monthIndex;
+      let otherMonth = false;
+
+      if(offset < 1){
+        day = previousDays + offset;
+        monthIndex = viewMonth === 0 ? 11 : viewMonth - 1;
+        year = viewMonth === 0 ? viewYear - 1 : viewYear;
+        otherMonth = true;
+      } else if(offset > totalDays){
+        day = offset - totalDays;
+        monthIndex = viewMonth === 11 ? 0 : viewMonth + 1;
+        year = viewMonth === 11 ? viewYear + 1 : viewYear;
+        otherMonth = true;
+      } else {
+        day = offset;
+        monthIndex = viewMonth;
+        year = viewYear;
+      }
+
+      const iso = isoFromParts(year, monthIndex, day);
+      const isPast = !otherMonth && iso < today;
+      const isUnavailable = !otherMonth && unavailable.has(iso);
+      const isBeyondAdvance = !otherMonth && (!selectingEnd || iso < startInput.value) && iso > advanceLimit;
+      const isAfterMaxEnd = !otherMonth && selectingEnd && iso >= startInput.value && iso > maxEnd;
+      const crossesUnavailable = !otherMonth && selectingEnd && iso >= startInput.value &&
+        rangeContainsUnavailable(startInput.value, iso, unavailable);
+      const disabled = otherMonth || isPast || isUnavailable || isBeyondAdvance || isAfterMaxEnd || crossesUnavailable;
+      const isStart = iso === startInput.value;
+      const isEnd = iso === endInput.value;
+      const inRange = startInput.value && endInput.value && iso > startInput.value && iso < endInput.value;
+
+      let classes = 'range-calendar-day';
+      if(otherMonth) classes += ' other-month';
+      if(isPast || isBeyondAdvance || isAfterMaxEnd || crossesUnavailable) classes += ' disabled';
+      if(isUnavailable) classes += ' unavailable';
+      if(iso === today) classes += ' today';
+      if(inRange) classes += ' in-range';
+      if(isStart) classes += ' range-start';
+      if(isEnd) classes += ' range-end';
+
+      html += '<button type="button" class="' + classes + '" data-range-iso="' + iso + '"' +
+        (disabled ? ' disabled' : '') + ' aria-label="' + day + ' de ' + MESES[monthIndex] + ' de ' + year + '">' +
+        '<span>' + day + '</span></button>';
+    }
+
+    html += '</div>' +
+      '<div class="range-calendar-legend">' +
+        '<span><i class="range-legend-dot selected"></i>Período</span>' +
+        '<span><i class="range-legend-dot unavailable"></i>Indisponível</span>' +
+      '</div>' +
+      '<div class="range-calendar-actions">' +
+        '<button type="button" class="range-clear-btn" data-range-action="clear">Limpar</button>' +
+        '<button type="button" class="range-apply-btn" data-range-action="close"' + (!endInput.value ? ' disabled' : '') + '>Aplicar período</button>' +
+      '</div>';
+
+    calendarEl.innerHTML = html;
+  }
+
+  function open(){
+    syncView();
+    render();
+    calendarEl.classList.remove('hidden');
+    triggerEl.setAttribute('aria-expanded', 'true');
+  }
+
+  function close(){
+    calendarEl.classList.add('hidden');
+    triggerEl.setAttribute('aria-expanded', 'false');
+  }
+
+  triggerEl.addEventListener('click', function(){
+    if(calendarEl.classList.contains('hidden')) open();
+    else close();
+  });
+
+  calendarEl.addEventListener('click', function(e){
+    // O calendário é renderizado novamente após cada ação. Sem interromper a
+    // propagação, o alvo removido deixa de pertencer ao campo e o listener
+    // global interpreta o clique como externo, fechando o seletor.
+    e.stopPropagation();
+
+    const nav = e.target.closest('[data-range-nav]');
+    if(nav){
+      if(nav.getAttribute('data-range-nav') === 'prev'){
+        viewMonth--;
+        if(viewMonth < 0){ viewMonth = 11; viewYear--; }
+      } else {
+        viewMonth++;
+        if(viewMonth > 11){ viewMonth = 0; viewYear++; }
+      }
+      render();
+      return;
+    }
+
+    const action = e.target.closest('[data-range-action]');
+    if(action){
+      if(action.getAttribute('data-range-action') === 'clear'){
+        startInput.value = '';
+        endInput.value = '';
+        dispatchDateChange(startInput);
+        dispatchDateChange(endInput);
+        syncView();
+        render();
+      } else if(endInput.value){
+        close();
+      }
+      return;
+    }
+
+    const dayButton = e.target.closest('[data-range-iso]');
+    if(!dayButton || dayButton.disabled) return;
+    const iso = dayButton.getAttribute('data-range-iso');
+
+    if(!startInput.value || endInput.value){
+      startInput.value = iso;
+      endInput.value = '';
+    } else if(iso < startInput.value){
+      startInput.value = iso;
+      endInput.value = '';
+    } else {
+      endInput.value = iso;
+    }
+    dispatchDateChange(startInput);
+    dispatchDateChange(endInput);
+    render();
+  });
+
+  document.addEventListener('click', function(e){
+    if(!calendarEl.classList.contains('hidden') && !document.getElementById('field-dataIda').contains(e.target)){
+      close();
+    }
+  });
+
+  const controller = {
+    refresh:function(){
+      updateSummary();
+      if(!calendarEl.classList.contains('hidden')) render();
+    },
+    close:close
+  };
+  datePickers.push(controller);
+  updateSummary();
+  return controller;
+}
 
 function createDatePicker(inputEl, wrapperEl, getBlockedSetFn){
   let viewYear, viewMonth;
@@ -450,8 +766,22 @@ document.addEventListener('keydown', function(e){
   }
 });
 
-createDatePicker(dataIdaInput, document.getElementById('wrap-dataIda'), () => getCarReservedDates(partidaSelect.value, carroSelect.value));
-createDatePicker(dataVoltaInput, document.getElementById('wrap-dataVolta'), () => getCarReservedDates(partidaSelect.value, carroSelect.value));
+createReservationRangePicker(
+  dataIdaInput,
+  dataVoltaInput,
+  document.getElementById('rangePickerTrigger'),
+  document.getElementById('reservationRangeCalendar'),
+  () => {
+    const unavailable = getCarReservedDates(partidaSelect.value, carroSelect.value);
+    if(!partidaSelect.value || !carroSelect.value) return unavailable;
+    const rules = getReservationRules();
+    const endLimit = addDaysISO(todayISO(), rules.maxAdvanceDays + rules.maxConsecutiveDays);
+    findVehicleBlocks(partidaSelect.value, carroSelect.value, todayISO(), endLimit, null).forEach(block => {
+      eachDateISOInRange(block.dataInicio, block.dataFim, iso => unavailable.add(iso));
+    });
+    return unavailable;
+  }
+);
 createDatePicker(qDataVoltaInput, document.getElementById('wrap-qDataVolta'), () => {
   if(!quickReserveContext) return new Set();
   return getCarReservedDates(quickReserveContext.filial, quickReserveContext.carro);

@@ -155,7 +155,7 @@ function createPassengerListWidget(containerId, options){
 // Valida a lista de nomes de passageiros de um formulário.
 // Retorna { ok:true, passageiros:[...] } ou { ok:false, message: '...' }.
 function validarListaPassageiros(nomeCriador, nomes, maxPassageiros){
-  const limite = maxPassageiros || (CAPACIDADE_MAXIMA - 1);
+  const limite = maxPassageiros == null ? (CAPACIDADE_MAXIMA - 1) : maxPassageiros;
   const vistos = [nomeCriador.trim().toLowerCase()];
   const passageiros = [];
 
@@ -176,7 +176,7 @@ function validarListaPassageiros(nomeCriador, nomes, maxPassageiros){
   }
 
   if(passageiros.length > limite){
-    return { ok:false, message:'Capacidade máxima atingida (' + CAPACIDADE_MAXIMA + ' pessoas).' };
+    return { ok:false, message:'Capacidade máxima atingida (' + (limite + 1) + ' pessoas).' };
   }
 
   return { ok:true, passageiros:passageiros };
@@ -189,11 +189,11 @@ function getOcupantes(reserva){
 }
 
 function getVagasRestantes(reserva){
-  return Math.max(0, CAPACIDADE_MAXIMA - getOcupantes(reserva));
+  return Math.max(0, getVehicleCapacity(reserva) - getOcupantes(reserva));
 }
 
 function isReservaLotada(reserva){
-  return getOcupantes(reserva) >= CAPACIDADE_MAXIMA;
+  return getOcupantes(reserva) >= getVehicleCapacity(reserva);
 }
 
 function isPassageiro(reserva, nome){
@@ -216,6 +216,7 @@ function horariosCompativeis(h1, h2){
 // que tenham vagas disponíveis e horário de retirada compatível.
 function findReservasCompativeis(partida, destino, dataIda, dataVolta, horarioRetirada, currentUserNome){
   return getReservations().filter(r => {
+    if(isReservationCompleted(r)) return false;
     if(r.partida !== partida) return false;
     if(r.destino !== destino) return false;
     if(r.dataIda !== dataIda) return false;
@@ -230,19 +231,20 @@ function findReservasCompativeis(partida, destino, dataIda, dataVolta, horarioRe
 function renderRideCard(reserva){
   const vagas = getVagasRestantes(reserva);
   const ocupantes = getOcupantes(reserva);
+  const capacidade = getVehicleCapacity(reserva);
   const card = document.createElement('div');
   card.className = 'ride-card';
   card.innerHTML =
     '<div class="ride-info">' +
-      '<div class="ride-route">' + reserva.partida + ' &rarr; ' + reserva.destino + '</div>' +
-      '<span class="reservation-car">Polo final ' + reserva.carro + '</span>' +
-      '<div class="ride-driver">Reservado por: ' + reserva.nome + '</div>' +
+      '<div class="ride-route">' + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
+      '<span class="reservation-car">Polo final ' + escapeHTML(reserva.carro) + '</span>' +
+      '<div class="ride-driver">Reservado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta">' + formatDate(reserva.dataIda) + (reserva.horarioRetirada ? ' às ' + reserva.horarioRetirada : '') + ' até ' + formatDate(reserva.dataVolta) + (reserva.horarioDevolucao ? ' às ' + reserva.horarioDevolucao : '') + '</div>' +
-      '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + ' (' + ocupantes + '/' + CAPACIDADE_MAXIMA + ')</span></div>' +
+      '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + ' (' + ocupantes + '/' + capacidade + ')</span></div>' +
       renderOcupantesHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +
-      '<button type="button" class="join-ride-btn" data-id="' + reserva.id + '">Entrar nessa carona</button>' +
+      '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>' +
     '</div>';
   return card;
 }
@@ -251,7 +253,7 @@ function renderRideCard(reserva){
 // sugestão automática de caronas compatíveis quanto pela aba "Caronas Disponíveis").
 // Retorna { reserva } em caso de sucesso, ou null se a reserva não existir, já
 // estiver lotada ou o usuário já for passageiro/criador dela.
-function addPassengerToReservation(id, user){
+async function addPassengerToReservation(id, user){
   const list = getReservations();
   const idx = list.findIndex(r => String(r.id) === String(id));
   if(idx === -1) return null;
@@ -265,7 +267,14 @@ function addPassengerToReservation(id, user){
 
   reserva.passageiros.push({ nome: user.nome });
   list[idx] = reserva;
-  saveReservations(list);
+  try{
+    await saveReservations(list);
+  }catch(error){
+    await hydrateDatabaseState();
+    alert(error.message);
+    return null;
+  }
+  logAudit('entrou', 'reserva', reserva.id, user.nome + ' entrou na carona de ' + reserva.partida + ' para ' + reserva.destino);
 
   return { reserva: reserva };
 }
@@ -274,7 +283,7 @@ function addPassengerToReservation(id, user){
 // O criador da reserva não pode sair por essa via — apenas excluir a reserva inteira.
 // Retorna { reserva } em caso de sucesso, ou null se a reserva não existir, o usuário for
 // o criador, ou o usuário não for passageiro dela.
-function removePassengerFromReservation(id, user){
+async function removePassengerFromReservation(id, user){
   const list = getReservations();
   const idx = list.findIndex(r => String(r.id) === String(id));
   if(idx === -1) return null;
@@ -287,7 +296,14 @@ function removePassengerFromReservation(id, user){
 
   reserva.passageiros = reserva.passageiros.filter(p => p.nome !== user.nome);
   list[idx] = reserva;
-  saveReservations(list);
+  try{
+    await saveReservations(list);
+  }catch(error){
+    await hydrateDatabaseState();
+    alert(error.message);
+    return null;
+  }
+  logAudit('saiu', 'reserva', reserva.id, user.nome + ' saiu da carona');
 
   return { reserva: reserva };
 }
@@ -321,14 +337,14 @@ function checkAndShowCompatibleRides(){
   ridesSection.classList.remove('hidden');
 }
 
-function joinRide(id){
+async function joinRide(id){
   const currentUser = getCurrentUser();
   if(!currentUser){
     showLogin();
     return;
   }
 
-  const result = addPassengerToReservation(id, currentUser);
+  const result = await addPassengerToReservation(id, currentUser);
   if(!result){
     checkAndShowCompatibleRides();
     return;
@@ -376,7 +392,7 @@ const caronasConfirmationText = document.getElementById('caronasConfirmation-tex
 // Preenche os selects de filtro com "Todos" + todas as cidades cadastradas.
 function populateFiltroOptions(){
   const optionsHtml = '<option value="">Todos</option>' +
-    CIDADES.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+    CIDADES.map(c => '<option value="' + escapeHTML(c) + '">' + escapeHTML(c) + '</option>').join('');
 
   const partidaAtual = filtroPartidaSelect.value;
   const destinoAtual = filtroDestinoSelect.value;
@@ -397,6 +413,7 @@ function getAvailableRidesForCurrentUser(){
   const filtroData = filtroDataInput.value;
 
   return getReservations().filter(r => {
+    if(isReservationCompleted(r)) return false;
     if(isReservaLotada(r)) return false;
     if(currentUser && isPassageiro(r, currentUser.nome)) return false;
     if(filtroPartida && r.partida !== filtroPartida) return false;
@@ -409,21 +426,22 @@ function getAvailableRidesForCurrentUser(){
 function renderAvailableRideCard(reserva){
   const vagas = getVagasRestantes(reserva);
   const ocupantes = getOcupantes(reserva);
+  const capacidade = getVehicleCapacity(reserva);
   const card = document.createElement('div');
   card.className = 'ride-card available-ride-card';
   card.innerHTML =
     '<div class="ride-info">' +
-      '<div class="ride-route">' + reserva.partida + ' &rarr; ' + reserva.destino + '</div>' +
-      '<span class="reservation-car">Polo final ' + reserva.carro + '</span>' +
-      '<div class="ride-driver">Criado por: ' + reserva.nome + '</div>' +
+      '<div class="ride-route">' + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
+      '<span class="reservation-car">Polo final ' + escapeHTML(reserva.carro) + '</span>' +
+      '<div class="ride-driver">Criado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta">Ida: ' + formatDate(reserva.dataIda) + (reserva.horarioRetirada ? ' às ' + reserva.horarioRetirada : '') + '</div>' +
       '<div class="ride-meta">Volta: ' + formatDate(reserva.dataVolta) + (reserva.horarioDevolucao ? ' às ' + reserva.horarioDevolucao : '') + '</div>' +
-      '<div class="ride-occupants-badge">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + CAPACIDADE_MAXIMA + ' ocupantes</span></div>' +
+      '<div class="ride-occupants-badge">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
       '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + '</span></div>' +
       renderOcupantesHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +
-      '<button type="button" class="join-ride-btn" data-id="' + reserva.id + '">Entrar nessa carona</button>' +
+      '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>' +
     '</div>';
   return card;
 }
@@ -466,14 +484,14 @@ availableRidesList.addEventListener('click', function(e){
   openJoinConfirmModal(btn.getAttribute('data-id'), 'available');
 });
 
-function joinRideFromAvailable(id){
+async function joinRideFromAvailable(id){
   const currentUser = getCurrentUser();
   if(!currentUser){
     showLogin();
     return;
   }
 
-  const result = addPassengerToReservation(id, currentUser);
+  const result = await addPassengerToReservation(id, currentUser);
   if(!result){
     renderAvailableRides();
     return;

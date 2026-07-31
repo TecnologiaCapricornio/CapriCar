@@ -6,6 +6,15 @@ function pad2(n){
   return String(n).padStart(2, '0');
 }
 
+function escapeHTML(value){
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function isoFromParts(year, monthIndex, day){
   return year + '-' + pad2(monthIndex + 1) + '-' + pad2(day);
 }
@@ -13,6 +22,20 @@ function isoFromParts(year, monthIndex, day){
 function todayISO(){
   const t = new Date();
   return isoFromParts(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+function addDaysISO(iso, days){
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + Number(days || 0));
+  return isoFromParts(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function daysBetweenInclusive(startISO, endISO){
+  if(!startISO || !endISO || endISO < startISO) return 0;
+  const [sy, sm, sd] = startISO.split('-').map(Number);
+  const [ey, em, ed] = endISO.split('-').map(Number);
+  return Math.floor((Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / 86400000) + 1;
 }
 
 function daysInMonth(year, monthIndex){
@@ -110,6 +133,22 @@ function reservasConflitam(r1, r2){
   return conflita;
 }
 
+function normalizeReservationStatus(status){
+  return String(status || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isReservationCompleted(reservation){
+  if(!reservation) return false;
+  if(reservation.operacao && reservation.operacao.devolucao) return true;
+  return ['concluida', 'cancelada', 'devolvido', 'devolvida'].includes(
+    normalizeReservationStatus(reservation.status)
+  );
+}
+
 // Verifica se uma reserva "candidata" (ainda não salva) conflitaria com as reservas
 // já existentes do mesmo carro (mesma partida + mesmo número de carro). Permite
 // excluir uma reserva pelo id (usado ao editar) — não utilizado atualmente, mas
@@ -117,10 +156,45 @@ function reservasConflitam(r1, r2){
 function findConflictingReservations(partida, carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, excludeId){
   const candidata = { dataIda: dataIda, dataVolta: dataVolta, horarioRetirada: horarioRetirada, horarioDevolucao: horarioDevolucao };
   return getReservations().filter(r => {
+    if(isReservationCompleted(r)) return false;
     if(r.partida !== partida || r.carro !== carro) return false;
     if(excludeId != null && String(r.id) === String(excludeId)) return false;
     return reservasConflitam(candidata, r);
   });
+}
+
+// Usa o identificador da conta nas reservas novas. O nome é mantido como
+// compatibilidade apenas para reservas antigas, criadas antes desse vínculo.
+function isReservationCreator(reservation, user){
+  if(!reservation || !user) return false;
+  if(reservation.criadorUsuarioId && user.id){
+    return String(reservation.criadorUsuarioId) === String(user.id);
+  }
+  return String(reservation.nome || '').trim().toLowerCase() ===
+    String(user.nome || '').trim().toLowerCase();
+}
+
+function reservationPickupStart(reservation){
+  if(!reservation || !reservation.dataIda || !reservation.horarioRetirada) return null;
+  const dateParts = String(reservation.dataIda).split('-').map(Number);
+  const timeParts = String(reservation.horarioRetirada).split(':').map(Number);
+  if(dateParts.length !== 3 || timeParts.length !== 2 ||
+     [...dateParts, ...timeParts].some(value => !Number.isFinite(value))) return null;
+  return new Date(
+    dateParts[0],
+    dateParts[1] - 1,
+    dateParts[2],
+    timeParts[0],
+    timeParts[1],
+    0,
+    0
+  );
+}
+
+function canRegisterPickupNow(reservation, now){
+  const scheduled = reservationPickupStart(reservation);
+  if(!scheduled) return false;
+  return (now instanceof Date ? now : new Date()) >= scheduled;
 }
 
 // Formata a faixa horária ocupada por uma reserva em um dia específico, ex: "07:00 - 10:00".
@@ -150,8 +224,44 @@ function gerarHorarios(){
   return horarios;
 }
 
-function populateHorarioOptions(selectEl){
-  const horarios = gerarHorarios();
-  selectEl.innerHTML = '<option value="">Selecione...</option>' +
+function populateHorarioOptions(selectEl, availableTimes){
+  const previousValue = selectEl.value;
+  const horarios = Array.isArray(availableTimes) ? availableTimes : gerarHorarios();
+  const placeholder = horarios.length ? 'Selecione...' : 'Nenhum horário disponível';
+  selectEl.innerHTML = '<option value="">' + placeholder + '</option>' +
     horarios.map(h => '<option value="' + h + '">' + h + '</option>').join('');
+  selectEl.disabled = horarios.length === 0;
+  selectEl.value = horarios.includes(previousValue) ? previousValue : '';
+}
+
+function getAvailableReservationTimeOptions(partida, carro, dataIda, dataVolta, selectedPickup, excludeId){
+  const horarios = gerarHorarios();
+  if(!partida || !carro || !dataIda || !dataVolta || dataVolta < dataIda){
+    return { pickup:horarios, return:horarios };
+  }
+
+  const validCombinations = [];
+  horarios.forEach(pickup => {
+    if(selectedPickup && pickup !== selectedPickup) return;
+    horarios.forEach(returnTime => {
+      if(dataIda === dataVolta && returnTime <= pickup) return;
+      const conflicts = findConflictingReservations(
+        partida,
+        carro,
+        dataIda,
+        dataVolta,
+        pickup,
+        returnTime,
+        excludeId
+      );
+      if(!conflicts.length){
+        validCombinations.push({ pickup:pickup, return:returnTime });
+      }
+    });
+  });
+
+  return {
+    pickup:[...new Set(validCombinations.map(item => item.pickup))],
+    return:[...new Set(validCombinations.map(item => item.return))]
+  };
 }

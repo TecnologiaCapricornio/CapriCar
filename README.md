@@ -1,54 +1,32 @@
-# CapriCar — versão modular
+# CapriCar
 
-O projeto foi reorganizado sem alterar a lógica funcional do sistema.
+Sistema interno de reservas e gestão de veículos corporativos.
 
-## Estrutura
+## Início rápido
+
+```powershell
+npm install
+npm run db:migrate
+npm run db:seed
+npm start
+```
+
+A aplicação fica disponível em:
 
 ```text
-capricar/
-├── index.html
-├── assets/
-│   ├── logo.png
-│   └── bg.jpg
-├── css/
-│   ├── variables.css
-│   ├── base.css
-│   ├── components.css
-│   ├── calendar.css
-│   ├── admin.css
-│   └── responsive.css
-└── js/
-    ├── app.js
-    ├── config.js
-    ├── storage.js
-    ├── auth.js
-    ├── reservations.js
-    ├── rides.js
-    ├── calendar.js
-    ├── admin.js
-    ├── modals.js
-    └── utils.js
+http://localhost:3000
 ```
 
-## Responsabilidade dos arquivos JavaScript
+Antes de iniciar, copie `.env.example` para `.env` e configure o PostgreSQL.
 
-- `config.js`: constantes, filiais, veículos, capacidade e textos fixos.
-- `utils.js`: datas, horários, formatação e detecção de conflitos.
-- `storage.js`: leitura e gravação das reservas no `localStorage`.
-- `auth.js`: login, logout, perfil e navegação entre abas.
-- `reservations.js`: formulário, validação e gerenciamento das reservas do usuário.
-- `rides.js`: passageiros, ocupantes e caronas disponíveis.
-- `calendar.js`: calendário mensal e seleção de veículos.
-- `admin.js`: filtros, criação, edição e exclusão administrativa.
-- `modals.js`: confirmações, reserva rápida e seletor visual de datas.
-- `app.js`: inicialização final da aplicação.
+## Documentação
 
-## Execução
+- [Documentação técnica e operacional](docs/DOCUMENTACAO_TECNICA.md)
+- [Backup e restauração](BACKUP.md)
+- [Transferência para outro computador](INSTRUCOES_TRANSFERENCIA.md)
 
-Abra o `index.html` em um navegador moderno. Para um ambiente mais próximo de produção, sirva a pasta com um servidor local, por exemplo:
+## Testes
 
-```bash
-python -m http.server 8000
+```powershell
+npm test
 ```
-
-Depois acesse `http://localhost:8000`.

@@ -8,6 +8,9 @@ const adminFiltroData = document.getElementById('adminFiltroData');
 const adminSummary = document.getElementById('adminSummary');
 const adminReservationsList = document.getElementById('adminReservationsList');
 const adminNovaReservaBtn = document.getElementById('adminNovaReservaBtn');
+const adminReservationViewButtons = document.querySelectorAll('[data-admin-reservation-view]');
+const adminActiveReservationsCount = document.getElementById('adminActiveReservationsCount');
+const adminCompletedReservationsCount = document.getElementById('adminCompletedReservationsCount');
 
 const adminReservaModal = document.getElementById('adminReservaModal');
 const adminReservaCloseBtn = document.getElementById('adminReservaCloseBtn');
@@ -23,14 +26,22 @@ const aDataIdaInput = document.getElementById('aDataIda');
 const aDataVoltaInput = document.getElementById('aDataVolta');
 const aHorarioRetiradaSelect = document.getElementById('aHorarioRetirada');
 const aHorarioDevolucaoSelect = document.getElementById('aHorarioDevolucao');
+const aMotivoInput = document.getElementById('aMotivo');
+const aResponsavelInput = document.getElementById('aResponsavel');
 const aPassageirosWidget = createPassengerListWidget('aPassageirosListContainer');
 const adminOcupantesPanel = document.getElementById('adminOcupantesPanel');
 const aLegadoAvisoBox = document.getElementById('aLegadoAvisoBox');
 const aLegadoAvisoTexto = document.getElementById('aLegadoAvisoTexto');
 const aConverterLegadoBtn = document.getElementById('aConverterLegadoBtn');
+const adminReservationBackBtn = document.getElementById('adminReservationBackBtn');
+const adminReservationNextBtn = document.getElementById('adminReservationNextBtn');
+const adminReservationStepLabel = document.getElementById('adminReservationStepLabel');
 let aLegadoPendente = 0; // qtd de passageirosConfirmados (legado) ainda não convertidos nesta edição
 
 let adminEditingId = null; // null = modo criação ("Nova reserva como admin")
+let reservationEditMode = 'admin';
+let adminMobileReservationStep = 1;
+let adminReservationsView = 'active';
 
 populateHorarioOptions(aHorarioRetiradaSelect);
 populateHorarioOptions(aHorarioDevolucaoSelect);
@@ -70,11 +81,11 @@ function getAdminDestinoValue(){
 
 function populateAdminCarroOptions(){
   const partida = aPartidaSelect.value;
-  const carros = CARROS_POR_FILIAL[partida] || [];
+  const carros = getVehicles().filter(v => v.ativo !== false && v.filial === partida);
   const currentCarro = aCarroSelect.value;
   aCarroSelect.innerHTML = '<option value="">Selecione...</option>' +
-    carros.map(c => '<option value="' + c + '">Polo final ' + c + '</option>').join('');
-  if(carros.includes(currentCarro)){
+    carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(v.modelo || 'Veículo') + ' · ' + escapeHTML(v.codigo) + (v.placa ? ' · ' + escapeHTML(v.placa) : '') + '</option>').join('');
+  if(carros.some(v => String(v.codigo) === String(currentCarro))){
     aCarroSelect.value = currentCarro;
   }
 }
@@ -97,13 +108,123 @@ function setAdminFieldError(fieldId, message){
 }
 
 function clearAdminFieldErrors(){
-  ['Nome','Partida','Destino','Carro','DataIda','DataVolta','HorarioRetirada','HorarioDevolucao','PassageirosConfirmados'].forEach(suffix => {
+  ['Nome','Partida','Destino','Carro','DataIda','DataVolta','HorarioRetirada','HorarioDevolucao','PassageirosConfirmados','Motivo','Responsavel'].forEach(suffix => {
     const errorEl = document.getElementById('error-a' + suffix);
     if(errorEl) errorEl.textContent = '';
   });
   document.querySelectorAll('#adminReservaForm .field').forEach(f => f.classList.remove('invalid'));
   setAdminError('');
 }
+
+function showAdminMobileReservationStep(step, shouldScroll){
+  adminMobileReservationStep = Math.max(1, Math.min(3, Number(step) || 1));
+  adminReservaForm.setAttribute('data-mobile-step', String(adminMobileReservationStep));
+  document.querySelectorAll('#adminReservationProgress [data-admin-progress-step]').forEach(item => {
+    item.classList.toggle(
+      'active',
+      Number(item.getAttribute('data-admin-progress-step')) === adminMobileReservationStep
+    );
+  });
+  adminReservationBackBtn.disabled = adminMobileReservationStep === 1;
+  adminReservationStepLabel.textContent = 'Etapa ' + adminMobileReservationStep + ' de 3';
+  if(shouldScroll && isMobileReservationWizard()){
+    adminReservaModal.querySelector('.modal-card').scrollTo({ top:0, behavior:'smooth' });
+  }
+}
+
+function validateAdminMobileReservationStep(step){
+  if(step === 1){
+    ['nome','partida','destino','carro'].forEach(id => setAdminFieldError(id, ''));
+    let valid = true;
+    const nome = aNomeInput.value.trim();
+    const partida = aPartidaSelect.value;
+    const destino = getAdminDestinoValue();
+    if(!nome){ setAdminFieldError('nome', 'Informe o nome do responsável.'); valid = false; }
+    if(!partida){ setAdminFieldError('partida', 'Selecione a filial de partida.'); valid = false; }
+    if(!destino){ setAdminFieldError('destino', 'Selecione ou informe o destino.'); valid = false; }
+    if(destino && partida && destino === partida){
+      setAdminFieldError('destino', 'O destino deve ser diferente da partida.');
+      valid = false;
+    }
+    if(!aCarroSelect.value){ setAdminFieldError('carro', 'Selecione o carro.'); valid = false; }
+    return valid;
+  }
+
+  if(step === 2){
+    ['dataIda','dataVolta','horarioRetirada','horarioDevolucao'].forEach(id => setAdminFieldError(id, ''));
+    setAdminError('');
+    let valid = true;
+    const dataIda = aDataIdaInput.value;
+    const dataVolta = aDataVoltaInput.value;
+    const retirada = aHorarioRetiradaSelect.value;
+    const devolucao = aHorarioDevolucaoSelect.value;
+    if(!dataIda){ setAdminFieldError('dataIda', 'Informe a data de ida.'); valid = false; }
+    if(!dataVolta){ setAdminFieldError('dataVolta', 'Informe a data de volta.'); valid = false; }
+    if(!retirada){ setAdminFieldError('horarioRetirada', 'Selecione o horário de retirada.'); valid = false; }
+    if(!devolucao){ setAdminFieldError('horarioDevolucao', 'Selecione o horário de devolução.'); valid = false; }
+    if(dataIda && dataVolta && dataVolta < dataIda){
+      setAdminFieldError('dataVolta', 'A data de volta deve ser igual ou posterior à data de ida.');
+      valid = false;
+    }
+    if(dataIda && dataVolta && dataIda === dataVolta && retirada && devolucao && devolucao <= retirada){
+      setAdminFieldError('horarioDevolucao', 'O horário de devolução deve ser após o horário de retirada.');
+      valid = false;
+    }
+    if(dataIda && dataVolta){
+      const ruleValidation = validateReservationRules(
+        aNomeInput.value.trim(),
+        dataIda,
+        dataVolta,
+        adminEditingId
+      );
+      if(!ruleValidation.ok){
+        setAdminFieldError(ruleValidation.field, ruleValidation.message);
+        valid = false;
+      }
+    }
+    if(valid){
+      const conflicts = findConflictingReservations(
+        aPartidaSelect.value,
+        aCarroSelect.value,
+        dataIda,
+        dataVolta,
+        retirada,
+        devolucao,
+        adminEditingId
+      );
+      if(conflicts.length){
+        setAdminError('Este carro já está reservado neste horário. ' + buildConflictMessage(conflicts));
+        valid = false;
+      }
+      const blocks = findVehicleBlocks(
+        aPartidaSelect.value,
+        aCarroSelect.value,
+        dataIda,
+        dataVolta,
+        null
+      );
+      if(blocks.length){
+        setAdminError('Veículo indisponível no período selecionado.');
+        valid = false;
+      }
+    }
+    return valid;
+  }
+  return true;
+}
+
+adminReservationBackBtn.addEventListener('click', function(){
+  if(!isMobileReservationWizard()) return;
+  showAdminMobileReservationStep(adminMobileReservationStep - 1, true);
+});
+
+adminReservationNextBtn.addEventListener('click', function(){
+  if(!isMobileReservationWizard()) return;
+  if(!validateAdminMobileReservationStep(adminMobileReservationStep)) return;
+  showAdminMobileReservationStep(adminMobileReservationStep + 1, true);
+});
+
+showAdminMobileReservationStep(1, false);
 
 // Renderiza o painel de ocupantes dentro do modal admin: somente leitura.
 // A edição de passageiros (adicionar/remover/renomear) é feita exclusivamente
@@ -118,12 +239,15 @@ function renderAdminOcupantesPanel(reserva){
 }
 
 // Abre o modal admin. Se reservaId for null, abre em modo criação (nome livre).
-function openAdminReservaModal(reservaId){
+function openAdminReservaModal(reservaId, mode){
   adminEditingId = reservaId;
+  reservationEditMode = mode || 'admin';
+  if(reservationEditMode !== 'self' && !canManageReservations()) return;
   clearAdminFieldErrors();
 
   if(reservaId == null){
-    adminReservaTitle.textContent = 'Nova reserva (como admin)';
+    adminReservaTitle.textContent = isAdmin() ? 'Nova reserva (como admin)' :
+      (isFacilities() ? 'Nova reserva (Facilities)' : 'Nova reserva (gestão)');
     aNomeInput.value = '';
     aNomeInput.disabled = false;
     aPartidaSelect.value = '';
@@ -135,6 +259,8 @@ function openAdminReservaModal(reservaId){
     aDataVoltaInput.value = '';
     aHorarioRetiradaSelect.value = '';
     aHorarioDevolucaoSelect.value = '';
+    aMotivoInput.value = '';
+    aResponsavelInput.value = '';
     aPassageirosWidget.clear();
     aLegadoPendente = 0;
     aLegadoAvisoBox.classList.add('hidden');
@@ -142,9 +268,11 @@ function openAdminReservaModal(reservaId){
   } else {
     const reserva = getReservations().find(r => String(r.id) === String(reservaId));
     if(!reserva) return;
-    adminReservaTitle.textContent = 'Editar reserva';
+    const currentUser = getCurrentUser();
+    if(reservationEditMode === 'self' && (!currentUser || reserva.nome !== currentUser.nome || (reserva.operacao && reserva.operacao.retirada))) return;
+    adminReservaTitle.textContent = reservationEditMode === 'self' ? 'Editar minha reserva' : 'Editar reserva';
     aNomeInput.value = reserva.nome;
-    aNomeInput.disabled = false;
+    aNomeInput.disabled = reservationEditMode === 'self';
     aPartidaSelect.value = reserva.partida;
     populateAdminCarroOptions();
     aCarroSelect.value = reserva.carro;
@@ -161,6 +289,8 @@ function openAdminReservaModal(reservaId){
     aDataVoltaInput.value = reserva.dataVolta;
     aHorarioRetiradaSelect.value = reserva.horarioRetirada || '';
     aHorarioDevolucaoSelect.value = reserva.horarioDevolucao || '';
+    aMotivoInput.value = reserva.motivo || '';
+    aResponsavelInput.value = reserva.responsavel || reserva.nome || '';
     // Pré-preenche o widget com os passageiros nomeados atuais, exceto o criador
     // (que continua sem botão de remover — não faz parte da lista editável).
     const nomeadosSemCriador = getPassageiros(reserva).filter(p => p.nome !== reserva.nome).map(p => p.nome);
@@ -175,12 +305,19 @@ function openAdminReservaModal(reservaId){
     renderAdminOcupantesPanel(reserva);
   }
 
+  showAdminMobileReservationStep(1, false);
   adminReservaModal.classList.remove('hidden');
+}
+
+function openSelfEditReservation(reservaId){
+  openAdminReservaModal(reservaId, 'self');
 }
 
 function closeAdminReservaModal(){
   adminReservaModal.classList.add('hidden');
   adminEditingId = null;
+  reservationEditMode = 'admin';
+  showAdminMobileReservationStep(1, false);
 }
 
 adminReservaCloseBtn.addEventListener('click', closeAdminReservaModal);
@@ -189,7 +326,7 @@ adminReservaModal.addEventListener('click', function(e){
 });
 
 adminNovaReservaBtn.addEventListener('click', function(){
-  openAdminReservaModal(null);
+  openAdminReservaModal(null, 'admin');
 });
 
 // "Converter em nomes": adiciona N linhas vazias ao widget (uma para cada
@@ -203,9 +340,12 @@ aConverterLegadoBtn.addEventListener('click', function(){
   aLegadoAvisoBox.classList.add('hidden');
 });
 
-adminReservaForm.addEventListener('submit', function(e){
+adminReservaForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  if(!isAdmin()) return;
+  const currentUser = getCurrentUser();
+  const editing = getReservations().find(r => String(r.id) === String(adminEditingId));
+  const canSelfEdit = reservationEditMode === 'self' && editing && currentUser && editing.nome === currentUser.nome && !(editing.operacao && editing.operacao.retirada);
+  if(!canManageReservations() && !canSelfEdit) return;
 
   clearAdminFieldErrors();
 
@@ -217,7 +357,10 @@ adminReservaForm.addEventListener('submit', function(e){
   const dataVolta = aDataVoltaInput.value;
   const horarioRetirada = aHorarioRetiradaSelect.value;
   const horarioDevolucao = aHorarioDevolucaoSelect.value;
-  const validacaoPassageiros = validarListaPassageiros(nome, aPassageirosWidget.getNomes());
+  const motivo = aMotivoInput.value.trim();
+  const responsavel = aResponsavelInput.value.trim();
+  const vehicle = getVehicle(partida, carro);
+  const validacaoPassageiros = validarListaPassageiros(nome, aPassageirosWidget.getNomes(), Math.max(0, Number(vehicle && vehicle.capacidade ? vehicle.capacidade : CAPACIDADE_MAXIMA) - 1));
 
   let valid = true;
   if(!nome){ setAdminFieldError('nome', 'Informe o nome do responsável.'); valid = false; }
@@ -230,22 +373,50 @@ adminReservaForm.addEventListener('submit', function(e){
   if(dataIda && dataVolta && dataVolta < dataIda){ setAdminFieldError('dataVolta', 'A data de volta deve ser igual ou posterior à data de ida.'); valid = false; }
   if(!horarioRetirada){ setAdminFieldError('horarioRetirada', 'Selecione o horário de retirada.'); valid = false; }
   if(!horarioDevolucao){ setAdminFieldError('horarioDevolucao', 'Selecione o horário de devolução.'); valid = false; }
+  if(!motivo){ setAdminFieldError('motivo', 'Informe o motivo da viagem.'); valid = false; }
+  if(!responsavel){ setAdminFieldError('responsavel', 'Informe o responsável pela viagem.'); valid = false; }
   if(dataIda && dataVolta && dataIda === dataVolta && horarioRetirada && horarioDevolucao && horarioDevolucao <= horarioRetirada){
     setAdminFieldError('horarioDevolucao', 'O horário de devolução deve ser após o horário de retirada.');
     valid = false;
+  }
+  if(nome && dataIda && dataVolta){
+    const ruleValidation = validateReservationRules(nome, dataIda, dataVolta, adminEditingId);
+    if(!ruleValidation.ok){
+      setAdminFieldError(ruleValidation.field, ruleValidation.message);
+      valid = false;
+    }
   }
   if(nome && !validacaoPassageiros.ok){
     setAdminFieldError('passageirosConfirmados', validacaoPassageiros.message);
     valid = false;
   }
 
-  if(!valid) return;
+  if(!valid){
+    if(isMobileReservationWizard()){
+      const stepOneHasError = ['Nome','Partida','Destino','Carro'].some(suffix =>
+        document.getElementById('error-a' + suffix).textContent
+      );
+      const stepTwoHasError = ['DataIda','DataVolta','HorarioRetirada','HorarioDevolucao'].some(suffix =>
+        document.getElementById('error-a' + suffix).textContent
+      );
+      if(stepOneHasError) showAdminMobileReservationStep(1, true);
+      else if(stepTwoHasError) showAdminMobileReservationStep(2, true);
+    }
+    return;
+  }
 
   // Revalida conflito de horário com outras reservas do mesmo carro (exclui a própria reserva em edição).
   const conflitos = findConflictingReservations(partida, carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, adminEditingId);
   if(conflitos.length > 0){
     const msg = 'Este carro já está reservado neste horário. ' + buildConflictMessage(conflitos);
     setAdminError(msg);
+    if(isMobileReservationWizard()) showAdminMobileReservationStep(2, true);
+    return;
+  }
+  const bloqueios = findVehicleBlocks(partida, carro, dataIda, dataVolta, null);
+  if(bloqueios.length > 0){
+    setAdminError('Veículo indisponível: ' + bloqueios.map(b => b.tipo + ' (' + formatDate(b.dataInicio) + ' a ' + formatDate(b.dataFim) + ')').join('; '));
+    if(isMobileReservationWizard()) showAdminMobileReservationStep(2, true);
     return;
   }
 
@@ -263,11 +434,22 @@ adminReservaForm.addEventListener('submit', function(e){
       dataVolta: dataVolta,
       horarioRetirada: horarioRetirada,
       horarioDevolucao: horarioDevolucao,
+      motivo: motivo,
+      responsavel: responsavel,
+      status: 'confirmada',
+      criadoEm: new Date().toISOString(),
       passageiros: [{ nome: nome }].concat(validacaoPassageiros.passageiros),
       passageirosConfirmados: 0
     };
     list.push(reserva);
-    saveReservations(list);
+    try{
+      await saveReservations(list);
+    }catch(error){
+      await hydrateDatabaseState();
+      setAdminError(error.message);
+      return;
+    }
+    logAudit('criou', 'reserva', reserva.id, reserva.partida + ' → ' + reserva.destino + ' · criada pela gestão');
   } else {
     const idx = list.findIndex(r => String(r.id) === String(adminEditingId));
     if(idx === -1){ setAdminError('Reserva não encontrada.'); return; }
@@ -280,13 +462,23 @@ adminReservaForm.addEventListener('submit', function(e){
     reserva.dataVolta = dataVolta;
     reserva.horarioRetirada = horarioRetirada;
     reserva.horarioDevolucao = horarioDevolucao;
+    reserva.motivo = motivo;
+    reserva.responsavel = responsavel;
+    reserva.editadoEm = new Date().toISOString();
     // O widget é a única fonte de verdade dos passageiros no modal admin: o que
     // estiver nele no momento de Salvar substitui a lista anterior por completo
     // (evita ressurreição/duplicação em relação a edições feitas em outra aba).
     reserva.passageiros = [{ nome: nome }].concat(validacaoPassageiros.passageiros);
     reserva.passageirosConfirmados = aLegadoPendente;
     list[idx] = reserva;
-    saveReservations(list);
+    try{
+      await saveReservations(list);
+    }catch(error){
+      await hydrateDatabaseState();
+      setAdminError(error.message);
+      return;
+    }
+    logAudit('editou', 'reserva', reserva.id, reserva.partida + ' → ' + reserva.destino);
   }
 
   closeAdminReservaModal();
@@ -300,7 +492,7 @@ adminReservaForm.addEventListener('submit', function(e){
 function populateAdminFilters(){
   const filiais = CIDADES;
   adminFiltroFilial.innerHTML = '<option value="">Todas</option>' +
-    filiais.map(f => '<option value="' + f + '">' + f + '</option>').join('');
+    filiais.map(f => '<option value="' + escapeHTML(f) + '">' + escapeHTML(f) + '</option>').join('');
   const todosCarros = [];
   filiais.forEach(f => (CARROS_POR_FILIAL[f] || []).forEach(c => todosCarros.push(c)));
   adminFiltroCarro.innerHTML = '<option value="">Todos</option>' +
@@ -310,25 +502,41 @@ populateAdminFilters();
 
 function renderAdminReservationItem(res){
   const ocupantes = getOcupantes(res);
+  const capacidade = getVehicleCapacity(res);
+  const completed = isReservationCompleted(res);
+  const operacao = res.operacao || {};
+  const statusClass = completed
+    ? 'status-completed'
+    : (operacao.retirada ? 'status-in-use' : 'status-waiting');
+  const statusLabel = completed
+    ? 'Concluída'
+    : (operacao.retirada ? 'Em uso' : 'Confirmada');
   const item = document.createElement('div');
-  item.className = 'reservation-item';
+  item.className = 'reservation-item' + (completed ? ' reservation-history-item' : '');
   item.innerHTML =
     '<div class="reservation-info">' +
-      '<div class="reservation-route">' + res.partida + ' &rarr; ' + res.destino + '</div>' +
-      '<span class="reservation-car">Polo final ' + res.carro + '</span>' +
+      '<div class="reservation-card-top">' +
+        '<div>' +
+          '<div class="reservation-route">' + escapeHTML(res.partida) + ' &rarr; ' + escapeHTML(res.destino) + '</div>' +
+          '<span class="reservation-car">Polo final ' + escapeHTML(res.carro) + '</span>' +
+        '</div>' +
+        '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
+      '</div>' +
       '<div class="reservation-details">' + formatDate(res.dataIda) + (res.horarioRetirada ? ' às ' + res.horarioRetirada : '') + ' até ' + formatDate(res.dataVolta) + (res.horarioDevolucao ? ' às ' + res.horarioDevolucao : '') + '</div>' +
       '<div class="reservation-name">Responsável: ' + escapeHtml(res.nome) + '</div>' +
-      '<div class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + CAPACIDADE_MAXIMA + ' ocupantes</span></div>' +
+      '<div class="reservation-business">' + escapeHTML(res.motivo || 'Motivo não informado') + '</div>' +
+      '<div class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
+      renderOperationDetails(res) +
     '</div>' +
     '<div class="reservation-actions">' +
-      '<button type="button" class="submit-btn admin-edit-btn" data-id="' + res.id + '">Editar</button>' +
-      '<button class="delete-btn admin-delete-btn" data-id="' + res.id + '">Excluir</button>' +
+      (!completed ? '<button type="button" class="submit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
+      (!completed && !operacao.retirada ? '<button class="delete-btn admin-delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '') +
     '</div>';
   return item;
 }
 
 function renderAdminTab(){
-  if(!isAdmin()) return;
+  if(!canManageReservations()) return;
 
   const filialFiltro = adminFiltroFilial.value;
   const carroFiltro = adminFiltroCarro.value;
@@ -339,34 +547,69 @@ function renderAdminTab(){
   if(carroFiltro) list = list.filter(r => r.carro === carroFiltro);
   if(dataFiltro) list = list.filter(r => dataFiltro >= r.dataIda && dataFiltro <= r.dataVolta);
 
+  const activeList = list.filter(r => !isReservationCompleted(r));
+  const completedList = list.filter(isReservationCompleted);
+  adminActiveReservationsCount.textContent = String(activeList.length);
+  adminCompletedReservationsCount.textContent = String(completedList.length);
+  adminReservationViewButtons.forEach(button => {
+    button.classList.toggle(
+      'active',
+      button.getAttribute('data-admin-reservation-view') === adminReservationsView
+    );
+  });
+  list = adminReservationsView === 'completed' ? completedList : activeList;
+
   const todas = getReservations();
   const totalReservas = todas.length;
   let vagasOcupadas = 0;
+  let capacidadeTotal = 0;
   todas.forEach(r => { vagasOcupadas += getOcupantes(r); });
-  const vagasLivres = Math.max(0, (totalReservas * CAPACIDADE_MAXIMA) - vagasOcupadas);
+  todas.forEach(r => { capacidadeTotal += getVehicleCapacity(r); });
+  const vagasLivres = Math.max(0, capacidadeTotal - vagasOcupadas);
   adminSummary.textContent = 'Total de reservas: ' + totalReservas + ' · Vagas ocupadas: ' + vagasOcupadas + ' · Vagas livres: ' + vagasLivres;
 
   if(list.length === 0){
-    adminReservationsList.innerHTML = '<div class="empty-state">Nenhuma reserva encontrada.</div>';
+    adminReservationsList.innerHTML = '<div class="empty-state">' +
+      (adminReservationsView === 'completed'
+        ? 'Nenhuma reserva concluída encontrada.'
+        : 'Nenhuma reserva ativa encontrada.') +
+      '</div>';
     return;
   }
 
   adminReservationsList.innerHTML = '';
-  list.slice().reverse().forEach(res => {
+  list.slice().sort((a, b) => {
+    const aDate = String(a.dataIda || '') + 'T' + String(a.horarioRetirada || '');
+    const bDate = String(b.dataIda || '') + 'T' + String(b.horarioRetirada || '');
+    return adminReservationsView === 'completed'
+      ? bDate.localeCompare(aDate)
+      : aDate.localeCompare(bDate);
+  }).forEach(res => {
     adminReservationsList.appendChild(renderAdminReservationItem(res));
   });
 
-  adminReservationsList.querySelectorAll('.admin-edit-btn').forEach(btn => {
-    btn.addEventListener('click', function(){
+adminReservationsList.querySelectorAll('.admin-edit-btn').forEach(btn => {
+    btn.addEventListener('click', async function(){
+      if(!canManageReservations()) return;
       openAdminReservaModal(this.getAttribute('data-id'));
     });
   });
   adminReservationsList.querySelectorAll('.admin-delete-btn').forEach(btn => {
-    btn.addEventListener('click', function(){
+    btn.addEventListener('click', async function(){
+      if(!canManageReservations()) return;
       if(!confirm('Tem certeza que deseja excluir esta reserva?')) return;
       const id = this.getAttribute('data-id');
+      const old = getReservations().find(r => String(r.id) === String(id));
       const updated = getReservations().filter(r => String(r.id) !== String(id));
-      saveReservations(updated);
+      try{
+        await saveReservations(updated);
+      }catch(error){
+        await hydrateDatabaseState();
+        alert(error.message);
+        renderAdminTab();
+        return;
+      }
+      logAudit('cancelou', 'reserva', id, old ? old.partida + ' → ' + old.destino + ' · cancelada pela gestão' : 'Reserva cancelada');
       renderAdminTab();
       renderMyReservations();
       renderMainCalendar();
@@ -379,3 +622,11 @@ function renderAdminTab(){
 adminFiltroFilial.addEventListener('change', renderAdminTab);
 adminFiltroCarro.addEventListener('change', renderAdminTab);
 adminFiltroData.addEventListener('change', renderAdminTab);
+adminReservationViewButtons.forEach(button => {
+  button.addEventListener('click', function(){
+    adminReservationsView = this.getAttribute('data-admin-reservation-view') === 'completed'
+      ? 'completed'
+      : 'active';
+    renderAdminTab();
+  });
+});

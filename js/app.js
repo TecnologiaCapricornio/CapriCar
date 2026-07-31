@@ -2,9 +2,16 @@
 /* =========================================================
    Inicialização: login persistido ou tela de login
    ========================================================= */
-const existingUser = getCurrentUser();
-if(existingUser && existingUser.nome){
-  showApp(existingUser);
-} else {
-  showLogin();
-}
+(async function initializeApplication(){
+  try{
+    const session = await apiRequest('/api/auth/me');
+    const user = accountToSession(session.user);
+    setCurrentUser(user);
+    await hydrateDatabaseState();
+    showApp(user);
+  }catch(error){
+    databaseHydrated = false;
+    clearCurrentUser();
+    showLogin();
+  }
+})();

@@ -2,17 +2,19 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#10253f">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>CapriCar | Reserva de Carros Corporativos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/variables.css">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/components.css">
-<link rel="stylesheet" href="css/calendar.css">
-<link rel="stylesheet" href="css/admin.css">
-<link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="css/variables.css?v=20260729-2">
+<link rel="stylesheet" href="css/base.css?v=20260730-2">
+<link rel="stylesheet" href="css/components.css?v=20260730-7">
+<link rel="stylesheet" href="css/calendar.css?v=20260730-9">
+<link rel="stylesheet" href="css/admin.css?v=20260729-7">
+<link rel="stylesheet" href="css/responsive.css?v=20260730-3">
 </head>
 <body>
 
@@ -50,12 +52,20 @@
       </div>
     </div>
 
-    <nav class="tabs" id="tabsNav">
-      <button type="button" class="tab-btn active" data-tab="nova">Nova Reserva</button>
-      <button type="button" class="tab-btn" data-tab="calendario">Calendário</button>
-      <button type="button" class="tab-btn" data-tab="minhas">Minhas Reservas</button>
-      <button type="button" class="tab-btn" data-tab="caronas">Caronas Disponíveis</button>
-      <button type="button" class="tab-btn hidden" data-tab="admin" id="adminTabBtn">Admin</button>
+    <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-expanded="false" aria-controls="tabsNav">
+      <span class="mobile-nav-toggle-copy">
+        <small>Navegação</small>
+        <strong id="mobileNavCurrent">Minhas Reservas</strong>
+      </span>
+      <span class="mobile-nav-chevron" aria-hidden="true">⌄</span>
+    </button>
+
+    <nav class="tabs mobile-collapsed" id="tabsNav">
+      <button type="button" class="tab-btn active" data-tab="minhas" data-mobile-label="Minhas Reservas">Minhas Reservas</button>
+      <button type="button" class="tab-btn" data-tab="caronas" data-mobile-label="Caronas">Caronas Disponíveis</button>
+      <button type="button" class="tab-btn" data-tab="calendario" data-mobile-label="Calendário">Calendário</button>
+      <button type="button" class="tab-btn" data-tab="nova" data-mobile-label="Nova Reserva">Nova Reserva</button>
+      <button type="button" class="tab-btn hidden" data-tab="admin" data-mobile-label="Admin" id="adminTabBtn">Admin</button>
     </nav>
 
     <div class="header-right">
@@ -69,12 +79,18 @@
   <main>
 
     <!-- ---- Nova Reserva ---- -->
-    <section class="tab-panel" id="panel-nova">
+    <section class="tab-panel hidden" id="panel-nova">
       <div class="card">
         <h2>Nova Reserva</h2>
         <div class="form-hint" id="solicitanteHint"></div>
         <form id="reservaForm" novalidate>
-          <div class="row">
+          <div class="mobile-reservation-progress" id="mobileReservationProgress" aria-label="Progresso da reserva">
+            <span class="active" data-progress-step="1"><strong>1</strong> Trajeto</span>
+            <span data-progress-step="2"><strong>2</strong> Data e horário</span>
+            <span data-progress-step="3"><strong>3</strong> Detalhes</span>
+          </div>
+
+          <div class="row mobile-reservation-step" data-reservation-step="1">
             <div class="field" id="field-partida">
               <label for="partida">Local de Partida</label>
               <select id="partida" name="partida">
@@ -100,7 +116,7 @@
             </div>
           </div>
 
-          <div class="field hidden" id="field-carro">
+          <div class="field hidden mobile-reservation-step" id="field-carro" data-reservation-step="1">
             <label for="carro">Carro (Por localização) </label>
             <select id="carro" name="carro">
               <option value="">Selecione...</option>
@@ -108,15 +124,41 @@
             <div class="error-msg" id="error-carro"></div>
           </div>
 
-          <div class="row">
-            <div class="field" id="field-dataIda">
-              <label for="dataIda">Data de Ida</label>
-              <div class="date-input-wrapper" id="wrap-dataIda">
-                <input type="date" id="dataIda" name="dataIda" readonly autocomplete="off">
-              </div>
-              <div class="error-msg" id="error-dataIda"></div>
-            </div>
+          <div class="field mobile-reservation-step" id="field-motivo" data-reservation-step="3">
+            <label for="motivo">Motivo da viagem</label>
+            <textarea id="motivo" name="motivo" rows="3" placeholder="Descreva brevemente o objetivo da viagem"></textarea>
+            <div class="error-msg" id="error-motivo"></div>
+          </div>
 
+          <div class="field mobile-reservation-step" id="field-responsavel" data-reservation-step="3">
+            <label for="responsavel">Responsável pela viagem</label>
+            <input type="text" id="responsavel" name="responsavel" placeholder="Nome do responsável">
+            <div class="error-msg" id="error-responsavel"></div>
+          </div>
+
+          <div class="field range-picker-field mobile-reservation-step" id="field-dataIda" data-reservation-step="2">
+            <label for="rangePickerTrigger">Período da reserva</label>
+            <button type="button" class="range-picker-trigger" id="rangePickerTrigger" aria-expanded="false">
+              <span class="range-picker-value">
+                <span class="range-picker-caption">Ida</span>
+                <strong id="rangeStartLabel">Selecionar data</strong>
+              </span>
+              <span class="range-picker-arrow">→</span>
+              <span class="range-picker-value">
+                <span class="range-picker-caption">Volta</span>
+                <strong id="rangeEndLabel">Selecionar data</strong>
+              </span>
+              <span class="range-picker-icon" aria-hidden="true">▦</span>
+            </button>
+            <input type="hidden" id="dataIda" name="dataIda">
+            <input type="hidden" id="dataVolta" name="dataVolta">
+            <div class="reservation-range-calendar hidden" id="reservationRangeCalendar"></div>
+            <div class="range-picker-hint" id="rangePickerHint">Selecione a data de ida e depois a data de volta.</div>
+            <div class="error-msg" id="error-dataIda"></div>
+            <div class="error-msg" id="error-dataVolta"></div>
+          </div>
+
+          <div class="row mobile-reservation-step" data-reservation-step="2">
             <div class="field" id="field-horarioRetirada">
               <label for="horarioRetirada">Horário de Retirada</label>
               <select id="horarioRetirada" name="horarioRetirada">
@@ -124,17 +166,6 @@
               </select>
               <div class="error-msg" id="error-horarioRetirada"></div>
             </div>
-          </div>
-
-          <div class="row">
-            <div class="field" id="field-dataVolta">
-              <label for="dataVolta">Data de Volta</label>
-              <div class="date-input-wrapper" id="wrap-dataVolta">
-                <input type="date" id="dataVolta" name="dataVolta" readonly autocomplete="off">
-              </div>
-              <div class="error-msg" id="error-dataVolta"></div>
-            </div>
-
             <div class="field" id="field-horarioDevolucao">
               <label for="horarioDevolucao">Horário de Devolução</label>
               <select id="horarioDevolucao" name="horarioDevolucao">
@@ -144,13 +175,19 @@
             </div>
           </div>
 
-          <div class="field" id="field-passageirosConfirmados">
+          <div class="field mobile-reservation-step" id="field-passageirosConfirmados" data-reservation-step="3">
             <label>Passageiros que vão com você</label>
             <div id="passageirosListContainer"></div>
             <div class="error-msg" id="error-passageirosConfirmados"></div>
           </div>
 
-          <button type="submit" class="submit-btn">
+          <div class="mobile-wizard-actions">
+            <button type="button" class="secondary-btn" id="mobileReservationBackBtn">Voltar</button>
+            <span id="mobileReservationStepLabel" aria-live="polite">Etapa 1 de 3</span>
+            <button type="button" class="submit-btn" id="mobileReservationNextBtn">Próximo</button>
+          </div>
+
+          <button type="submit" class="submit-btn mobile-reservation-step" data-reservation-step="3">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 17 L4.5 11 C5 9 6.5 8 8.5 8 H15.5 C17.5 8 19 9 19.5 11 L21 17" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
               <rect x="2" y="16" width="20" height="5" rx="2.5" fill="#fff"/>
@@ -190,15 +227,24 @@
         <h2>Calendário de Reservas por Carro</h2>
 
         <div class="car-selector" id="carSelector"></div>
+        <div class="calendar-vehicle-filter hidden" id="calendarVehicleFilter">
+          <label for="calendarVehicleSelect">Veículo</label>
+          <select id="calendarVehicleSelect"></select>
+        </div>
 
         <div class="calendar-nav">
-          <button type="button" class="calendar-nav-btn" id="calPrevBtn" aria-label="Mês anterior">&#8249;</button>
-          <span class="calendar-month-label" id="calMonthLabel"></span>
-          <button type="button" class="calendar-nav-btn" id="calNextBtn" aria-label="Próximo mês">&#8250;</button>
+          <button type="button" class="calendar-today-btn" id="calTodayBtn">Hoje</button>
+          <div class="calendar-nav-period">
+            <button type="button" class="calendar-nav-btn" id="calPrevBtn" aria-label="Semana anterior">&#8249;</button>
+            <span class="calendar-month-label" id="calMonthLabel"></span>
+            <button type="button" class="calendar-nav-btn" id="calNextBtn" aria-label="Próxima semana">&#8250;</button>
+          </div>
         </div>
-        <div class="calendar-grid" id="calendarGrid"></div>
+        <p class="calendar-drag-hint">Clique em um horário ou arraste na mesma coluna para selecionar o período da reserva.</p>
+        <div class="weekly-calendar" id="calendarGrid"></div>
         <div class="calendar-legend">
-          <span><span class="legend-dot legend-reserved"></span>Dia com reserva deste carro</span>
+          <span><span class="legend-dot legend-reserved"></span>Reserva existente</span>
+          <span><span class="legend-dot legend-selection"></span>Período selecionado</span>
           <span><span class="legend-dot legend-today"></span>Hoje</span>
         </div>
 
@@ -215,9 +261,23 @@
     </section>
 
     <!-- ---- Minhas Reservas ---- -->
-    <section class="tab-panel hidden" id="panel-minhas">
+    <section class="tab-panel" id="panel-minhas">
       <div class="card">
-        <h2>Minhas Reservas</h2>
+        <div class="my-reservations-heading">
+          <h2>Minhas Reservas</h2>
+          <button type="button" class="secondary-btn my-new-reservation-btn" id="myNewReservationBtn">
+            + Nova reserva
+          </button>
+        </div>
+
+        <div class="reservation-view-tabs" aria-label="Filtrar minhas reservas">
+          <button type="button" class="reservation-view-btn active" data-reservation-view="active">
+            Ativas <span id="activeReservationsCount">0</span>
+          </button>
+          <button type="button" class="reservation-view-btn" data-reservation-view="history">
+            Histórico <span id="historyReservationsCount">0</span>
+          </button>
+        </div>
 
         <div class="confirmation" id="minhasConfirmation">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -282,9 +342,29 @@
     <!-- ---- Admin ---- -->
     <section class="tab-panel hidden" id="panel-admin">
       <div class="card">
-        <h2>Painel de Administração</h2>
+        <h2 id="managementPanelTitle">Painel de Administração</h2>
 
+        <div class="admin-section-tabs" id="adminSectionTabs">
+          <button type="button" class="admin-section-btn active" data-admin-section="reservas">Reservas</button>
+          <button type="button" class="admin-section-btn" data-admin-section="frota">Filiais e veículos</button>
+          <button type="button" class="admin-section-btn" data-admin-section="bloqueios">Bloqueios</button>
+          <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
+          <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
+          <button type="button" class="admin-section-btn" data-admin-section="regras">Regras</button>
+          <button type="button" class="admin-section-btn" data-admin-section="usuarios">Usuários</button>
+        </div>
+
+        <div class="admin-section-panel" id="admin-section-reservas">
         <div class="form-hint" id="adminSummary"></div>
+
+        <div class="reservation-view-tabs" aria-label="Filtrar reservas da gestão">
+          <button type="button" class="reservation-view-btn active" data-admin-reservation-view="active">
+            Ativas <span id="adminActiveReservationsCount">0</span>
+          </button>
+          <button type="button" class="reservation-view-btn" data-admin-reservation-view="completed">
+            Concluídas <span id="adminCompletedReservationsCount">0</span>
+          </button>
+        </div>
 
         <div class="rides-filters" id="adminFilters">
           <div class="row">
@@ -312,6 +392,226 @@
         <div class="reservations-list" id="adminReservationsList">
           <div class="empty-state">Nenhuma reserva encontrada.</div>
         </div>
+        </div>
+
+        <div class="admin-section-panel hidden" id="admin-section-frota">
+          <div class="admin-grid">
+            <div class="admin-subcard">
+              <h3>Filiais</h3>
+              <form id="branchForm" class="compact-form">
+                <div class="field">
+                  <label for="branchName">Nome da filial</label>
+                  <input type="text" id="branchName" placeholder="Ex.: Campinas">
+                </div>
+                <button type="submit" class="submit-btn">Adicionar filial</button>
+              </form>
+              <div id="branchesList" class="management-list"></div>
+            </div>
+
+            <div class="admin-subcard">
+              <h3>Veículos</h3>
+              <form id="vehicleForm" class="compact-form">
+                <div class="field">
+                  <label for="vehicleBranch">Filial</label>
+                  <select id="vehicleBranch"></select>
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="vehicleCode">Identificação</label>
+                    <input type="text" id="vehicleCode" placeholder="Ex.: São Carlos">
+                  </div>
+                  <div class="field">
+                    <label for="vehiclePlate">Placa</label>
+                    <input type="text" id="vehiclePlate" placeholder="ABC1D23">
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="vehicleModel">Modelo</label>
+                    <input type="text" id="vehicleModel" placeholder="Ex.: Volkswagen Polo">
+                  </div>
+                  <div class="field">
+                    <label for="vehicleCapacity">Capacidade</label>
+                    <input type="number" id="vehicleCapacity" min="1" max="20" value="5">
+                  </div>
+                </div>
+                <button type="submit" class="submit-btn">Adicionar veículo</button>
+              </form>
+              <div id="vehiclesList" class="management-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-section-panel hidden" id="admin-section-bloqueios">
+          <div class="admin-subcard">
+            <h3>Novo bloqueio de veículo</h3>
+            <form id="blockForm" class="compact-form">
+              <div class="row">
+                <div class="field">
+                  <label for="blockVehicle">Veículo</label>
+                  <select id="blockVehicle"></select>
+                </div>
+                <div class="field">
+                  <label for="blockType">Motivo</label>
+                  <select id="blockType">
+                    <option value="Manutenção">Manutenção</option>
+                    <option value="Revisão">Revisão</option>
+                    <option value="Documentação">Documentação</option>
+                    <option value="Indisponibilidade">Indisponibilidade</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="blockStart">Início</label>
+                  <input type="date" id="blockStart">
+                </div>
+                <div class="field">
+                  <label for="blockEnd">Fim</label>
+                  <input type="date" id="blockEnd">
+                </div>
+              </div>
+              <div class="field">
+                <label for="blockNotes">Observações</label>
+                <textarea id="blockNotes" rows="2" placeholder="Detalhes do bloqueio"></textarea>
+              </div>
+              <button type="submit" class="submit-btn">Bloquear veículo</button>
+            </form>
+          </div>
+          <div id="blocksList" class="management-list"></div>
+        </div>
+
+        <div class="admin-section-panel hidden" id="admin-section-auditoria">
+          <div class="row admin-filter-row">
+            <div class="field">
+              <label for="auditUserFilter">Usuário</label>
+              <input type="text" id="auditUserFilter" placeholder="Filtrar por usuário">
+            </div>
+            <div class="field">
+              <label for="auditActionFilter">Ação</label>
+              <select id="auditActionFilter">
+                <option value="">Todas</option>
+                <option value="criou">Criou</option>
+                <option value="editou">Editou</option>
+                <option value="cancelou">Cancelou</option>
+                <option value="entrou">Entrou na carona</option>
+                <option value="saiu">Saiu da carona</option>
+                <option value="retirou">Retirou veículo</option>
+                <option value="devolveu">Devolveu veículo</option>
+              </select>
+            </div>
+          </div>
+          <div id="auditList" class="audit-list"></div>
+        </div>
+
+        <div class="admin-section-panel hidden" id="admin-section-relatorios">
+          <div class="rides-filters report-filters">
+            <div class="row">
+              <div class="field">
+                <label for="reportBranch">Filial</label>
+                <select id="reportBranch"><option value="">Todas</option></select>
+              </div>
+              <div class="field">
+                <label for="reportVehicle">Veículo</label>
+                <select id="reportVehicle"><option value="">Todos</option></select>
+              </div>
+              <div class="field">
+                <label for="reportUser">Usuário</label>
+                <input type="text" id="reportUser" placeholder="Todos">
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="reportStart">De</label>
+                <input type="date" id="reportStart">
+              </div>
+              <div class="field">
+                <label for="reportEnd">Até</label>
+                <input type="date" id="reportEnd">
+              </div>
+            </div>
+          </div>
+          <div id="reportSummary" class="report-summary"></div>
+          <div class="report-actions">
+            <button type="button" class="secondary-btn" id="exportCsvBtn">Exportar CSV</button>
+            <button type="button" class="submit-btn" id="exportExcelBtn">Exportar Excel</button>
+            <button type="button" class="submit-btn" id="exportPdfBtn">Exportar PDF</button>
+          </div>
+          <div class="table-wrap">
+            <table class="report-table">
+              <thead>
+                <tr><th>Período</th><th>Filial</th><th>Carro</th><th>Usuário</th><th>Motivo</th><th>Km</th><th>Status</th></tr>
+              </thead>
+              <tbody id="reportTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-section-panel hidden" id="admin-section-regras">
+          <div class="admin-subcard rules-card">
+            <h3>Regras de reserva</h3>
+            <p class="rules-explanation">Estas regras são aplicadas a todos os usuários, inclusive nas reservas criadas ou editadas pelo administrador.</p>
+            <div class="form-hint" id="rulesSummary"></div>
+            <form id="reservationRulesForm" class="compact-form">
+              <div class="field">
+                <label for="ruleMaxConsecutiveDays">Máximo de dias consecutivos por reserva</label>
+                <input type="number" id="ruleMaxConsecutiveDays" min="1" max="365" required>
+              </div>
+              <div class="field">
+                <label for="ruleMaxAdvanceDays">Antecedência máxima para reservar (dias)</label>
+                <input type="number" id="ruleMaxAdvanceDays" min="1" max="365" required>
+              </div>
+              <div class="field">
+                <label for="ruleMaxReservations">Máximo de reservas por usuário dentro desse período</label>
+                <input type="number" id="ruleMaxReservations" min="1" max="50" required>
+              </div>
+              <div class="error-msg" id="rulesError"></div>
+              <button type="submit" class="submit-btn">Salvar regras</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="admin-section-panel hidden" id="admin-section-usuarios">
+          <div class="admin-grid user-management-grid">
+            <div class="admin-subcard">
+              <h3 id="userAccountFormTitle">Novo usuário</h3>
+              <form id="userAccountForm" class="compact-form" novalidate>
+                <div class="field">
+                  <label for="userAccountName">Nome</label>
+                  <input type="text" id="userAccountName" placeholder="Nome do usuário" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="userAccountUsername">Usuário de acesso</label>
+                  <input type="text" id="userAccountUsername" placeholder="Ex.: joao.silva" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="userAccountPassword">Senha</label>
+                  <input type="password" id="userAccountPassword" placeholder="Mínimo de 8 caracteres" autocomplete="new-password">
+                  <div class="form-hint" id="userAccountPasswordHint">A senha é obrigatória no primeiro cadastro.</div>
+                </div>
+                <div class="field">
+                  <label>Permissões adicionais</label>
+                  <div class="permission-grid">
+                    <label class="permission-option"><input type="checkbox" id="permissionReservations"> Reservas</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionFleet"> Filiais e veículos</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
+                  </div>
+                  <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar carros.</div>
+                </div>
+                <div class="error-msg" id="userAccountError"></div>
+                <div class="user-form-actions">
+                  <button type="button" class="secondary-btn hidden" id="userAccountCancelBtn">Cancelar edição</button>
+                  <button type="submit" class="submit-btn" id="userAccountSubmitBtn">Criar usuário</button>
+                </div>
+              </form>
+            </div>
+            <div class="admin-subcard">
+              <h3>Usuários cadastrados</h3>
+              <div id="userAccountsList" class="management-list"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -326,6 +626,7 @@
     <button type="button" class="modal-close" id="profileCloseBtn">&times;</button>
     <div class="profile-avatar-lg" id="profileAvatarLg">--</div>
     <h3 id="profileName"></h3>
+    <div class="form-hint" id="profileRole"></div>
     <button type="button" class="danger-btn" id="logoutBtn">Sair</button>
   </div>
 </div>
@@ -337,6 +638,16 @@
     <h3>Reservar este carro</h3>
     <div class="quick-reserve-summary" id="quickReserveSummary"></div>
     <form id="quickReserveForm" novalidate>
+      <div class="field" id="qfield-motivo">
+        <label for="qMotivo">Motivo da viagem</label>
+        <textarea id="qMotivo" rows="2" placeholder="Objetivo da viagem"></textarea>
+        <div class="error-msg" id="error-qMotivo"></div>
+      </div>
+      <div class="field" id="qfield-responsavel">
+        <label for="qResponsavel">Responsável</label>
+        <input type="text" id="qResponsavel" placeholder="Nome do responsável">
+        <div class="error-msg" id="error-qResponsavel"></div>
+      </div>
       <div class="field" id="qfield-destino">
         <label for="qDestino">Destino</label>
         <select id="qDestino" name="qDestino">
@@ -404,13 +715,19 @@
     <h3 id="adminReservaTitle">Editar reserva</h3>
     <div class="error-msg admin-reserve-error" id="adminReservaError"></div>
     <form id="adminReservaForm" novalidate>
-      <div class="field" id="afield-nome">
+      <div class="mobile-reservation-progress" id="adminReservationProgress" aria-label="Progresso da edição">
+        <span class="active" data-admin-progress-step="1"><strong>1</strong> Trajeto</span>
+        <span data-admin-progress-step="2"><strong>2</strong> Data e horário</span>
+        <span data-admin-progress-step="3"><strong>3</strong> Detalhes</span>
+      </div>
+
+      <div class="field mobile-admin-reservation-step" id="afield-nome" data-admin-reservation-step="1">
         <label for="aNome">Nome do responsável</label>
         <input type="text" id="aNome" placeholder="Nome do responsável" autocomplete="off">
         <div class="error-msg" id="error-aNome"></div>
       </div>
 
-      <div class="row">
+      <div class="row mobile-admin-reservation-step" data-admin-reservation-step="1">
         <div class="field" id="afield-partida">
           <label for="aPartida">Local de Partida</label>
           <select id="aPartida">
@@ -432,7 +749,7 @@
         </div>
       </div>
 
-      <div class="field" id="afield-carro">
+      <div class="field mobile-admin-reservation-step" id="afield-carro" data-admin-reservation-step="1">
         <label for="aCarro">Carro (filial de partida)</label>
         <select id="aCarro">
           <option value="">Selecione...</option>
@@ -440,7 +757,19 @@
         <div class="error-msg" id="error-aCarro"></div>
       </div>
 
-      <div class="row">
+      <div class="field mobile-admin-reservation-step" id="afield-motivo" data-admin-reservation-step="3">
+        <label for="aMotivo">Motivo da viagem</label>
+        <textarea id="aMotivo" rows="3" placeholder="Objetivo da viagem"></textarea>
+        <div class="error-msg" id="error-aMotivo"></div>
+      </div>
+
+      <div class="field mobile-admin-reservation-step" id="afield-responsavel" data-admin-reservation-step="3">
+        <label for="aResponsavel">Responsável pela viagem</label>
+        <input type="text" id="aResponsavel" placeholder="Nome do responsável">
+        <div class="error-msg" id="error-aResponsavel"></div>
+      </div>
+
+      <div class="row mobile-admin-reservation-step" data-admin-reservation-step="2">
         <div class="field" id="afield-dataIda">
           <label for="aDataIda">Data de Ida</label>
           <input type="date" id="aDataIda" autocomplete="off">
@@ -456,7 +785,7 @@
         </div>
       </div>
 
-      <div class="row">
+      <div class="row mobile-admin-reservation-step" data-admin-reservation-step="2">
         <div class="field" id="afield-dataVolta">
           <label for="aDataVolta">Data de Volta</label>
           <input type="date" id="aDataVolta" autocomplete="off">
@@ -472,7 +801,7 @@
         </div>
       </div>
 
-      <div class="field" id="afield-passageirosConfirmados">
+      <div class="field mobile-admin-reservation-step" id="afield-passageirosConfirmados" data-admin-reservation-step="3">
         <label>Passageiros que vão com você</label>
         <div id="aPassageirosListContainer"></div>
         <div class="error-msg" id="error-aPassageirosConfirmados"></div>
@@ -482,23 +811,181 @@
         </div>
       </div>
 
-      <div id="adminOcupantesPanel"></div>
+      <div class="mobile-admin-reservation-step" id="adminOcupantesPanel" data-admin-reservation-step="3"></div>
 
-      <button type="submit" class="submit-btn">Salvar Reserva</button>
+      <div class="mobile-wizard-actions admin-mobile-wizard-actions">
+        <button type="button" class="secondary-btn" id="adminReservationBackBtn">Voltar</button>
+        <span id="adminReservationStepLabel" aria-live="polite">Etapa 1 de 3</span>
+        <button type="button" class="submit-btn" id="adminReservationNextBtn">Próximo</button>
+      </div>
+
+      <button type="submit" class="submit-btn mobile-admin-reservation-step" data-admin-reservation-step="3">Salvar Reserva</button>
     </form>
   </div>
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/storage.js"></script>
-<script src="js/rides.js"></script>
-<script src="js/reservations.js"></script>
-<script src="js/calendar.js"></script>
-<script src="js/modals.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/app.js"></script>
+<!-- ===================== Modal de Edição de Filial / Veículo ===================== -->
+<div class="modal-overlay hidden" id="fleetEditModal">
+  <div class="modal-card fleet-edit-card">
+    <button type="button" class="modal-close" id="fleetEditCloseBtn">&times;</button>
+    <h3 id="fleetEditTitle">Editar cadastro</h3>
+    <p id="fleetEditSubtitle">Atualize as informações e salve as alterações.</p>
+    <form id="fleetEditForm" novalidate>
+      <div id="fleetEditBranchFields">
+        <div class="field">
+          <label for="fleetEditBranchName">Nome da filial</label>
+          <input type="text" id="fleetEditBranchName" placeholder="Nome da filial" autocomplete="off">
+        </div>
+      </div>
+      <div class="hidden" id="fleetEditVehicleFields">
+        <div class="field">
+          <label for="fleetEditVehicleBranch">Filial</label>
+          <select id="fleetEditVehicleBranch"></select>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="fleetEditVehicleCode">Identificação</label>
+            <input type="text" id="fleetEditVehicleCode" placeholder="Ex.: São Carlos" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="fleetEditVehiclePlate">Placa</label>
+            <input type="text" id="fleetEditVehiclePlate" placeholder="ABC1D23" autocomplete="off">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="fleetEditVehicleModel">Modelo</label>
+            <input type="text" id="fleetEditVehicleModel" placeholder="Modelo do veículo" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="fleetEditVehicleCapacity">Capacidade</label>
+            <input type="number" id="fleetEditVehicleCapacity" min="1" max="20">
+          </div>
+        </div>
+      </div>
+      <div class="error-msg fleet-edit-error" id="fleetEditError"></div>
+      <div class="fleet-edit-actions">
+        <button type="button" class="secondary-btn" id="fleetEditCancelBtn">Cancelar</button>
+        <button type="submit" class="submit-btn">Salvar alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== Modal de Retirada / Devolução ===================== -->
+<div class="modal-overlay hidden" id="userDeleteModal">
+  <div class="modal-card user-delete-card" role="dialog" aria-modal="true" aria-labelledby="userDeleteTitle">
+    <button type="button" class="modal-close" id="userDeleteCloseBtn" aria-label="Fechar">&times;</button>
+    <div class="destructive-modal-icon" aria-hidden="true">!</div>
+    <h3 id="userDeleteTitle">Excluir usuário definitivamente</h3>
+    <p>
+      A conta perderá o acesso imediatamente e desaparecerá da lista.
+      Reservas, relatórios e ações históricas serão preservados.
+    </p>
+    <div class="quick-reserve-summary user-delete-summary" id="userDeleteSummary"></div>
+    <form id="userDeleteForm" novalidate>
+      <div class="field">
+        <label for="userDeleteJustification">Justificativa da exclusão</label>
+        <textarea
+          id="userDeleteJustification"
+          rows="4"
+          minlength="5"
+          maxlength="500"
+          placeholder="Ex.: desligamento, fim do contrato ou conta criada incorretamente"
+          required
+        ></textarea>
+        <div class="form-hint">A justificativa e o administrador responsável ficarão salvos na auditoria.</div>
+      </div>
+      <div class="error-msg user-delete-error" id="userDeleteError"></div>
+      <div class="fleet-edit-actions">
+        <button type="button" class="secondary-btn" id="userDeleteCancelBtn">Cancelar</button>
+        <button type="submit" class="danger-btn" id="userDeleteSubmitBtn">Excluir definitivamente</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="vehicleDeleteModal">
+  <div class="modal-card vehicle-delete-card" role="dialog" aria-modal="true" aria-labelledby="vehicleDeleteTitle">
+    <button type="button" class="modal-close" id="vehicleDeleteCloseBtn" aria-label="Fechar">&times;</button>
+    <div class="destructive-modal-icon" aria-hidden="true">!</div>
+    <h3 id="vehicleDeleteTitle">Excluir veículo definitivamente</h3>
+    <p>
+      O veículo será removido do cadastro e não poderá receber novas reservas.
+      Reservas concluídas continuarão disponíveis nos relatórios.
+    </p>
+    <div class="quick-reserve-summary vehicle-delete-summary" id="vehicleDeleteSummary"></div>
+    <form id="vehicleDeleteForm" novalidate>
+      <div class="field">
+        <label for="vehicleDeleteJustification">Justificativa da exclusão</label>
+        <textarea
+          id="vehicleDeleteJustification"
+          rows="4"
+          minlength="5"
+          maxlength="500"
+          placeholder="Ex.: veículo vendido, devolvido à locadora ou retirado definitivamente da frota"
+          required
+        ></textarea>
+        <div class="form-hint">A justificativa, o usuário e os dados do veículo ficarão salvos na auditoria.</div>
+      </div>
+      <div class="error-msg vehicle-delete-error" id="vehicleDeleteError"></div>
+      <div class="fleet-edit-actions">
+        <button type="button" class="secondary-btn" id="vehicleDeleteCancelBtn">Cancelar</button>
+        <button type="submit" class="danger-btn" id="vehicleDeleteSubmitBtn">Excluir definitivamente</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="operationModal">
+  <div class="modal-card operation-card">
+    <button type="button" class="modal-close" id="operationCloseBtn">&times;</button>
+    <h3 id="operationTitle">Registrar retirada</h3>
+    <div class="quick-reserve-summary" id="operationSummary"></div>
+    <form id="operationForm">
+      <div class="field">
+        <label for="operationKm">Quilometragem</label>
+        <input type="number" id="operationKm" min="0" step="1" required>
+      </div>
+      <div class="field">
+        <label for="operationFuel">Nível de combustível</label>
+        <select id="operationFuel" required>
+          <option value="">Selecione...</option>
+          <option value="Reserva">Reserva</option>
+          <option value="1/4">1/4</option>
+          <option value="1/2">1/2</option>
+          <option value="3/4">3/4</option>
+          <option value="Cheio">Cheio</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="operationDamages">Avarias e observações</label>
+        <textarea id="operationDamages" rows="3" placeholder="Informe avarias existentes ou encontradas"></textarea>
+      </div>
+      <div class="field">
+        <label for="operationPhotos">Fotos (até 3, máximo 1 MB cada)</label>
+        <input type="file" id="operationPhotos" accept="image/*" multiple>
+        <div class="form-hint" id="operationPhotoHint"></div>
+      </div>
+      <div class="error-msg" id="operationError"></div>
+      <button type="submit" class="submit-btn">Salvar registro</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/config.js?v=20260729-6"></script>
+<script src="js/utils.js?v=20260730-2"></script>
+<script src="js/api.js?v=20260729-4"></script>
+<script src="js/storage.js?v=20260730-1"></script>
+<script src="js/rides.js?v=20260730-1"></script>
+<script src="js/reservations.js?v=20260730-5"></script>
+<script src="js/calendar.js?v=20260730-12"></script>
+<script src="js/modals.js?v=20260730-3"></script>
+<script src="js/admin.js?v=20260729-9"></script>
+<script src="js/xlsx-export.js?v=20260729-1"></script>
+<script src="js/management.js?v=20260730-1"></script>
+<script src="js/auth.js?v=20260730-2"></script>
+<script src="js/app.js?v=20260729-4"></script>
 
 </body>
 </html>

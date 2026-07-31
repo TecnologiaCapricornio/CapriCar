@@ -1,0 +1,10 @@
+.env
+node_modules/
+npm-debug.log*
+server/uploads/
+backups/
+tools/
+dist/
+logs/
+config.yml
+~$*.docx
