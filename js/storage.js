@@ -9,10 +9,11 @@ function getReservations(){
 }
 
 function saveReservations(list){
+  const previous = getReservations();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  return typeof queueCollectionSync === 'function'
-    ? queueCollectionSync('reservations', list)
-    : Promise.resolve();
+  return typeof syncReservations === 'function'
+    ? syncReservations(previous, list)
+    : Promise.resolve({ localOnly:true, reservations:list });
 }
 
 // Retorna todas as reservas cuja faixa [dataIda, dataVolta] cobre a data informada (qualquer carro/rota).
@@ -81,7 +82,9 @@ function getReservationRules(){
   const defaults = {
     maxConsecutiveDays: 10,
     maxAdvanceDays: 30,
-    maxReservationsInWindow: 2
+    maxReservationsInWindow: 2,
+    reservationBufferMinutes: 60,
+    pickupAdvanceMinutes:15
   };
   try{
     const stored = JSON.parse(localStorage.getItem(RULES_KEY) || 'null');
@@ -89,7 +92,13 @@ function getReservationRules(){
     return {
       maxConsecutiveDays: Math.max(1, Number(stored.maxConsecutiveDays) || defaults.maxConsecutiveDays),
       maxAdvanceDays: Math.max(1, Number(stored.maxAdvanceDays) || defaults.maxAdvanceDays),
-      maxReservationsInWindow: Math.max(1, Number(stored.maxReservationsInWindow) || defaults.maxReservationsInWindow)
+      maxReservationsInWindow: Math.max(1, Number(stored.maxReservationsInWindow) || defaults.maxReservationsInWindow),
+      reservationBufferMinutes: Number.isFinite(Number(stored.reservationBufferMinutes))
+        ? Math.min(1440, Math.max(0, Number(stored.reservationBufferMinutes)))
+        : defaults.reservationBufferMinutes,
+      pickupAdvanceMinutes:Number.isFinite(Number(stored.pickupAdvanceMinutes))
+        ? Math.min(1440, Math.max(0, Number(stored.pickupAdvanceMinutes)))
+        : defaults.pickupAdvanceMinutes
     };
   }catch(e){
     return defaults;
@@ -100,7 +109,13 @@ function saveReservationRules(rules){
   const normalized = {
     maxConsecutiveDays: Math.max(1, Number(rules.maxConsecutiveDays) || 10),
     maxAdvanceDays: Math.max(1, Number(rules.maxAdvanceDays) || 30),
-    maxReservationsInWindow: Math.max(1, Number(rules.maxReservationsInWindow) || 2)
+    maxReservationsInWindow: Math.max(1, Number(rules.maxReservationsInWindow) || 2),
+    reservationBufferMinutes: Number.isFinite(Number(rules.reservationBufferMinutes))
+      ? Math.min(1440, Math.max(0, Number(rules.reservationBufferMinutes)))
+      : 60,
+    pickupAdvanceMinutes:Number.isFinite(Number(rules.pickupAdvanceMinutes))
+      ? Math.min(1440, Math.max(0, Number(rules.pickupAdvanceMinutes)))
+      : 15
   };
   localStorage.setItem(RULES_KEY, JSON.stringify(normalized));
   if(typeof queueCollectionSync === 'function'){
@@ -200,7 +215,8 @@ function initializeFleetData(){
           id: 'veiculo-' + filial.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + codigo,
           filial: filial,
           codigo: codigo,
-          modelo: 'Volkswagen Polo',
+          marca: 'Volkswagen',
+          modelo: 'Polo',
           placa: '',
           capacidade: CAPACIDADE_MAXIMA,
           ativo: true
@@ -227,6 +243,50 @@ function syncFleetGlobals(){
 
 function getVehicle(partida, codigo){
   return getVehicles().find(v => v.filial === partida && String(v.codigo) === String(codigo)) || null;
+}
+
+function getVehicleBrand(vehicle){
+  if(!vehicle) return '';
+  if(String(vehicle.marca || '').trim()) return String(vehicle.marca).trim();
+  const legacyParts = String(vehicle.modelo || '').trim().split(/\s+/).filter(Boolean);
+  return legacyParts.length > 1 ? legacyParts[0] : '';
+}
+
+function getVehicleModelName(vehicle){
+  if(!vehicle) return '';
+  const model = String(vehicle.modelo || '').trim();
+  if(String(vehicle.marca || '').trim()) return model;
+  const legacyParts = model.split(/\s+/).filter(Boolean);
+  return legacyParts.length > 1 ? legacyParts.slice(1).join(' ') : model;
+}
+
+function getVehicleFullModel(vehicle){
+  if(!vehicle) return 'Veículo';
+  return [getVehicleBrand(vehicle), getVehicleModelName(vehicle)].filter(Boolean).join(' ') || 'Veículo';
+}
+
+function getPassengerDirectory(){
+  try{
+    const data = JSON.parse(localStorage.getItem(USER_DIRECTORY_KEY) || '[]');
+    return Array.isArray(data) ? data.filter(user => user && user.active !== false && user.id && user.nome) : [];
+  }catch(error){
+    return [];
+  }
+}
+
+function findPassengerDirectoryUser(value){
+  const normalized = String(value || '').trim().toLocaleLowerCase('pt-BR');
+  if(!normalized) return null;
+  return getPassengerDirectory().find(user =>
+    String(user.nome || '').trim().toLocaleLowerCase('pt-BR') === normalized
+  ) || null;
+}
+
+function getVehicleDisplayName(reserva){
+  if(!reserva) return 'Veículo não identificado';
+  const vehicle = getVehicle(reserva.partida, reserva.carro);
+  if(!vehicle) return reserva.carro || 'Veículo não identificado';
+  return getVehicleFullModel(vehicle) + (vehicle.placa ? ' · ' + vehicle.placa : '');
 }
 
 function getVehicleCapacity(reserva){

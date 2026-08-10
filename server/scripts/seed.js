@@ -7,14 +7,14 @@ const DEFAULT_USERS = [
     displayName:'Administrador',
     passwordEnv:'ADMIN_INITIAL_PASSWORD',
     role:'admin',
-    permissions:[true, true, true, true]
+    permissions:[true, true, true, true, true, true, true]
   },
   {
     username:'facilities',
     displayName:'Facilities',
     passwordEnv:'FACILITIES_INITIAL_PASSWORD',
     role:'facilities',
-    permissions:[true, true, true, true]
+    permissions:[true, true, true, true, false, false, false]
   }
 ];
 
@@ -22,22 +22,22 @@ const DEFAULT_BRANCHES = [
   {
     name:'São Paulo',
     vehicles:[
-      { code:'89', model:'Volkswagen Polo', capacity:5 },
-      { code:'45', model:'Volkswagen Polo', capacity:5 }
+      { code:'89', brand:'Volkswagen', model:'Polo', capacity:5 },
+      { code:'45', brand:'Volkswagen', model:'Polo', capacity:5 }
     ]
   },
   {
     name:'São Carlos',
     vehicles:[
-      { code:'78', model:'Volkswagen Polo', capacity:5 },
-      { code:'32', model:'Volkswagen Polo', capacity:5 }
+      { code:'78', brand:'Volkswagen', model:'Polo', capacity:5 },
+      { code:'32', brand:'Volkswagen', model:'Polo', capacity:5 }
     ]
   },
   {
     name:'Bragança Paulista',
     vehicles:[
-      { code:'67', model:'Volkswagen Polo', capacity:5 },
-      { code:'54', model:'Volkswagen Polo', capacity:5 }
+      { code:'67', brand:'Volkswagen', model:'Polo', capacity:5 },
+      { code:'54', brand:'Volkswagen', model:'Polo', capacity:5 }
     ]
   }
 ];
@@ -60,8 +60,9 @@ async function seedUsers(client){
       `INSERT INTO users (
          username, display_name, password_hash, role, active,
          can_manage_reservations, can_manage_fleet,
-         can_manage_blocks, can_view_reports
-       ) VALUES ($1, $2, $3, $4, TRUE, $5, $6, $7, $8)
+         can_manage_blocks, can_view_reports, can_view_audit,
+         can_manage_rules, can_manage_users
+       ) VALUES ($1, $2, $3, $4, TRUE, $5, $6, $7, $8, $9, $10, $11)
        ON CONFLICT (LOWER(username)) DO NOTHING`,
       [
         user.username,
@@ -87,10 +88,10 @@ async function seedFleet(client){
     const branchId = branchResult.rows[0].id;
     for(const vehicle of branch.vehicles){
       await client.query(
-        `INSERT INTO vehicles (branch_id, code, model, capacity)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO vehicles (branch_id, code, brand, model, capacity)
+         VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (branch_id, LOWER(code)) DO NOTHING`,
-        [branchId, vehicle.code, vehicle.model, vehicle.capacity]
+        [branchId, vehicle.code, vehicle.brand, vehicle.model, vehicle.capacity]
       );
     }
   }

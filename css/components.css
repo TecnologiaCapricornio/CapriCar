@@ -161,6 +161,10 @@
     max-width:1040px;
   }
 
+  .tab-panel#panel-caronas{
+    max-width:860px;
+  }
+
   .tab-panel#panel-calendario{
     max-width:1160px;
   }
@@ -185,6 +189,229 @@
     display:flex;
     align-items:center;
     gap:8px;
+  }
+
+  #panel-nova .card{
+    padding:24px;
+  }
+
+  #panel-nova .card h2{
+    margin-bottom:12px;
+  }
+
+  #panel-nova .form-hint{
+    margin-bottom:10px;
+    padding:8px 12px;
+  }
+
+  #reservaForm{
+    gap:10px;
+  }
+
+  #reservaForm .row{
+    gap:10px;
+  }
+
+  #reservaForm .field{
+    gap:4px;
+  }
+
+  #reservaForm .error-msg:empty{
+    min-height:0;
+  }
+
+  /* Seletor visual de horário. O select original continua sendo a fonte de dados. */
+  .time-picker-control{
+    position:relative;
+    width:100%;
+  }
+
+  .time-picker-native{
+    display:none !important;
+  }
+
+  .time-picker-trigger{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    min-height:47px;
+    padding:10px 13px;
+    border:1.5px solid rgba(255,255,255,.10);
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,.05);
+    color:#8fa4b8;
+    font:inherit;
+    font-size:.92rem;
+    font-weight:600;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+  }
+
+  .time-picker-trigger:hover,
+  .time-picker-control.is-open .time-picker-trigger{
+    border-color:var(--azul-claro);
+    background:rgba(255,255,255,.08);
+  }
+
+  .time-picker-trigger:focus-visible{
+    outline:none;
+    border-color:var(--azul-claro);
+    box-shadow:0 0 0 4px rgba(111,168,216,.18);
+  }
+
+  .field.invalid .time-picker-trigger{
+    border-color:var(--vermelho);
+    box-shadow:0 0 0 3px rgba(239,91,106,.15);
+  }
+
+  .time-picker-trigger.has-value{
+    color:#fff;
+  }
+
+  .time-picker-trigger:disabled{
+    opacity:.58;
+    cursor:not-allowed;
+  }
+
+  .time-picker-trigger-icon{
+    display:grid;
+    place-items:center;
+    width:27px;
+    height:27px;
+    flex:0 0 27px;
+    border-radius:8px;
+    background:rgba(111,168,216,.13);
+    color:var(--azul-claro);
+  }
+
+  .time-picker-trigger-icon svg{
+    width:17px;
+    height:17px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .time-picker-trigger-value{
+    flex:1;
+  }
+
+  .time-picker-trigger-chevron{
+    color:var(--azul-claro);
+    font-size:1.05rem;
+    line-height:1;
+    transform:translateY(-2px);
+    transition:transform .2s;
+  }
+
+  .time-picker-control.is-open .time-picker-trigger-chevron{
+    transform:rotate(180deg) translateY(2px);
+  }
+
+  .time-picker-popover{
+    position:absolute;
+    z-index:120;
+    top:calc(100% + 8px);
+    left:0;
+    width:min(360px, calc(100vw - 32px));
+    padding:14px;
+    border:1px solid rgba(111,168,216,.3);
+    border-radius:16px;
+    background:#142a45;
+    box-shadow:0 20px 50px rgba(2,10,20,.55);
+  }
+
+  .time-picker-popover-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+  }
+
+  .time-picker-popover-header > div{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .time-picker-popover-header strong{
+    color:#fff;
+    font-size:.92rem;
+  }
+
+  .time-picker-popover-header small{
+    color:var(--texto-muted);
+    font-size:.7rem;
+  }
+
+  .time-picker-close{
+    display:grid;
+    place-items:center;
+    width:31px;
+    height:31px;
+    padding:0;
+    border:1px solid rgba(111,168,216,.22);
+    border-radius:50%;
+    background:rgba(255,255,255,.04);
+    color:#cfe0ee;
+    font-size:1.25rem;
+    cursor:pointer;
+  }
+
+  .time-picker-options{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
+    max-height:230px;
+    overflow-y:auto;
+    padding-right:3px;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(111,168,216,.5) transparent;
+  }
+
+  .time-picker-option{
+    min-height:40px;
+    padding:8px 5px;
+    border:1px solid rgba(111,168,216,.22);
+    border-radius:10px;
+    background:rgba(255,255,255,.035);
+    color:#dce8f3;
+    font:inherit;
+    font-size:.82rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:background .15s, border-color .15s, transform .15s;
+  }
+
+  .time-picker-option:hover{
+    border-color:var(--azul-claro);
+    background:rgba(111,168,216,.13);
+    transform:translateY(-1px);
+  }
+
+  .time-picker-option.is-selected{
+    border-color:#82bce7;
+    background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
+    color:#fff;
+    box-shadow:0 5px 14px rgba(58,106,149,.35);
+  }
+
+  .time-picker-empty{
+    grid-column:1 / -1;
+    padding:18px 10px;
+    color:var(--texto-muted);
+    font-size:.8rem;
+    text-align:center;
+  }
+
+  .row .field:last-child .time-picker-popover{
+    right:0;
+    left:auto;
   }
 
   .my-reservations-heading{
@@ -261,6 +488,163 @@
     margin-bottom:18px;
   }
 
+  .notification-center{
+    position:relative;
+  }
+
+  .notification-bell{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:40px;
+    height:40px;
+    padding:0;
+    border:1px solid var(--card-border);
+    border-radius:50%;
+    background:rgba(255,255,255,.055);
+    color:var(--texto);
+    cursor:pointer;
+  }
+
+  .notification-bell:hover,
+  .notification-bell[aria-expanded="true"]{
+    border-color:var(--azul-claro);
+    background:rgba(126,169,199,.14);
+  }
+
+  .notification-bell svg{
+    width:20px;
+    height:20px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .notification-badge{
+    position:absolute;
+    top:-4px;
+    right:-4px;
+    display:grid;
+    place-items:center;
+    min-width:18px;
+    height:18px;
+    padding:0 4px;
+    border:2px solid #142942;
+    border-radius:999px;
+    background:#e04f5f;
+    color:#fff;
+    font-size:.62rem;
+    font-weight:800;
+  }
+
+  .notification-panel{
+    position:absolute;
+    z-index:150;
+    top:calc(100% + 12px);
+    right:0;
+    width:min(390px,calc(100vw - 24px));
+    max-height:min(590px,calc(100dvh - 90px));
+    overflow:hidden;
+    border:1px solid var(--card-border);
+    border-radius:18px;
+    background:#172d48;
+    box-shadow:0 18px 50px rgba(0,0,0,.38);
+  }
+
+  .notification-panel-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:16px;
+    border-bottom:1px solid var(--card-border);
+  }
+
+  .notification-panel-header > div{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .notification-panel-header strong{font-size:1rem;}
+  .notification-panel-header span{color:var(--texto-muted);font-size:.75rem;}
+  .notification-panel-header button{
+    border:0;
+    background:transparent;
+    color:var(--azul-claro);
+    font-size:.72rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .notification-panel-header button:disabled{opacity:.45;cursor:default;}
+
+  .notification-list{
+    max-height:min(500px,calc(100dvh - 170px));
+    overflow-y:auto;
+  }
+
+  .notification-item{
+    position:relative;
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr);
+    gap:11px;
+    width:100%;
+    padding:14px 16px;
+    border:0;
+    border-bottom:1px solid rgba(126,169,199,.13);
+    background:transparent;
+    color:var(--texto);
+    text-align:left;
+    cursor:pointer;
+  }
+
+  .notification-item:hover{background:rgba(126,169,199,.08);}
+  .notification-item.unread{background:rgba(74,137,188,.13);}
+  .notification-item.unread::after{
+    content:'';
+    position:absolute;
+    top:18px;
+    right:12px;
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#74bdf2;
+  }
+
+  .notification-item-icon{
+    display:grid;
+    place-items:center;
+    width:36px;
+    height:36px;
+    border-radius:12px;
+    background:rgba(111,168,216,.15);
+    color:#9fd4fa;
+    font-size:1rem;
+    font-weight:800;
+  }
+  .notification-item-icon.cancel{background:rgba(224,79,95,.14);color:#ff9ba6;}
+  .notification-item-icon.key{background:rgba(240,177,72,.15);color:#ffd481;}
+
+  .notification-item-copy{display:flex;flex-direction:column;gap:4px;padding-right:9px;}
+  .notification-item-copy strong{font-size:.82rem;line-height:1.3;}
+  .notification-item-copy > span{color:var(--texto-muted);font-size:.76rem;line-height:1.45;}
+  .notification-item-copy small{color:var(--azul-claro);font-size:.68rem;}
+  .notification-empty{padding:32px 18px;color:var(--texto-muted);text-align:center;font-size:.8rem;}
+
+  .rodizio-warning{
+    padding:11px 13px;
+    border:1px solid rgba(255,190,76,.5);
+    border-left:4px solid #ffbe4c;
+    border-radius:var(--radius-sm);
+    background:rgba(255,174,45,.12);
+    color:#ffe0a3;
+    font-size:.8rem;
+    font-weight:600;
+    line-height:1.45;
+  }
+
   form{
     display:flex;
     flex-direction:column;
@@ -271,7 +655,7 @@
   .reservations-list{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr));
-    gap:12px;
+    gap:16px;
   }
 
   .empty-state{
@@ -285,12 +669,12 @@
     border:1px solid rgba(111,168,216,.16);
     border-left:3px solid var(--azul-claro);
     border-radius:var(--radius-md);
-    padding:14px 16px;
+    padding:17px 18px;
     background:rgba(11,31,52,.55);
     display:flex;
     flex-direction:column;
     align-items:stretch;
-    gap:14px;
+    gap:17px;
     transition:transform .15s ease, background .2s ease;
   }
 
@@ -302,7 +686,7 @@
   .reservation-info{
     display:flex;
     flex-direction:column;
-    gap:11px;
+    gap:14px;
     width:100%;
     min-width:0;
   }
@@ -312,6 +696,23 @@
     align-items:flex-start;
     justify-content:space-between;
     gap:12px;
+  }
+
+  .reservation-id-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:38px;
+    margin-right:8px;
+    padding:4px 9px;
+    border:1px solid rgba(126,190,235,.38);
+    border-radius:999px;
+    background:rgba(111,168,216,.16);
+    color:#9fd4fa;
+    font-size:.8rem;
+    font-weight:700;
+    line-height:1.1;
+    vertical-align:1px;
   }
 
   .reservation-route{
@@ -346,17 +747,72 @@
     background:rgba(255,255,255,.035);
   }
 
-  .reservation-period span{
-    display:flex;
-    flex-direction:column;
-    gap:2px;
+  .reservation-period > .reservation-moment{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,max-content));
+    align-items:center;
+    gap:4px 5px;
   }
 
-  .reservation-period strong{
+  .reservation-moment-label{
+    grid-column:1 / -1;
     color:#8fbadb;
     font-size:.66rem;
+    font-weight:800;
     letter-spacing:.04em;
     text-transform:uppercase;
+  }
+
+  .reservation-moment-part{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    min-width:0;
+    color:#d9e9f6;
+    white-space:nowrap;
+  }
+
+  .reservation-moment-part strong{
+    color:#f3f8fc;
+    font-size:.82rem;
+    font-weight:600;
+  }
+
+  .reservation-moment-icon{
+    width:15px;
+    height:15px;
+    flex:0 0 15px;
+    fill:none;
+    stroke:#78b8e8;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .calendar-event-time{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    min-width:0;
+  }
+
+  .calendar-event-id{
+    display:inline-flex;
+    align-self:flex-start;
+    margin-bottom:2px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(255,255,255,.2);
+    color:inherit;
+    font-size:.7rem;
+    font-weight:700;
+    line-height:1.2;
+  }
+
+  .calendar-event-time .reservation-moment-icon{
+    width:12px;
+    height:12px;
+    flex-basis:12px;
   }
 
   .reservation-card-chips{
@@ -510,7 +966,7 @@
   .rides-list{
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:16px;
   }
 
   .ride-card{
@@ -518,8 +974,8 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    gap:14px;
-    padding:16px 18px;
+    gap:20px;
+    padding:20px 22px;
     border-radius:var(--radius-md);
     background:linear-gradient(135deg, rgba(51,212,136,0.14), rgba(111,168,216,0.10));
     border:1.5px solid rgba(51,212,136,0.35);
@@ -535,14 +991,66 @@
   .ride-info{
     display:flex;
     flex-direction:column;
-    gap:4px;
+    gap:12px;
     min-width:0;
+    width:100%;
+  }
+
+  .ride-card .reservation-period{
+    gap:12px;
+    padding:12px;
+    background:rgba(6,22,38,.34);
+  }
+
+  .ride-card .reservation-period > .reservation-moment{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px;
+    padding:10px 12px;
+    border:1px solid rgba(111,168,216,.16);
+    border-radius:10px;
+    background:rgba(255,255,255,.035);
+  }
+
+  .ride-card .reservation-moment-label{
+    flex:0 0 100%;
+    margin-bottom:2px;
+    font-size:.62rem;
+  }
+
+  .ride-card .reservation-moment-part{
+    flex:0 0 auto;
+    gap:4px;
+  }
+
+  .ride-card .reservation-moment-part strong{
+    font-size:.76rem;
+  }
+
+  .ride-card .reservation-moment-icon{
+    width:13px;
+    height:13px;
+    flex-basis:13px;
   }
 
   .ride-route{
     font-weight:700;
     color:#fff;
     font-size:0.95rem;
+  }
+
+  .reservation-vehicle{
+    width:fit-content;
+    margin-top:3px;
+    color:#a9c7df;
+    font-size:.75rem;
+    font-weight:700;
+    line-height:1.25;
+  }
+
+  .ride-card .reservation-vehicle{
+    margin-top:-7px;
   }
 
   .ride-meta{
@@ -725,8 +1233,14 @@
     gap:8px;
   }
 
-  .passenger-row input[type="text"]{
+  .passenger-input-wrap{
+    position:relative;
     flex:1;
+    min-width:0;
+  }
+
+  .passenger-row input[type="text"]{
+    width:100%;
     background:rgba(26,48,80,0.55);
     border:1.5px solid rgba(111,168,216,0.3);
     border-radius:var(--radius-sm);
@@ -800,6 +1314,168 @@
   .join-confirm-card{
     max-width:380px;
     text-align:left;
+  }
+
+  .passenger-suggestions{
+    position:absolute;
+    z-index:30;
+    top:calc(100% + 5px);
+    left:0;
+    right:0;
+    padding:5px;
+    border:1px solid var(--card-border);
+    border-radius:10px;
+    background:var(--card-bg-solid);
+    box-shadow:0 14px 30px rgba(4,18,35,.28);
+  }
+
+  .passenger-suggestion{
+    display:block;
+    width:100%;
+    padding:9px 10px;
+    border:0;
+    border-radius:7px;
+    background:transparent;
+    color:var(--texto);
+    text-align:left;
+    cursor:pointer;
+  }
+
+  .passenger-suggestion:hover,
+  .passenger-suggestion:focus{
+    background:rgba(75,137,190,.18);
+    outline:none;
+  }
+
+  .pickup-availability-card{
+    max-width:420px;
+    text-align:center;
+  }
+
+  .pickup-availability-card > p{
+    margin:2px 0 12px;
+    color:var(--texto-muted);
+    font-size:.88rem;
+  }
+
+  .pickup-availability-icon{
+    display:grid;
+    place-items:center;
+    width:54px;
+    height:54px;
+    margin:0 auto 14px;
+    border:1px solid rgba(111,168,216,.35);
+    border-radius:16px;
+    background:rgba(111,168,216,.13);
+    color:var(--azul-claro);
+  }
+
+  .pickup-availability-icon svg{
+    width:29px;
+    height:29px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .pickup-availability-date{
+    margin-bottom:12px;
+    color:var(--texto);
+    font-size:1.15rem;
+    font-weight:800;
+  }
+
+  .pickup-availability-card .quick-reserve-summary{
+    margin-bottom:15px;
+    text-align:center;
+  }
+
+  .pickup-availability-card .submit-btn{
+    width:100%;
+  }
+
+  .site-dialog-card{
+    max-width:420px;
+    text-align:center;
+  }
+
+  .site-dialog-icon{
+    display:grid;
+    place-items:center;
+    width:54px;
+    height:54px;
+    margin:0 auto 14px;
+    border:1px solid rgba(111,168,216,.35);
+    border-radius:16px;
+    background:rgba(111,168,216,.13);
+    color:var(--azul-claro);
+  }
+
+  .site-dialog-icon.warning{
+    border-color:rgba(235,178,72,.42);
+    background:rgba(235,178,72,.13);
+    color:#f2c263;
+  }
+
+  .site-dialog-icon.danger{
+    border-color:rgba(239,91,106,.4);
+    background:rgba(239,91,106,.13);
+    color:#ff8895;
+  }
+
+  .site-dialog-icon.success{
+    border-color:rgba(51,212,136,.38);
+    background:rgba(51,212,136,.12);
+    color:var(--verde);
+  }
+
+  .site-dialog-icon svg{
+    width:29px;
+    height:29px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .site-dialog-card > p{
+    white-space:pre-line;
+    line-height:1.55;
+  }
+
+  .site-dialog-actions{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    margin-top:18px;
+  }
+
+  .site-dialog-actions .submit-btn,
+  .site-dialog-actions .secondary-btn{
+    width:100%;
+    height:52px;
+    margin:0;
+    padding:0 12px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1.2;
+    white-space:nowrap;
+  }
+
+  .site-dialog-actions .site-dialog-confirm:only-child,
+  .site-dialog-actions .secondary-btn.hidden + .site-dialog-confirm{
+    grid-column:1 / -1;
+  }
+
+  .site-dialog-confirm.danger{
+    background:linear-gradient(135deg,#b93849,#8e2837);
+    color:#fff;
+    box-shadow:0 8px 20px rgba(160,43,58,.24);
   }
 
   .join-confirm-card h3{

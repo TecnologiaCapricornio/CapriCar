@@ -76,6 +76,62 @@ function deleteVehiclePermanently(vehicleId, justification){
   return operation;
 }
 
+function syncReservations(previous, next){
+  if(!databaseHydrated) return Promise.resolve({ localOnly:true, reservations:next });
+  const before = new Map((Array.isArray(previous) ? previous : []).map(item => [String(item.id), item]));
+  const after = new Map((Array.isArray(next) ? next : []).map(item => [String(item.id), item]));
+  const changes = [];
+  for(const [id, reservation] of after){
+    const old = before.get(id);
+    if(!old || JSON.stringify(old) !== JSON.stringify(reservation)){
+      changes.push({ type:'upsert', reservation });
+    }
+  }
+  for(const id of before.keys()){
+    if(!after.has(id)) changes.push({ type:'delete', id });
+  }
+  if(!changes.length) return Promise.resolve({ ok:true, reservations:next });
+  const operation = databaseSyncQueue
+    .catch(() => {})
+    .then(() => apiRequest('/api/reservations/sync', {
+      method:'POST', body:{ changes }
+    }))
+    .then(result => {
+      if(Array.isArray(result.reservations)){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(result.reservations));
+      }
+      return result;
+    });
+  databaseSyncQueue = operation.catch(error => {
+    console.error('Falha ao salvar reservas:', error);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(previous || []));
+  });
+  return operation;
+}
+
+function deleteBranchPermanently(branchId, justification){
+  if(!databaseHydrated){
+    return Promise.reject(new Error('Aguarde a conexão com o banco e tente novamente.'));
+  }
+  const operation = databaseSyncQueue
+    .catch(() => {})
+    .then(async () => {
+      const result = await apiRequest('/api/state/branches/' + encodeURIComponent(branchId), {
+        method:'DELETE',
+        body:{
+          justification,
+          revision:Number(databaseRevisions.branches || 0)
+        }
+      });
+      databaseRevisions.branches = result.revision;
+      return result;
+    });
+  databaseSyncQueue = operation.catch(error => {
+    console.error('Falha ao excluir a filial:', error);
+  });
+  return operation;
+}
+
 async function hydrateDatabaseState(){
   let localAudit = [];
   try{
@@ -85,7 +141,6 @@ async function hydrateDatabaseState(){
   }
   const payload = await apiRequest('/api/state/bootstrap');
   const mapping = {
-    reservations:STORAGE_KEY,
     branches:BRANCHES_KEY,
     vehicles:VEHICLES_KEY,
     blocks:BLOCKS_KEY,
@@ -123,6 +178,15 @@ async function hydrateDatabaseState(){
   }
   if(Array.isArray(payload.users) && payload.users.length){
     localStorage.setItem(USERS_KEY, JSON.stringify(payload.users));
+  }
+
+  const reservationPayload = await apiRequest('/api/reservations');
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(Array.isArray(reservationPayload.reservations) ? reservationPayload.reservations : [])
+  );
+  if(Array.isArray(payload.userDirectory)){
+    localStorage.setItem(USER_DIRECTORY_KEY, JSON.stringify(payload.userDirectory));
   }
   databaseHydrated = true;
   syncFleetGlobals();

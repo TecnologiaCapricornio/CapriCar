@@ -44,7 +44,7 @@ function loadPermissions(){
 test('administrador mantém acesso a todas as seções', () => {
   const app = loadPermissions();
   app.setCurrentUser({ nome:'admin', role:'admin', isAdmin:true });
-  ['reservas','frota','bloqueios','auditoria','relatorios','regras'].forEach(section => {
+  ['reservas','frota','bloqueios','auditoria','relatorios','regras','usuarios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
 });
@@ -61,13 +61,16 @@ test('Facilities acessa somente as quatro áreas permitidas', () => {
   ['reservas','frota','bloqueios','relatorios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
-  ['auditoria','regras'].forEach(section => {
+  ['auditoria','regras','usuarios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), false);
   });
   assert.equal(app.canManageReservations(), true);
   assert.equal(app.canManageFleet(), true);
   assert.equal(app.canManageBlocks(), true);
   assert.equal(app.canViewReports(), true);
+  assert.equal(app.canViewAudit(), false);
+  assert.equal(app.canManageRules(), false);
+  assert.equal(app.canManageUsers(), false);
   assert.equal(app.isAdmin(), false);
 });
 
@@ -86,17 +89,37 @@ test('permissões atualizadas mudam o acesso do usuário', () => {
     nome:'Gestor Teste',
     role:'user',
     active:true,
-    permissions:{ reservations:true, fleet:false, blocks:false, reports:true }
+    permissions:{ reservations:true, fleet:false, blocks:false, reports:true, audit:true, rules:false, users:true }
   });
   app.setCurrentUser(app.accountToSession(account));
   assert.equal(app.canManageReservations(), true);
   assert.equal(app.canManageFleet(), false);
   assert.equal(app.canViewReports(), true);
+  assert.equal(app.canViewAudit(), true);
+  assert.equal(app.canManageRules(), false);
+  assert.equal(app.canManageUsers(), true);
 
-  account.permissions = { reservations:false, fleet:true, blocks:true, reports:false };
+  account.permissions = { reservations:false, fleet:true, blocks:true, reports:false, audit:false, rules:true, users:false };
   app.setCurrentUser(app.accountToSession(account));
   assert.equal(app.canManageReservations(), false);
   assert.equal(app.canManageFleet(), true);
   assert.equal(app.canManageBlocks(), true);
   assert.equal(app.canViewReports(), false);
+  assert.equal(app.canViewAudit(), false);
+  assert.equal(app.canManageRules(), true);
+  assert.equal(app.canManageUsers(), false);
+});
+
+test('novas permissões liberam somente suas áreas correspondentes', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({
+    nome:'Gestor especializado',
+    role:'user',
+    permissions:{ audit:true, rules:true, users:true }
+  });
+  assert.equal(app.canAccessManagement(), true);
+  assert.equal(app.canAccessAdminSection('auditoria'), true);
+  assert.equal(app.canAccessAdminSection('regras'), true);
+  assert.equal(app.canAccessAdminSection('usuarios'), true);
+  assert.equal(app.canAccessAdminSection('reservas'), false);
 });

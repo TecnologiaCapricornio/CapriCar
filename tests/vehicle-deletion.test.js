@@ -33,7 +33,9 @@ test('preserva reserva histórica após a exclusão definitiva do veículo', () 
     rules:{
       maxConsecutiveDays:10,
       maxAdvanceDays:30,
-      maxReservationsInWindow:2
+      maxReservationsInWindow:2,
+      reservationBufferMinutes:60,
+      pickupAdvanceMinutes:15
     }
   }));
 });

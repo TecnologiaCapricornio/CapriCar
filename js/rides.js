@@ -105,13 +105,64 @@ function createPassengerListWidget(containerId, options){
 
   function addRow(value){
     if(listEl.children.length >= maxPassageiros) return;
+    const initial = value && typeof value === 'object'
+      ? { nome:String(value.nome || ''), usuarioId:String(value.usuarioId || '') }
+      : { nome:String(value || ''), usuarioId:'' };
     const row = document.createElement('div');
     row.className = 'passenger-row';
+    const inputWrap = document.createElement('div');
+    inputWrap.className = 'passenger-input-wrap';
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = 'Nome do passageiro';
+    input.placeholder = 'Busque um usuário ou digite o nome do visitante';
     input.autocomplete = 'off';
-    input.value = value || '';
+    input.value = initial.nome;
+    input.dataset.userId = initial.usuarioId;
+    const suggestions = document.createElement('div');
+    suggestions.className = 'passenger-suggestions hidden';
+
+    function closeSuggestions(){
+      suggestions.classList.add('hidden');
+      suggestions.innerHTML = '';
+    }
+
+    function selectUser(user){
+      input.value = user.nome;
+      input.dataset.userId = String(user.id);
+      closeSuggestions();
+    }
+
+    function renderSuggestions(){
+      input.dataset.userId = '';
+      const query = input.value.trim().toLocaleLowerCase('pt-BR');
+      if(!query){ closeSuggestions(); return; }
+      const matches = getPassengerDirectory().filter(user =>
+        String(user.nome).toLocaleLowerCase('pt-BR').includes(query)
+      ).slice(0, 6);
+      if(!matches.length){ closeSuggestions(); return; }
+      suggestions.innerHTML = '';
+      matches.forEach(user => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'passenger-suggestion';
+        option.textContent = user.nome;
+        option.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectUser(user);
+        });
+        suggestions.appendChild(option);
+      });
+      suggestions.classList.remove('hidden');
+    }
+
+    input.addEventListener('input', renderSuggestions);
+    input.addEventListener('focus', renderSuggestions);
+    input.addEventListener('blur', function(){
+      const exact = findPassengerDirectoryUser(input.value);
+      if(exact) selectUser(exact);
+      setTimeout(closeSuggestions, 100);
+    });
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'passenger-remove-btn';
@@ -120,7 +171,9 @@ function createPassengerListWidget(containerId, options){
       row.remove();
       updateAddBtnState();
     });
-    row.appendChild(input);
+    inputWrap.appendChild(input);
+    inputWrap.appendChild(suggestions);
+    row.appendChild(inputWrap);
     row.appendChild(removeBtn);
     listEl.appendChild(row);
     updateAddBtnState();
@@ -136,9 +189,22 @@ function createPassengerListWidget(containerId, options){
     return Array.from(listEl.querySelectorAll('input[type="text"]')).map(i => i.value);
   }
 
+  function getPassengers(){
+    return Array.from(listEl.querySelectorAll('input[type="text"]')).map(input => ({
+      nome:input.value,
+      usuarioId:input.dataset.userId || ''
+    }));
+  }
+
   function setNomes(nomes){
     listEl.innerHTML = '';
     (nomes || []).forEach(nome => addRow(nome));
+    updateAddBtnState();
+  }
+
+  function setPassengers(passengers){
+    listEl.innerHTML = '';
+    (passengers || []).forEach(passenger => addRow(passenger));
     updateAddBtnState();
   }
 
@@ -149,7 +215,14 @@ function createPassengerListWidget(containerId, options){
 
   updateAddBtnState();
 
-  return { getNomes: getNomes, setNomes: setNomes, clear: clear, addRow: addRow };
+  return {
+    getNomes:getNomes,
+    getPassengers:getPassengers,
+    setNomes:setNomes,
+    setPassengers:setPassengers,
+    clear:clear,
+    addRow:addRow
+  };
 }
 
 // Valida a lista de nomes de passageiros de um formulário.
@@ -160,7 +233,8 @@ function validarListaPassageiros(nomeCriador, nomes, maxPassageiros){
   const passageiros = [];
 
   for(let i = 0; i < nomes.length; i++){
-    const nome = String(nomes[i] || '').trim();
+    const entry = nomes[i] && typeof nomes[i] === 'object' ? nomes[i] : { nome:nomes[i] };
+    const nome = String(entry.nome || '').trim();
     if(!nome){
       return { ok:false, message:'Informe o nome do passageiro ou remova a linha.' };
     }
@@ -171,8 +245,17 @@ function validarListaPassageiros(nomeCriador, nomes, maxPassageiros){
     if(vistos.indexOf(chave) !== -1){
       return { ok:false, message:'Passageiro repetido: ' + nome + '.' };
     }
+    const linkedUser = entry.usuarioId
+      ? getPassengerDirectory().find(user => String(user.id) === String(entry.usuarioId))
+      : findPassengerDirectoryUser(nome);
+    if(entry.usuarioId && (!linkedUser || String(linkedUser.nome).trim().toLocaleLowerCase('pt-BR') !== chave)){
+      return { ok:false, message:'O usuário selecionado não é mais válido. Pesquise novamente ou informe como visitante.' };
+    }
     vistos.push(chave);
-    passageiros.push({ nome: nome });
+    passageiros.push(linkedUser
+      ? { nome:linkedUser.nome, usuarioId:String(linkedUser.id) }
+      : { nome:nome, externo:true }
+    );
   }
 
   if(passageiros.length > limite){
@@ -198,32 +281,26 @@ function isReservaLotada(reserva){
 
 function isPassageiro(reserva, nome){
   if(!nome) return false;
-  return getPassageiros(reserva).some(p => p.nome === nome);
+  const user = nome && typeof nome === 'object' ? nome : { nome:nome };
+  return getPassageiros(reserva).some(p =>
+    (user.id && p.usuarioId && String(p.usuarioId) === String(user.id)) ||
+    (p.externo !== true && String(p.nome || '').trim().toLocaleLowerCase('pt-BR') ===
+      String(user.nome || '').trim().toLocaleLowerCase('pt-BR')
+    )
+  );
 }
 
-// Verifica se dois horários (HH:MM) são "compatíveis" o suficiente para compartilhar o mesmo trajeto.
-// Consideramos compatível quando a diferença entre os horários de retirada é de até 60 minutos.
-function horariosCompativeis(h1, h2){
-  if(!h1 || !h2) return true;
-  const toMin = h => {
-    const [hh, mm] = h.split(':').map(Number);
-    return hh * 60 + mm;
-  };
-  return Math.abs(toMin(h1) - toMin(h2)) <= 60;
-}
-
-// Busca reservas existentes com o mesmo trajeto (partida, destino, data de ida, data de volta)
-// que tenham vagas disponíveis e horário de retirada compatível.
-function findReservasCompativeis(partida, destino, dataIda, dataVolta, horarioRetirada, currentUserNome){
+// Busca reservas com a mesma origem, o mesmo destino e o mesmo dia de ida.
+// Os horários e a data de volta podem ser diferentes: eles são exibidos no cartão
+// para que a pessoa decida se a carona atende à necessidade dela.
+function findReservasCompativeis(partida, destino, dataIda, currentUserNome){
   return getReservations().filter(r => {
-    if(isReservationCompleted(r)) return false;
+    if(!reservationCanAcceptPassengers(r)) return false;
     if(r.partida !== partida) return false;
     if(r.destino !== destino) return false;
     if(r.dataIda !== dataIda) return false;
-    if(r.dataVolta !== dataVolta) return false;
     if(isReservaLotada(r)) return false;
     if(currentUserNome && isPassageiro(r, currentUserNome)) return false;
-    if(!horariosCompativeis(r.horarioRetirada, horarioRetirada)) return false;
     return true;
   });
 }
@@ -235,11 +312,11 @@ function renderRideCard(reserva){
   const card = document.createElement('div');
   card.className = 'ride-card';
   card.innerHTML =
-    '<div class="ride-info">' +
-      '<div class="ride-route">' + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
-      '<span class="reservation-car">Polo final ' + escapeHTML(reserva.carro) + '</span>' +
+      '<div class="ride-info">' +
+      '<div class="ride-route">' + renderReservationNumber(reserva) + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
+      '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(reserva)) + '</div>' +
       '<div class="ride-driver">Reservado por: ' + escapeHTML(reserva.nome) + '</div>' +
-      '<div class="ride-meta">' + formatDate(reserva.dataIda) + (reserva.horarioRetirada ? ' às ' + reserva.horarioRetirada : '') + ' até ' + formatDate(reserva.dataVolta) + (reserva.horarioDevolucao ? ' às ' + reserva.horarioDevolucao : '') + '</div>' +
+      '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
       '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + ' (' + ocupantes + '/' + capacidade + ')</span></div>' +
       renderOcupantesHTML(reserva) +
     '</div>' +
@@ -261,17 +338,20 @@ async function addPassengerToReservation(id, user){
   const reserva = list[idx];
   reserva.passageiros = getPassageiros(reserva);
 
-  if(isReservaLotada(reserva) || isPassageiro(reserva, user.nome)){
+  if(!reservationCanAcceptPassengers(reserva) || isReservaLotada(reserva) || isPassageiro(reserva, user)){
     return null;
   }
 
-  reserva.passageiros.push({ nome: user.nome });
+  reserva.passageiros.push({ nome: user.nome, usuarioId:user.id });
   list[idx] = reserva;
   try{
     await saveReservations(list);
   }catch(error){
     await hydrateDatabaseState();
-    alert(error.message);
+    await showSiteAlert(error.message, {
+      title:'Não foi possível entrar na carona',
+      type:'danger'
+    });
     return null;
   }
   logAudit('entrou', 'reserva', reserva.id, user.nome + ' entrou na carona de ' + reserva.partida + ' para ' + reserva.destino);
@@ -292,15 +372,22 @@ async function removePassengerFromReservation(id, user){
   if(reserva.nome === user.nome) return null; // criador não pode "sair", só excluir
 
   reserva.passageiros = getPassageiros(reserva);
-  if(!isPassageiro(reserva, user.nome)) return null;
+  if(!isPassageiro(reserva, user)) return null;
 
-  reserva.passageiros = reserva.passageiros.filter(p => p.nome !== user.nome);
+  reserva.passageiros = reserva.passageiros.filter(p => !(
+    (p.usuarioId && user.id && String(p.usuarioId) === String(user.id)) ||
+    String(p.nome || '').trim().toLocaleLowerCase('pt-BR') ===
+      String(user.nome || '').trim().toLocaleLowerCase('pt-BR')
+  ));
   list[idx] = reserva;
   try{
     await saveReservations(list);
   }catch(error){
     await hydrateDatabaseState();
-    alert(error.message);
+    await showSiteAlert(error.message, {
+      title:'Não foi possível sair da carona',
+      type:'danger'
+    });
     return null;
   }
   logAudit('saiu', 'reserva', reserva.id, user.nome + ' saiu da carona');
@@ -313,16 +400,19 @@ function checkAndShowCompatibleRides(){
   const partida = partidaSelect.value;
   const destino = getDestinoValue();
   const dataIda = dataIdaInput.value;
-  const dataVolta = dataVoltaInput.value;
-  const horarioRetirada = horarioRetiradaSelect.value;
 
-  if(!partida || !destino || !dataIda || !dataVolta || partida === destino){
+  if(!partida || !destino || !dataIda || partida === destino){
     ridesSection.classList.add('hidden');
     ridesList.innerHTML = '';
     return;
   }
 
-  const compativeis = findReservasCompativeis(partida, destino, dataIda, dataVolta, horarioRetirada, currentUser ? currentUser.nome : null);
+  const compativeis = findReservasCompativeis(
+    partida,
+    destino,
+    dataIda,
+    currentUser ? currentUser.nome : null
+  );
 
   if(compativeis.length === 0){
     ridesSection.classList.add('hidden');
@@ -352,7 +442,7 @@ async function joinRide(id){
 
   const reserva = result.reserva;
   const vagasRestantes = getVagasRestantes(reserva);
-  confirmationText.textContent = 'Você entrou na carona! ' + reserva.partida + ' → ' + reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '/' + CAPACIDADE_MAXIMA + '.';
+  confirmationText.textContent = 'Você entrou na carona! ' + reserva.partida + ' → ' + reserva.destino + ' de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '/' + CAPACIDADE_MAXIMA + '.';
   confirmation.classList.add('show');
 
   form.reset();
@@ -413,9 +503,9 @@ function getAvailableRidesForCurrentUser(){
   const filtroData = filtroDataInput.value;
 
   return getReservations().filter(r => {
-    if(isReservationCompleted(r)) return false;
+    if(!reservationCanAcceptPassengers(r)) return false;
     if(isReservaLotada(r)) return false;
-    if(currentUser && isPassageiro(r, currentUser.nome)) return false;
+    if(currentUser && isPassageiro(r, currentUser)) return false;
     if(filtroPartida && r.partida !== filtroPartida) return false;
     if(filtroDestino && r.destino !== filtroDestino) return false;
     if(filtroData && !(filtroData >= r.dataIda && filtroData <= r.dataVolta)) return false;
@@ -430,12 +520,11 @@ function renderAvailableRideCard(reserva){
   const card = document.createElement('div');
   card.className = 'ride-card available-ride-card';
   card.innerHTML =
-    '<div class="ride-info">' +
-      '<div class="ride-route">' + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
-      '<span class="reservation-car">Polo final ' + escapeHTML(reserva.carro) + '</span>' +
+      '<div class="ride-info">' +
+      '<div class="ride-route">' + renderReservationNumber(reserva) + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
+      '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(reserva)) + '</div>' +
       '<div class="ride-driver">Criado por: ' + escapeHTML(reserva.nome) + '</div>' +
-      '<div class="ride-meta">Ida: ' + formatDate(reserva.dataIda) + (reserva.horarioRetirada ? ' às ' + reserva.horarioRetirada : '') + '</div>' +
-      '<div class="ride-meta">Volta: ' + formatDate(reserva.dataVolta) + (reserva.horarioDevolucao ? ' às ' + reserva.horarioDevolucao : '') + '</div>' +
+      '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
       '<div class="ride-occupants-badge">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
       '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + '</span></div>' +
       renderOcupantesHTML(reserva) +
@@ -499,7 +588,7 @@ async function joinRideFromAvailable(id){
 
   const reserva = result.reserva;
   const vagasRestantes = getVagasRestantes(reserva);
-  caronasConfirmationText.textContent = 'Você entrou na carona! ' + reserva.partida + ' → ' + reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '/' + CAPACIDADE_MAXIMA + '.';
+  caronasConfirmationText.textContent = 'Você entrou na carona! ' + reserva.partida + ' → ' + reserva.destino + ' de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '/' + CAPACIDADE_MAXIMA + '.';
   caronasConfirmation.classList.add('show');
 
   renderAvailableRides();

@@ -13,7 +13,7 @@ router.get('/branches', async (req, res) => {
 router.get('/vehicles', async (req, res) => {
   const result = await query(
     `SELECT v.id, v.branch_id, b.name AS branch_name, v.code, v.plate,
-            v.model, v.capacity, v.active, v.created_at, v.updated_at
+            v.brand, v.model, v.capacity, v.active, v.created_at, v.updated_at
        FROM vehicles v
        JOIN branches b ON b.id = v.branch_id
       ORDER BY b.name, v.model, v.code`

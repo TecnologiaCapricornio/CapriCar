@@ -115,6 +115,12 @@
     letter-spacing:0.2px;
   }
 
+  .required-marker{
+    margin-left:4px;
+    color:#ff7887;
+    font-weight:900;
+  }
+
   .row{
     display:flex;
     gap:14px;
@@ -178,6 +184,24 @@
 
   .date-input-wrapper{
     position:relative;
+  }
+
+  .date-input-wrapper > input[readonly]{
+    cursor:pointer;
+    padding-right:42px;
+  }
+
+  .date-input-wrapper::after{
+    content:'▦';
+    position:absolute;
+    top:50%;
+    right:15px;
+    transform:translateY(-50%);
+    color:var(--azul-claro);
+    font-size:1.05rem;
+    font-weight:700;
+    line-height:1;
+    pointer-events:none;
   }
 
   .error-msg{

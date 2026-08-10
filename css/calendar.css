@@ -279,6 +279,49 @@
     white-space:nowrap;
   }
 
+  .week-reservation-event .calendar-event-time strong{
+    font-weight:600;
+  }
+
+  .week-reservation-event .calendar-event-id{
+    font-size:.72rem;
+    font-weight:700;
+  }
+
+  .week-reservation-event .calendar-event-route{
+    font-weight:800;
+  }
+
+  .week-reservation-event .calendar-event-vehicle{
+    color:#d9edf9;
+    font-weight:700;
+  }
+
+  .week-reservation-event .calendar-event-requester{
+    color:#c3dced;
+  }
+
+  .week-reservation-event.is-detailed .calendar-event-route,
+  .week-reservation-event.is-detailed .calendar-event-vehicle,
+  .week-reservation-event.is-detailed .calendar-event-requester{
+    display:block;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    line-height:1.3;
+  }
+
+  .week-reservation-event.is-detailed .calendar-event-vehicle{
+    margin-top:2px;
+  }
+
+  .week-reservation-event.is-short .calendar-event-vehicle,
+  .week-reservation-event.is-short .calendar-event-route,
+  .week-reservation-event.is-short .calendar-event-requester{
+    display:none;
+  }
+
   .week-reservation-event.clipped-start::before,
   .week-reservation-event.clipped-end::after{
     position:absolute;
@@ -457,26 +500,35 @@
   }
 
   .day-detail-item{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:14px;
+    border:1px solid rgba(111,168,216,.16);
     border-left:3px solid var(--azul-claro);
-    background:rgba(255,255,255,0.04);
-    padding:10px 12px;
-    border-radius:var(--radius-sm);
-    margin-bottom:8px;
+    background:rgba(11,31,52,.55);
+    padding:17px 18px;
+    border-radius:var(--radius-md);
+    margin-bottom:12px;
     font-size:0.85rem;
   }
 
-  .day-detail-item .route{
-    font-weight:700;
-    color:#fff;
+  .day-detail-item.focused{
+    border-color:var(--azul-claro);
+    border-left-color:var(--azul-claro);
+    box-shadow:0 0 0 3px rgba(111,168,216,.14);
   }
 
-  .day-detail-item .meta{
-    color:var(--texto-muted);
-    font-size:0.78rem;
-    margin-top:2px;
+  .day-detail-item .reservation-more-content .occupants-block{
+    margin-top:5px;
+    margin-bottom:0;
   }
 
   /* ---- Seletor de carro no Calendário ---- */
+  .calendar-mobile-branch-filter{
+    display:none;
+  }
+
   .car-selector{
     display:flex;
     flex-wrap:wrap;
@@ -595,8 +647,8 @@
     border:1px solid var(--card-border);
     border-radius:var(--radius-md);
     box-shadow:var(--sombra);
-    padding:12px;
-    width:250px;
+    padding:14px;
+    width:292px;
   }
 
   .date-popup.show{
@@ -611,7 +663,7 @@
     margin-bottom:8px;
     font-weight:700;
     color:#fff;
-    font-size:0.82rem;
+    font-size:0.88rem;
     text-transform:capitalize;
   }
 
@@ -619,7 +671,7 @@
     background:none;
     border:none;
     cursor:pointer;
-    font-size:1rem;
+    font-size:1.05rem;
     color:#bcd9f0;
     padding:2px 9px;
     border-radius:6px;
@@ -632,7 +684,7 @@
   .date-popup-grid{
     display:grid;
     grid-template-columns:repeat(7, 1fr);
-    gap:2px;
+    gap:3px;
   }
 
   .date-popup-weekday{
@@ -646,7 +698,10 @@
   .date-popup-day{
     font-size:0.76rem;
     text-align:center;
-    padding:6px 0;
+    min-height:32px;
+    display:grid;
+    place-items:center;
+    padding:5px 0;
     border-radius:6px;
     cursor:pointer;
     color:var(--texto);
@@ -721,6 +776,66 @@
 }
 
 @media (max-width:720px){
+  .calendar-mobile-branch-filter{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    align-items:center;
+    gap:9px;
+    margin-bottom:9px;
+    padding:6px 8px;
+    border:1px solid rgba(111,168,216,.2);
+    border-radius:12px;
+    background:rgba(255,255,255,.035);
+  }
+
+  .date-popup-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:10px;
+    padding-top:9px;
+    border-top:1px solid var(--card-border);
+  }
+
+  .date-popup-clear-btn{
+    border:1px solid var(--card-border);
+    border-radius:999px;
+    background:transparent;
+    color:var(--azul-claro);
+    padding:6px 13px;
+    font-size:.7rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  .date-popup-clear-btn:hover:not(:disabled){
+    background:rgba(111,168,216,.12);
+  }
+
+  .date-popup-clear-btn:disabled{
+    opacity:.4;
+    cursor:default;
+  }
+
+  .calendar-mobile-branch-filter label{
+    color:#91abc0;
+    font-size:.68rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  .calendar-mobile-branch-filter select{
+    min-height:36px;
+    padding:6px 34px 6px 11px;
+    border-radius:9px;
+    font-size:16px;
+    font-weight:700;
+  }
+
+  .car-selector{
+    display:none;
+  }
+
   .app-screen.calendar-mobile-view{
     width:100%;
     height:100dvh;
@@ -757,10 +872,6 @@
   .app-screen.calendar-mobile-view #panel-calendario > .card > h2{
     margin-bottom:10px;
     font-size:1rem;
-  }
-
-  .app-screen.calendar-mobile-view .car-selector{
-    margin-bottom:10px;
   }
 
   .app-screen.calendar-mobile-view .calendar-vehicle-filter{
@@ -1295,9 +1406,9 @@
 }
 
 .reservation-range-calendar{
-  width:min(100%, 440px);
+  width:min(100%, 360px);
   margin:8px auto 2px;
-  padding:18px;
+  padding:14px;
   border:1px solid rgba(111,168,216,.28);
   border-radius:18px;
   background:linear-gradient(145deg,rgba(26,47,72,.98),rgba(15,31,50,.98));
@@ -1308,8 +1419,8 @@
 .range-calendar-topline{
   display:flex;
   justify-content:space-between;
-  margin-bottom:14px;
-  padding:0 4px;
+  margin-bottom:10px;
+  padding:0 3px;
 }
 
 .range-calendar-topline strong,
@@ -1319,37 +1430,37 @@
 
 .range-calendar-topline strong{
   color:#fff;
-  font-size:.86rem;
+  font-size:.8rem;
 }
 
 .range-calendar-topline span{
-  margin-top:3px;
+  margin-top:2px;
   color:var(--texto-muted);
-  font-size:.7rem;
+  font-size:.64rem;
 }
 
 .range-calendar-header{
   display:grid;
-  grid-template-columns:38px 1fr 38px;
+  grid-template-columns:32px 1fr 32px;
   align-items:center;
-  margin-bottom:14px;
+  margin-bottom:9px;
 }
 
 .range-calendar-header strong{
   color:#fff;
   text-align:center;
-  font-size:.95rem;
+  font-size:.86rem;
   text-transform:lowercase;
 }
 
 .range-calendar-nav{
-  width:34px;
-  height:34px;
+  width:30px;
+  height:30px;
   border:0;
   border-radius:50%;
   background:transparent;
   color:#d9e8f5;
-  font-size:1.4rem;
+  font-size:1.2rem;
   cursor:pointer;
 }
 
@@ -1361,14 +1472,14 @@
 .range-calendar-grid{
   display:grid;
   grid-template-columns:repeat(7,minmax(0,1fr));
-  gap:5px 3px;
+  gap:3px 1px;
 }
 
 .range-calendar-weekday{
-  padding:4px 0 8px;
+  padding:3px 0 5px;
   color:#8fa7bd;
   text-align:center;
-  font-size:.68rem;
+  font-size:.62rem;
   font-weight:800;
   text-transform:uppercase;
 }
@@ -1382,11 +1493,11 @@
   min-width:0;
   padding:0;
   border:0;
-  border-radius:10px;
+  border-radius:8px;
   background:transparent;
   color:#dbe8f3;
   cursor:pointer;
-  font-size:.78rem;
+  font-size:.72rem;
   font-weight:650;
 }
 
@@ -1396,8 +1507,8 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  width:34px;
-  height:34px;
+  width:28px;
+  height:28px;
   border-radius:50%;
 }
 
@@ -1421,6 +1532,50 @@
   cursor:not-allowed;
 }
 
+.date-popup.range-style-date-popup{
+  width:min(360px,calc(100vw - 32px));
+  padding:14px;
+  border-color:rgba(111,168,216,.28);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(26,47,72,.99),rgba(15,31,50,.99));
+  box-shadow:0 18px 42px rgba(4,12,22,.45);
+}
+
+.row .field:last-child .date-popup.range-style-date-popup{
+  right:0;
+  left:auto;
+}
+
+.range-style-date-popup .single-date-topline{
+  margin-bottom:10px;
+}
+
+.range-style-date-popup .date-popup-day.selected,
+.range-style-date-popup .date-popup-day.blocked{
+  background:transparent;
+}
+
+.range-style-date-popup .date-popup-day.blocked{
+  color:#ef8791;
+}
+
+.range-style-date-popup .date-popup-actions{
+  display:flex;
+  justify-content:flex-end;
+}
+
+.range-calendar-day.partially-unavailable span::after{
+  content:"";
+  position:absolute;
+  right:4px;
+  bottom:3px;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--vermelho);
+  box-shadow:0 0 0 2px rgba(239,91,106,.15);
+}
+
 .range-calendar-day.today span{
   box-shadow:inset 0 0 0 1.5px var(--azul-claro);
 }
@@ -1442,10 +1597,10 @@
 .range-calendar-legend{
   display:flex;
   flex-wrap:wrap;
-  gap:14px;
-  margin:14px 3px 0;
+  gap:10px;
+  margin:10px 3px 0;
   color:var(--texto-muted);
-  font-size:.68rem;
+  font-size:.62rem;
 }
 
 .range-calendar-legend span{
@@ -1455,8 +1610,8 @@
 }
 
 .range-legend-dot{
-  width:9px;
-  height:9px;
+  width:8px;
+  height:8px;
   border-radius:50%;
 }
 
@@ -1468,20 +1623,24 @@
   background:var(--vermelho);
 }
 
+.range-legend-dot.partially-unavailable{
+  background:#d88919;
+}
+
 .range-calendar-actions{
   display:flex;
   justify-content:flex-end;
-  gap:9px;
-  margin-top:15px;
-  padding-top:13px;
+  gap:7px;
+  margin-top:10px;
+  padding-top:9px;
   border-top:1px solid rgba(111,168,216,.16);
 }
 
 .range-clear-btn,
 .range-apply-btn{
-  padding:9px 14px;
+  padding:7px 12px;
   border-radius:999px;
-  font-size:.76rem;
+  font-size:.7rem;
   font-weight:750;
   cursor:pointer;
 }
@@ -1515,13 +1674,14 @@
     font-size:.78rem;
   }
   .reservation-range-calendar{
-    padding:14px 10px;
+    width:min(100%,350px);
+    padding:12px 8px;
   }
   .range-calendar-grid{
     gap:4px 1px;
   }
   .range-calendar-day span{
-    width:31px;
-    height:31px;
+    width:27px;
+    height:27px;
   }
 }

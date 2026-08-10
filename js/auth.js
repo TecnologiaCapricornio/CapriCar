@@ -23,7 +23,10 @@ function normalizeUserPermissions(permissions){
     reservations:source.reservations === true,
     fleet:source.fleet === true,
     blocks:source.blocks === true,
-    reports:source.reports === true
+    reports:source.reports === true,
+    audit:source.audit === true,
+    rules:source.rules === true,
+    users:source.users === true
   };
 }
 
@@ -91,7 +94,7 @@ function hasManagementPermission(permission){
 }
 
 function canAccessManagement(){
-  return isAdmin() || ['reservations','fleet','blocks','reports'].some(hasManagementPermission);
+  return isAdmin() || ['reservations','fleet','blocks','reports','audit','rules','users'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
@@ -110,13 +113,28 @@ function canViewReports(){
   return hasManagementPermission('reports');
 }
 
+function canViewAudit(){
+  return hasManagementPermission('audit');
+}
+
+function canManageRules(){
+  return hasManagementPermission('rules');
+}
+
+function canManageUsers(){
+  return hasManagementPermission('users');
+}
+
 function canAccessAdminSection(section){
   if(isAdmin()) return true;
   const permissionBySection = {
     reservas:'reservations',
     frota:'fleet',
     bloqueios:'blocks',
-    relatorios:'reports'
+    relatorios:'reports',
+    auditoria:'audit',
+    regras:'rules',
+    usuarios:'users'
   };
   return !!permissionBySection[section] && hasManagementPermission(permissionBySection[section]);
 }
@@ -199,6 +217,7 @@ function showApp(user){
   renderCarSelector();
   renderMainCalendar();
   renderAvailableRides();
+  initializeNotifications();
 }
 
 function showLogin(){
@@ -262,6 +281,7 @@ logoutBtn.addEventListener('click', async function(){
     console.error('Falha ao encerrar sessão no servidor:', error);
   }
   databaseHydrated = false;
+  stopNotifications();
   clearCurrentUser();
   profileModal.classList.add('hidden');
   showLogin();
@@ -281,38 +301,106 @@ const panels = {
   caronas: document.getElementById('panel-caronas'),
   admin: document.getElementById('panel-admin')
 };
+let tabRefreshSequence = 0;
+
+function initializeTabAccessibility(){
+  if(!tabsNav || typeof tabsNav.setAttribute !== 'function') return;
+  tabsNav.setAttribute('role', 'tablist');
+  tabsNav.setAttribute('aria-label', 'Navegação principal');
+  tabsNav.querySelectorAll('.tab-btn').forEach(button => {
+    const name = button.getAttribute('data-tab');
+    const panel = panels[name];
+    button.id = 'main-tab-' + name;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-controls', panel.id);
+    button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
+    button.tabIndex = button.classList.contains('active') ? 0 : -1;
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', button.id);
+    panel.tabIndex = 0;
+  });
+}
 
 function setMobileNavOpen(open){
   const expanded = !!open;
   tabsNav.classList.toggle('mobile-collapsed', !expanded);
   mobileNavToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  mobileNavToggle.setAttribute(
+    'aria-label',
+    (expanded ? 'Fechar' : 'Abrir') + ' menu de navegação. Tela atual: ' + mobileNavCurrent.textContent
+  );
 }
 
-function switchTab(tabName){
-  if(tabName === 'admin' && !canAccessManagement()) return;
-  appScreen.classList.toggle('calendar-mobile-view', tabName === 'calendario');
-  Object.keys(panels).forEach(key => {
-    panels[key].classList.toggle('hidden', key !== tabName);
-  });
-  tabsNav.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
-  });
-  const selectedButton = tabsNav.querySelector('.tab-btn[data-tab="' + tabName + '"]');
-  if(selectedButton){
-    mobileNavCurrent.textContent = selectedButton.textContent.trim();
-  }
-  if(window.matchMedia('(max-width:480px)').matches){
-    setMobileNavOpen(false);
-  }
+function renderCurrentTabData(tabName, refreshedFromServer){
   if(tabName === 'minhas') renderMyReservations();
-  if(tabName === 'calendario'){ renderCarSelector(); renderMainCalendar(); }
+  if(tabName === 'calendario'){
+    renderCarSelector();
+    renderMainCalendar();
+  }
   if(tabName === 'caronas') renderAvailableRides();
+  if(tabName === 'nova' && refreshedFromServer){
+    populateCarroOptions(true);
+    populateDestinoOptions();
+    refreshDatePickers();
+    refreshAvailableTimeOptions();
+  }
   if(tabName === 'admin'){
     const activeSection = document.querySelector('.admin-section-btn.active:not(.hidden)');
     if(activeSection && typeof renderAdminSection === 'function'){
       renderAdminSection(activeSection.getAttribute('data-admin-section'));
     }
   }
+}
+
+async function refreshTabFromServer(tabName, refreshSequence){
+  if(!getCurrentUser() || typeof hydrateDatabaseState !== 'function') return;
+  try{
+    if(typeof databaseSyncQueue !== 'undefined') await databaseSyncQueue.catch(() => {});
+    await hydrateDatabaseState();
+    const activeButton = tabsNav.querySelector('.tab-btn.active');
+    const activeTab = activeButton ? activeButton.getAttribute('data-tab') : '';
+    if(refreshSequence !== tabRefreshSequence || activeTab !== tabName) return;
+    renderCurrentTabData(tabName, true);
+  }catch(error){
+    console.warn('Não foi possível atualizar a aba automaticamente:', error);
+  }
+}
+
+function switchTab(tabName){
+  if(tabName === 'admin' && !canAccessManagement()) return;
+  if(tabName === 'nova'){
+    const pendingReturn = getPendingReturnReservation(getCurrentUser());
+    if(pendingReturn){
+      showSiteAlert(pendingReturnReservationMessage(pendingReturn), {
+        title:'Devolução pendente',
+        type:'warning'
+      });
+      tabName = 'minhas';
+    }
+  }
+  appScreen.classList.toggle('calendar-mobile-view', tabName === 'calendario');
+  Object.keys(panels).forEach(key => {
+    panels[key].classList.toggle('hidden', key !== tabName);
+  });
+  tabsNav.querySelectorAll('.tab-btn').forEach(btn => {
+    const selected = btn.getAttribute('data-tab') === tabName;
+    btn.classList.toggle('active', selected);
+    btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+    btn.tabIndex = selected ? 0 : -1;
+  });
+  const selectedButton = tabsNav.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+  if(selectedButton){
+    mobileNavCurrent.textContent = selectedButton.textContent.trim();
+    mobileNavToggle.setAttribute('aria-label',
+      'Abrir menu de navegação. Tela atual: ' + mobileNavCurrent.textContent);
+  }
+  if(window.matchMedia('(max-width:480px)').matches){
+    setMobileNavOpen(false);
+  }
+  renderCurrentTabData(tabName, false);
+  const refreshSequence = ++tabRefreshSequence;
+  refreshTabFromServer(tabName, refreshSequence);
+  refreshNotifications();
 }
 
 myNewReservationBtn.addEventListener('click', function(){
@@ -335,6 +423,22 @@ tabsNav.addEventListener('click', function(e){
   switchTab(btn.getAttribute('data-tab'));
 });
 
+tabsNav.addEventListener('keydown', function(e){
+  if(!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+  const buttons = [...tabsNav.querySelectorAll('.tab-btn:not(.hidden)')];
+  const currentIndex = buttons.indexOf(document.activeElement);
+  if(currentIndex < 0) return;
+  e.preventDefault();
+  let nextIndex = currentIndex;
+  if(e.key === 'Home') nextIndex = 0;
+  else if(e.key === 'End') nextIndex = buttons.length - 1;
+  else nextIndex = (currentIndex + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+  buttons[nextIndex].focus();
+  switchTab(buttons[nextIndex].getAttribute('data-tab'));
+});
+
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') setMobileNavOpen(false);
 });
+
+initializeTabAccessibility();

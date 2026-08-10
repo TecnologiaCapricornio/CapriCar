@@ -20,7 +20,10 @@ function permissionsFromRow(row){
     reservations:row.can_manage_reservations === true,
     fleet:row.can_manage_fleet === true,
     blocks:row.can_manage_blocks === true,
-    reports:row.can_view_reports === true
+    reports:row.can_view_reports === true,
+    audit:row.can_view_audit === true,
+    rules:row.can_manage_rules === true,
+    users:row.can_manage_users === true
   };
 }
 
@@ -81,6 +84,7 @@ function requirePermission(permission){
 module.exports = {
   SESSION_COOKIE,
   parseCookies,
+  permissionsFromRow,
   publicUser,
   requireAuth,
   requireAdmin,

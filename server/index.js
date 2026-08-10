@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const catalogRoutes = require('./routes/catalog');
 const stateRoutes = require('./routes/state');
+const notificationRoutes = require('./routes/notifications');
+const reservationRoutes = require('./routes/reservations');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -48,6 +50,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', requireAuth, userRoutes);
 app.use('/api/catalog', requireAuth, catalogRoutes);
 app.use('/api/state', requireAuth, stateRoutes);
+app.use('/api/notifications', requireAuth, notificationRoutes);
+app.use('/api/reservations', requireAuth, reservationRoutes);
 
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));

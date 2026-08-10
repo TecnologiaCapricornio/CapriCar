@@ -57,6 +57,12 @@ function validateRules(value){
     assert(Number.isInteger(Number(value[key])) && Number(value[key]) >= 1 && Number(value[key]) <= 365,
       'Os limites das regras devem ser números inteiros entre 1 e 365.');
   }
+  assert(Number.isInteger(Number(value.reservationBufferMinutes)) &&
+    Number(value.reservationBufferMinutes) >= 0 && Number(value.reservationBufferMinutes) <= 1440,
+    'O intervalo entre reservas deve ser um número inteiro entre 0 e 1440 minutos.');
+  assert(Number.isInteger(Number(value.pickupAdvanceMinutes)) &&
+    Number(value.pickupAdvanceMinutes) >= 0 && Number(value.pickupAdvanceMinutes) <= 1440,
+    'A antecedência da retirada deve ser um número inteiro entre 0 e 1440 minutos.');
 }
 
 function validateBranches(value){
@@ -71,28 +77,30 @@ function validateBranches(value){
   });
 }
 
-function validateVehicles(value, branches){
+function validateVehicles(value, branches, currentVehicles){
   assert(Array.isArray(value) && value.length <= 5000, 'Lista de veículos inválida.');
   ensureUniqueIds(value, 'veículos');
   const branchNames = new Set(branches.map(branch => String(branch.nome).toLowerCase()));
   const keys = new Set();
   const plates = new Set();
+  const currentById = new Map((currentVehicles || []).map(vehicle => [String(vehicle.id), vehicle]));
   value.forEach(vehicle => {
     const branch = text(vehicle.filial, 'a filial do veículo', 120);
-    const code = text(vehicle.codigo, 'a identificação do veículo', 40);
+    const code = text(vehicle.codigo, 'a referência interna do veículo', 40);
+    const previous = currentById.get(String(vehicle.id));
+    const legacyWithoutBrand = previous && !String(previous.marca || '').trim();
+    text(vehicle.marca, 'a marca do veículo', 120, !legacyWithoutBrand);
     text(vehicle.modelo, 'o modelo do veículo', 120);
-    const plate = text(vehicle.placa, 'a placa do veículo', 10, false).toUpperCase();
+    const plate = text(vehicle.placa, 'a placa do veículo', 10).toUpperCase();
     assert(branchNames.has(branch.toLowerCase()), 'O veículo referencia uma filial inexistente.');
     assert(Number.isInteger(Number(vehicle.capacidade)) && Number(vehicle.capacidade) >= 1 && Number(vehicle.capacidade) <= 20,
       'A capacidade do veículo deve estar entre 1 e 20.');
     assert(typeof vehicle.ativo === 'boolean', 'O status do veículo é inválido.');
     const key = `${branch.toLowerCase()}|${code.toLowerCase()}`;
-    assert(!keys.has(key), 'Já existe um veículo com essa identificação na filial.');
+    assert(!keys.has(key), 'Já existe um veículo com essa placa.');
     keys.add(key);
-    if(plate){
-      assert(!plates.has(plate), 'Já existe um veículo com essa placa.');
-      plates.add(plate);
-    }
+    assert(!plates.has(plate), 'Já existe um veículo com essa placa.');
+    plates.add(plate);
   });
 }
 
@@ -116,9 +124,13 @@ function validateBlocks(value, vehicles){
 
 function reservationRange(reservation){
   return {
-    start:`${reservation.dataIda}T${reservation.horarioRetirada}`,
-    end:`${reservation.dataVolta}T${reservation.horarioDevolucao}`
+    start:new Date(`${reservation.dataIda}T${reservation.horarioRetirada}:00Z`).getTime(),
+    end:new Date(`${reservation.dataVolta}T${reservation.horarioDevolucao}:00Z`).getTime()
   };
+}
+
+function scheduledPickupTimestamp(reservation){
+  return Date.parse(`${reservation.dataIda}T${reservation.horarioRetirada}:00-03:00`);
 }
 
 function validateOperation(operation){
@@ -138,6 +150,7 @@ function validateOperation(operation){
     photos.forEach(photo => {
       text(photo.nome, 'o nome da foto', 255, false);
       text(photo.tipo, 'o tipo da foto', 100, false);
+      if(photo.id && photo.url && !photo.dados) return;
       const data = String(photo.dados || '');
       assert(data.startsWith('data:image/') && data.length <= 1400000,
         'A foto deve ser uma imagem de até 1 MB.');
@@ -149,13 +162,35 @@ function validateOperation(operation){
   }
 }
 
+function reservationOwnersMatch(first, second){
+  const firstUserId = String(first && first.criadorUsuarioId || '').trim();
+  const secondUserId = String(second && second.criadorUsuarioId || '').trim();
+  if(firstUserId && secondUserId) return firstUserId === secondUserId;
+  return String(first && first.nome || '').trim().toLowerCase() ===
+    String(second && second.nome || '').trim().toLowerCase();
+}
+
+function hasPendingReturnForOwner(reservation, currentReservations){
+  return (currentReservations || []).some(current =>
+    current &&
+    String(current.status || '').trim().toLowerCase() !== 'encerrada_administrativamente' &&
+    current.operacao &&
+    current.operacao.retirada &&
+    !current.operacao.devolucao &&
+    reservationOwnersMatch(reservation, current)
+  );
+}
+
 function validateReservations(value, context){
   assert(Array.isArray(value) && value.length <= 20000, 'Lista de reservas inválida.');
   ensureUniqueIds(value, 'reservas');
-  const rules = context.rules || {
+  const rules = {
     maxConsecutiveDays:10,
     maxAdvanceDays:30,
-    maxReservationsInWindow:2
+    maxReservationsInWindow:2,
+    reservationBufferMinutes:60,
+    pickupAdvanceMinutes:15,
+    ...(context.rules || {})
   };
   validateRules(rules);
   const today = todaySaoPaulo();
@@ -165,6 +200,9 @@ function validateReservations(value, context){
     vehicle
   ]));
   const blocks = context.blocks || [];
+  const currentReservationsById = new Map(
+    (context.currentReservations || []).map(reservation => [String(reservation.id), reservation])
+  );
   const ownerCounts = new Map();
   const ranges = [];
 
@@ -173,8 +211,8 @@ function validateReservations(value, context){
     const branch = text(reservation.partida, 'o local de partida', 120);
     text(reservation.destino, 'o destino', 160);
     const car = text(reservation.carro, 'o veículo', 40);
-    text(reservation.motivo, 'o motivo da viagem', 2000);
-    text(reservation.responsavel || owner, 'o responsável', 120);
+    text(reservation.motivo, 'o motivo da viagem', 2000, false);
+    text(reservation.responsavel, 'o responsável', 120, false);
     assert(validDate(reservation.dataIda) && validDate(reservation.dataVolta), 'A data da reserva é inválida.');
     assert(validTime(reservation.horarioRetirada) && validTime(reservation.horarioDevolucao),
       'O horário da reserva é inválido.');
@@ -187,7 +225,31 @@ function validateReservations(value, context){
     const historical =
       endDay < todayDay ||
       !!(reservation.operacao && reservation.operacao.devolucao) ||
-      ['concluida', 'cancelada'].includes(normalizedStatus);
+      ['concluida', 'cancelada', 'encerrada_administrativamente'].includes(normalizedStatus);
+
+    if(normalizedStatus === 'encerrada_administrativamente'){
+      const closure = reservation.encerramentoAdministrativo;
+      assert(closure && typeof closure === 'object' && !Array.isArray(closure),
+        'O encerramento administrativo é inválido.');
+      const justification = text(closure.justificativa, 'a justificativa do encerramento', 2000);
+      assert(justification.length >= 5, 'A justificativa do encerramento deve ter pelo menos 5 caracteres.');
+      text(closure.registradoPor, 'o responsável pelo encerramento', 120);
+      assert(!Number.isNaN(new Date(closure.registradoEm).getTime()),
+        'A data do encerramento administrativo é inválida.');
+      assert(reservation.operacao && reservation.operacao.retirada && !reservation.operacao.devolucao,
+        'O encerramento administrativo só pode ser usado após uma retirada sem devolução.');
+    }else{
+      assert(!reservation.encerramentoAdministrativo,
+        'Há um encerramento administrativo incompatível com o status da reserva.');
+    }
+
+    const previousReservation = currentReservationsById.get(String(reservation.id));
+    if(!previousReservation){
+      assert(
+        !hasPendingReturnForOwner(reservation, context.currentReservations),
+        'Você possui uma devolução pendente. Registre a devolução do veículo antes de criar uma nova reserva.'
+      );
+    }
     assert(endDay >= startDay, 'A devolução não pode ocorrer antes da retirada.');
     assert(historical || endDay - startDay + 1 <= Number(rules.maxConsecutiveDays),
       `A reserva não pode ultrapassar ${rules.maxConsecutiveDays} dias consecutivos.`);
@@ -210,6 +272,13 @@ function validateReservations(value, context){
       validateOperation(reservation.operacao);
       return;
     }
+    const scheduleChanged = !previousReservation ||
+      previousReservation.dataIda !== reservation.dataIda ||
+      previousReservation.horarioRetirada !== reservation.horarioRetirada;
+    if(scheduleChanged){
+      assert(scheduledPickupTimestamp(reservation) > Date.now(),
+        'O horário de retirada selecionado já passou. Escolha um horário futuro.');
+    }
 
     const vehicle = vehicleMap.get(`${branch.toLowerCase()}|${car.toLowerCase()}`);
     assert(vehicle && vehicle.ativo !== false, 'O veículo selecionado não está disponível.');
@@ -231,12 +300,14 @@ function validateReservations(value, context){
 
     const range = reservationRange(reservation);
     const vehicleKey = `${branch.toLowerCase()}|${car.toLowerCase()}`;
+    const reservationBufferMs = Number(rules.reservationBufferMinutes) * 60 * 1000;
     const conflict = ranges.some(existing =>
       existing.vehicleKey === vehicleKey &&
-      range.start < existing.end &&
-      range.end > existing.start
+      range.start < existing.end + reservationBufferMs &&
+      range.end > existing.start - reservationBufferMs
     );
-    assert(!conflict, 'Existem reservas conflitantes para o mesmo veículo e horário.');
+    assert(!conflict,
+      `O veículo está indisponível no período. A margem configurada entre reservas é de ${rules.reservationBufferMinutes} minutos.`);
     ranges.push({ ...range, vehicleKey });
 
     if(startDay >= todayDay && startDay <= todayDay + Number(rules.maxAdvanceDays)){
@@ -251,7 +322,7 @@ function validateReservations(value, context){
 function validateCollection(name, value, context){
   if(name === 'rules') return validateRules(value);
   if(name === 'branches') return validateBranches(value);
-  if(name === 'vehicles') return validateVehicles(value, context.branches || []);
+  if(name === 'vehicles') return validateVehicles(value, context.branches || [], context.currentVehicles || []);
   if(name === 'blocks') return validateBlocks(value, context.vehicles || []);
   if(name === 'reservations') return validateReservations(value, context);
   throw new ValidationError('Coleção desconhecida.', 404);

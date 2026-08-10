@@ -1,8 +1,106 @@
 /* Gestão de frota, bloqueios, operação, auditoria e relatórios */
 
+function operationPhotoFilename(photo, index, phaseLabel){
+  const original = String(photo && photo.nome || '').trim();
+  const fallbackExtension = String(photo && photo.tipo || '').includes('png') ? '.png' : '.jpg';
+  const fallback = 'foto-' + String(phaseLabel || 'veiculo').toLowerCase() + '-' +
+    (index + 1) + fallbackExtension;
+  return (original || fallback)
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .slice(0, 120);
+}
+
+function renderOperationPhoto(photo, index, phaseLabel){
+  const dataUrl = String(photo && photo.dados || '');
+  const protectedUrl = String(photo && photo.url || '');
+  const source = dataUrl.startsWith('data:image/')
+    ? dataUrl
+    : (protectedUrl.startsWith('/api/reservations/') ? protectedUrl : '');
+  if(!source) return '';
+  const filename = operationPhotoFilename(photo, index, phaseLabel);
+  const safeSource = escapeHTML(source);
+  const downloadSource = escapeHTML(protectedUrl
+    ? protectedUrl + (protectedUrl.includes('?') ? '&' : '?') + 'download=1'
+    : source);
+  const safeFilename = escapeHTML(filename);
+  return '<div class="operation-photo-card">' +
+    '<a class="operation-photo-preview" href="' + safeSource + '" target="_blank" rel="noopener" ' +
+      'aria-label="Abrir ' + safeFilename + '">' +
+      '<img src="' + safeSource + '" alt="' + safeFilename + '">' +
+    '</a>' +
+    '<a class="operation-photo-download" href="' + downloadSource + '" download="' + safeFilename + '">' +
+      '&#8595; Baixar imagem' +
+    '</a>' +
+  '</div>';
+}
+
+function operationPhotoBlob(dataUrl){
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+  if(!match) return null;
+
+  try{
+    const binary = atob(match[2]);
+    const bytes = new Uint8Array(binary.length);
+    for(let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return new Blob([bytes], { type: match[1] });
+  }catch(error){
+    console.error('Nao foi possivel processar a foto.', error);
+    return null;
+  }
+}
+
+function downloadOperationPhoto(link){
+  const blob = operationPhotoBlob(String(link.getAttribute('href') || ''));
+  if(!blob) return false;
+
+  try{
+    const objectUrl = URL.createObjectURL(blob);
+    const temporaryLink = document.createElement('a');
+    temporaryLink.href = objectUrl;
+    temporaryLink.download = link.getAttribute('download') || 'foto-veiculo.jpg';
+    temporaryLink.hidden = true;
+    document.body.appendChild(temporaryLink);
+    temporaryLink.click();
+    temporaryLink.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    return true;
+  }catch(error){
+    console.error('Nao foi possivel baixar a foto.', error);
+    return false;
+  }
+}
+
+function openOperationPhoto(link){
+  const blob = operationPhotoBlob(String(link.getAttribute('href') || ''));
+  if(!blob) return false;
+  const objectUrl = URL.createObjectURL(blob);
+  window.open(objectUrl, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+  return true;
+}
+
+document.addEventListener('click', function(event){
+  const downloadLink = event.target.closest('.operation-photo-download');
+  if(downloadLink){
+    if(!String(downloadLink.getAttribute('href') || '').startsWith('data:image/')) return;
+    event.preventDefault();
+    downloadOperationPhoto(downloadLink);
+    return;
+  }
+
+  const previewLink = event.target.closest('.operation-photo-preview');
+  if(previewLink){
+    if(!String(previewLink.getAttribute('href') || '').startsWith('data:image/')) return;
+    event.preventDefault();
+    openOperationPhoto(previewLink);
+  }
+});
+
 function renderOperationDetails(reserva){
   const operacao = reserva.operacao || {};
-  if(!operacao.retirada && !operacao.devolucao) return '';
+  const encerramento = reserva.encerramentoAdministrativo;
+  if(!operacao.retirada && !operacao.devolucao && !encerramento) return '';
   const renderPhase = (label, data) => {
     if(!data) return '';
     const photos = Array.isArray(data.fotos) ? data.fotos : [];
@@ -11,12 +109,20 @@ function renderOperationDetails(reserva){
       '<span>Km ' + Number(data.quilometragem || 0).toLocaleString('pt-BR') + ' · Combustível: ' + escapeHTML(data.combustivel || '—') + '</span>' +
       (data.avarias ? '<span>Avarias/observações: ' + escapeHTML(data.avarias) + '</span>' : '') +
       '<span>Registrado por ' + escapeHTML(data.registradoPor || '—') + ' em ' + escapeHTML(formatDateTime(data.registradoEm)) + '</span>' +
-      (photos.length ? '<div class="operation-photos">' + photos.map(photo => '<img src="' + escapeHTML(photo.dados) + '" alt="' + escapeHTML(photo.nome || 'Foto do veículo') + '">').join('') + '</div>' : '') +
+      (photos.length ? '<div class="operation-photos">' +
+        photos.map((photo, index) => renderOperationPhoto(photo, index, label)).join('') +
+      '</div>' : '') +
     '</div>';
   };
   return '<details class="operation-details"><summary>Ver retirada e devolução</summary>' +
     renderPhase('Retirada', operacao.retirada) +
     renderPhase('Devolução', operacao.devolucao) +
+    (encerramento ? '<div class="operation-record operation-record-administrative">' +
+      '<strong>Encerramento administrativo</strong>' +
+      '<span>Justificativa: ' + escapeHTML(encerramento.justificativa || '—') + '</span>' +
+      '<span>Registrado por ' + escapeHTML(encerramento.registradoPor || '—') + ' em ' +
+        escapeHTML(formatDateTime(encerramento.registradoEm)) + '</span>' +
+    '</div>' : '') +
   '</details>';
 }
 
@@ -28,10 +134,43 @@ function bindReservationFeatureButtons(container){
   });
   container.querySelectorAll('.operation-btn').forEach(btn => {
     btn.addEventListener('click', function(){
+      if(this.getAttribute('data-pickup-info') === 'true'){
+        const reservationId = this.getAttribute('data-id');
+        const reservation = getReservations().find(item => String(item.id) === String(reservationId));
+        if(reservation && canRegisterPickupNow(reservation)){
+          openOperationModal(reservationId, 'retirada');
+        } else {
+          openPickupAvailabilityModal(reservationId);
+        }
+        return;
+      }
       openOperationModal(this.getAttribute('data-id'), this.getAttribute('data-phase'));
     });
   });
 }
+
+const pickupAvailabilityModal = document.getElementById('pickupAvailabilityModal');
+const pickupAvailabilityDate = document.getElementById('pickupAvailabilityDate');
+const pickupAvailabilitySummary = document.getElementById('pickupAvailabilitySummary');
+
+function openPickupAvailabilityModal(reservationId){
+  const reservation = getReservations().find(item => String(item.id) === String(reservationId));
+  if(!reservation) return;
+  pickupAvailabilityDate.textContent = formatPickupAvailableFrom(reservation);
+  pickupAvailabilitySummary.textContent = reservation.partida + ' → ' + reservation.destino + ' · ' +
+    getVehicleDisplayName(reservation);
+  pickupAvailabilityModal.classList.remove('hidden');
+}
+
+function closePickupAvailabilityModal(){
+  pickupAvailabilityModal.classList.add('hidden');
+}
+
+document.getElementById('pickupAvailabilityCloseBtn').addEventListener('click', closePickupAvailabilityModal);
+document.getElementById('pickupAvailabilityOkBtn').addEventListener('click', closePickupAvailabilityModal);
+pickupAvailabilityModal.addEventListener('click', event => {
+  if(event.target === pickupAvailabilityModal) closePickupAvailabilityModal();
+});
 
 /* =========================================================
    Navegação interna do painel administrativo
@@ -70,35 +209,82 @@ const reservationRulesForm = document.getElementById('reservationRulesForm');
 const ruleMaxConsecutiveDaysInput = document.getElementById('ruleMaxConsecutiveDays');
 const ruleMaxAdvanceDaysInput = document.getElementById('ruleMaxAdvanceDays');
 const ruleMaxReservationsInput = document.getElementById('ruleMaxReservations');
+const ruleReservationBufferMinutesInput = document.getElementById('ruleReservationBufferMinutes');
+const rulePickupAdvanceMinutesInput = document.getElementById('rulePickupAdvanceMinutes');
 const rulesSummary = document.getElementById('rulesSummary');
 const rulesError = document.getElementById('rulesError');
 
 function renderReservationRules(){
-  if(!isAdmin()) return;
+  if(!canManageRules()) return;
   const rules = getReservationRules();
   ruleMaxConsecutiveDaysInput.value = rules.maxConsecutiveDays;
   ruleMaxAdvanceDaysInput.value = rules.maxAdvanceDays;
   ruleMaxReservationsInput.value = rules.maxReservationsInWindow;
+  ruleReservationBufferMinutesInput.value = rules.reservationBufferMinutes;
+  rulePickupAdvanceMinutesInput.value = rules.pickupAdvanceMinutes;
   rulesSummary.textContent =
     'Atualmente: até ' + rules.maxConsecutiveDays + ' dias seguidos, ' +
     rules.maxAdvanceDays + ' dias de antecedência e ' +
-    rules.maxReservationsInWindow + ' reservas por usuário nesse período.';
+    rules.maxReservationsInWindow + ' reservas por usuário nesse período e ' +
+    rules.reservationBufferMinutes + ' minutos livres entre reservas, com retirada liberada ' +
+    rules.pickupAdvanceMinutes + ' minutos antes do horário.';
   rulesError.textContent = '';
 }
 
 reservationRulesForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  if(!isAdmin()) return;
+  if(!canManageRules()) return;
   const maxConsecutiveDays = Number(ruleMaxConsecutiveDaysInput.value);
   const maxAdvanceDays = Number(ruleMaxAdvanceDaysInput.value);
   const maxReservationsInWindow = Number(ruleMaxReservationsInput.value);
+  const reservationBufferMinutes = Number(ruleReservationBufferMinutesInput.value);
+  const pickupAdvanceMinutes = Number(rulePickupAdvanceMinutesInput.value);
   if(!Number.isInteger(maxConsecutiveDays) || maxConsecutiveDays < 1 ||
      !Number.isInteger(maxAdvanceDays) || maxAdvanceDays < 1 ||
-     !Number.isInteger(maxReservationsInWindow) || maxReservationsInWindow < 1){
-    rulesError.textContent = 'Informe números inteiros maiores que zero.';
+     !Number.isInteger(maxReservationsInWindow) || maxReservationsInWindow < 1 ||
+     !Number.isInteger(reservationBufferMinutes) || reservationBufferMinutes < 0 || reservationBufferMinutes > 1440 ||
+     !Number.isInteger(pickupAdvanceMinutes) || pickupAdvanceMinutes < 0 || pickupAdvanceMinutes > 1440){
+    rulesError.textContent = 'Informe valores inteiros válidos. Os valores em minutos devem ficar entre 0 e 1440.';
     return;
   }
-  const rules = saveReservationRules({ maxConsecutiveDays, maxAdvanceDays, maxReservationsInWindow });
+  rulesError.textContent = '';
+  const currentRules = getReservationRules();
+  const changes = [
+    ['Dias consecutivos', Number(currentRules.maxConsecutiveDays), maxConsecutiveDays],
+    ['Antecedência', Number(currentRules.maxAdvanceDays), maxAdvanceDays],
+    ['Reservas por usuário', Number(currentRules.maxReservationsInWindow), maxReservationsInWindow],
+    ['Intervalo entre reservas', Number(currentRules.reservationBufferMinutes), reservationBufferMinutes],
+    ['Antecedência para retirada', Number(currentRules.pickupAdvanceMinutes), pickupAdvanceMinutes]
+  ].filter(change => change[1] !== change[2]);
+  if(!changes.length){
+    await showSiteAlert('Nenhuma regra foi modificada.', {
+      title:'Sem alterações',
+      type:'info',
+      confirmText:'Entendi'
+    });
+    return;
+  }
+  const confirmationMessage = 'Você alterou:\n' + changes.map(change =>
+    '• ' + change[0] + ': ' + change[1] + ' → ' + change[2]
+  ).join('\n') + '\n\nDeseja confirmar a alteração?';
+  const confirmed = await showSiteConfirm(confirmationMessage, {
+    title:'Confirmar alteração de regras',
+    type:'warning',
+    confirmText:'Alterar regras',
+    cancelText:'Cancelar'
+  });
+  if(!confirmed){
+    renderReservationRules();
+    return;
+  }
+
+  const rules = saveReservationRules({
+    maxConsecutiveDays,
+    maxAdvanceDays,
+    maxReservationsInWindow,
+    reservationBufferMinutes,
+    pickupAdvanceMinutes
+  });
   try{
     if(rules.saved) await rules.saved;
   }catch(error){
@@ -111,10 +297,17 @@ reservationRulesForm.addEventListener('submit', async function(e){
     'editou',
     'regras de reserva',
     'global',
-    rules.maxConsecutiveDays + ' dias · ' + rules.maxAdvanceDays + ' dias de antecedência · ' + rules.maxReservationsInWindow + ' reservas'
+    rules.maxConsecutiveDays + ' dias · ' + rules.maxAdvanceDays + ' dias de antecedência · ' +
+    rules.maxReservationsInWindow + ' reservas · ' + rules.reservationBufferMinutes +
+    ' minutos entre reservas · retirada ' + rules.pickupAdvanceMinutes + ' minutos antes'
   );
   renderReservationRules();
   refreshDatePickers();
+  await showSiteAlert('As regras de reserva foram alteradas com sucesso.', {
+    title:'Regras atualizadas',
+    type:'success',
+    confirmText:'Entendi'
+  });
 });
 
 /* =========================================================
@@ -140,7 +333,10 @@ const userPermissionInputs = {
   reservations:document.getElementById('permissionReservations'),
   fleet:document.getElementById('permissionFleet'),
   blocks:document.getElementById('permissionBlocks'),
-  reports:document.getElementById('permissionReports')
+  reports:document.getElementById('permissionReports'),
+  audit:document.getElementById('permissionAudit'),
+  rules:document.getElementById('permissionRules'),
+  users:document.getElementById('permissionUsers')
 };
 let userAccountEditingId = null;
 let userDeleteId = null;
@@ -149,7 +345,10 @@ const USER_PERMISSION_LABELS = {
   reservations:'Reservas',
   fleet:'Filiais e veículos',
   blocks:'Bloqueios',
-  reports:'Relatórios'
+  reports:'Relatórios',
+  audit:'Auditoria',
+  rules:'Regras',
+  users:'Usuários'
 };
 
 function selectedUserPermissions(){
@@ -170,6 +369,7 @@ function resetUserAccountForm(){
   userAccountSubmitBtn.textContent = 'Criar usuário';
   userAccountCancelBtn.classList.add('hidden');
   userAccountError.textContent = '';
+  if(typeof setFieldRequiredMarker === 'function') setFieldRequiredMarker('userAccountPassword', true);
 }
 
 function closeUserDeleteModal(){
@@ -182,7 +382,7 @@ function closeUserDeleteModal(){
 }
 
 function openUserDeleteModal(userId){
-  if(!isAdmin()) return;
+  if(!canManageUsers()) return;
   const account = getSystemUsers().find(item => String(item.id) === String(userId));
   if(!account || account.role === 'admin') return;
   userDeleteId = account.id;
@@ -204,7 +404,7 @@ function permissionBadges(account){
 }
 
 function renderUserManagement(){
-  if(!isAdmin()) return;
+  if(!canManageUsers()) return;
   ensureSystemUsers();
   const accounts = getSystemUsers().slice().sort((a,b) => {
     if(a.role === 'admin') return -1;
@@ -212,14 +412,16 @@ function renderUserManagement(){
     return a.nome.localeCompare(b.nome, 'pt-BR');
   });
   userAccountsList.innerHTML = accounts.length ? accounts.map(account =>
-    '<div class="management-item">' +
+    '<div class="management-item' + (account.active ? '' : ' is-inactive') + '">' +
       '<div><strong>' + escapeHTML(account.nome) + '</strong>' +
         '<small>@' + escapeHTML(account.username) + ' · ' +
           '<span class="' + (account.active ? '' : 'user-status-inactive') + '">' + (account.active ? 'Ativo' : 'Inativo') + '</span></small>' +
         '<div class="user-permissions">' + permissionBadges(account) + '</div>' +
       '</div>' +
       '<div class="management-actions">' +
-        '<button type="button" class="secondary-btn user-edit-btn" data-id="' + escapeHTML(account.id) + '">Editar</button>' +
+        (account.role !== 'admin' || isAdmin()
+          ? '<button type="button" class="secondary-btn user-edit-btn" data-id="' + escapeHTML(account.id) + '">Editar</button>'
+          : '') +
         (account.role !== 'admin'
           ? '<button type="button" class="secondary-btn user-toggle-btn" data-id="' + escapeHTML(account.id) + '">' +
               (account.active ? 'Desativar' : 'Ativar') + '</button>' +
@@ -231,9 +433,9 @@ function renderUserManagement(){
 
   userAccountsList.querySelectorAll('.user-edit-btn').forEach(btn => {
     btn.addEventListener('click', function(){
-      if(!isAdmin()) return;
+      if(!canManageUsers()) return;
       const account = getSystemUsers().find(item => String(item.id) === String(this.getAttribute('data-id')));
-      if(!account) return;
+      if(!account || (account.role === 'admin' && !isAdmin())) return;
       userAccountEditingId = account.id;
       userAccountNameInput.value = account.nome;
       userAccountUsernameInput.value = account.username;
@@ -245,6 +447,7 @@ function renderUserManagement(){
       });
       userAccountFormTitle.textContent = 'Editar usuário';
       userAccountPasswordHint.textContent = 'Deixe a senha vazia para manter a atual.';
+      if(typeof setFieldRequiredMarker === 'function') setFieldRequiredMarker('userAccountPassword', false);
       userAccountSubmitBtn.textContent = 'Salvar alterações';
       userAccountCancelBtn.classList.remove('hidden');
       userAccountError.textContent = '';
@@ -254,7 +457,7 @@ function renderUserManagement(){
 
   userAccountsList.querySelectorAll('.user-toggle-btn').forEach(btn => {
     btn.addEventListener('click', async function(){
-      if(!isAdmin()) return;
+      if(!canManageUsers()) return;
       const accounts = getSystemUsers();
       const account = accounts.find(item => String(item.id) === String(this.getAttribute('data-id')));
       if(!account || account.role === 'admin') return;
@@ -297,7 +500,7 @@ document.addEventListener('keydown', function(e){
 });
 userDeleteForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  if(!isAdmin() || !userDeleteId) return;
+  if(!canManageUsers() || !userDeleteId) return;
   const justification = userDeleteJustification.value.trim();
   userDeleteError.textContent = '';
   if(justification.length < 5){
@@ -327,7 +530,7 @@ userAccountCancelBtn.addEventListener('click', resetUserAccountForm);
 
 userAccountForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  if(!isAdmin()) return;
+  if(!canManageUsers()) return;
   userAccountError.textContent = '';
   const nome = userAccountNameInput.value.trim();
   const username = userAccountUsernameInput.value.trim().toLowerCase();
@@ -380,6 +583,7 @@ userAccountForm.addEventListener('submit', async function(e){
         profileName.textContent = refreshed.nome;
         avatarInitials.textContent = initials(refreshed.nome);
         profileAvatarLg.textContent = initials(refreshed.nome);
+        configureManagementPanel();
       }
     } else {
       const result = await apiRequest('/api/users', {
@@ -409,8 +613,8 @@ const branchNameInput = document.getElementById('branchName');
 const branchesList = document.getElementById('branchesList');
 const vehicleForm = document.getElementById('vehicleForm');
 const vehicleBranchSelect = document.getElementById('vehicleBranch');
-const vehicleCodeInput = document.getElementById('vehicleCode');
 const vehiclePlateInput = document.getElementById('vehiclePlate');
+const vehicleBrandInput = document.getElementById('vehicleBrand');
 const vehicleModelInput = document.getElementById('vehicleModel');
 const vehicleCapacityInput = document.getElementById('vehicleCapacity');
 const vehiclesList = document.getElementById('vehiclesList');
@@ -422,8 +626,8 @@ const fleetEditBranchFields = document.getElementById('fleetEditBranchFields');
 const fleetEditVehicleFields = document.getElementById('fleetEditVehicleFields');
 const fleetEditBranchNameInput = document.getElementById('fleetEditBranchName');
 const fleetEditVehicleBranchSelect = document.getElementById('fleetEditVehicleBranch');
-const fleetEditVehicleCodeInput = document.getElementById('fleetEditVehicleCode');
 const fleetEditVehiclePlateInput = document.getElementById('fleetEditVehiclePlate');
+const fleetEditVehicleBrandInput = document.getElementById('fleetEditVehicleBrand');
 const fleetEditVehicleModelInput = document.getElementById('fleetEditVehicleModel');
 const fleetEditVehicleCapacityInput = document.getElementById('fleetEditVehicleCapacity');
 const fleetEditError = document.getElementById('fleetEditError');
@@ -433,9 +637,16 @@ const vehicleDeleteSummary = document.getElementById('vehicleDeleteSummary');
 const vehicleDeleteJustification = document.getElementById('vehicleDeleteJustification');
 const vehicleDeleteError = document.getElementById('vehicleDeleteError');
 const vehicleDeleteSubmitBtn = document.getElementById('vehicleDeleteSubmitBtn');
+const branchDeleteModal = document.getElementById('branchDeleteModal');
+const branchDeleteForm = document.getElementById('branchDeleteForm');
+const branchDeleteSummary = document.getElementById('branchDeleteSummary');
+const branchDeleteJustification = document.getElementById('branchDeleteJustification');
+const branchDeleteError = document.getElementById('branchDeleteError');
+const branchDeleteSubmitBtn = document.getElementById('branchDeleteSubmitBtn');
 let fleetEditType = null;
 let fleetEditId = null;
 let vehicleDeleteId = null;
+let branchDeleteId = null;
 
 function closeFleetEditModal(){
   fleetEditModal.classList.add('hidden');
@@ -470,7 +681,7 @@ function openVehicleEditModal(vehicleId){
   fleetEditId = vehicle.id;
   fleetEditForm.reset();
   fleetEditTitle.textContent = 'Editar veículo';
-  fleetEditSubtitle.textContent = 'Atualize os dados de identificação e capacidade do veículo.';
+  fleetEditSubtitle.textContent = 'Atualize a filial, a placa, a marca, o modelo e a capacidade do veículo.';
   fleetEditBranchFields.classList.add('hidden');
   fleetEditVehicleFields.classList.remove('hidden');
   fleetEditVehicleBranchSelect.innerHTML = getBranches().map(branch =>
@@ -478,13 +689,13 @@ function openVehicleEditModal(vehicleId){
       (branch.ativo === false ? ' (inativa)' : '') + '</option>'
   ).join('');
   fleetEditVehicleBranchSelect.value = vehicle.filial;
-  fleetEditVehicleCodeInput.value = vehicle.codigo;
   fleetEditVehiclePlateInput.value = vehicle.placa || '';
-  fleetEditVehicleModelInput.value = vehicle.modelo || '';
+  fleetEditVehicleBrandInput.value = getVehicleBrand(vehicle);
+  fleetEditVehicleModelInput.value = getVehicleModelName(vehicle);
   fleetEditVehicleCapacityInput.value = vehicle.capacidade || CAPACIDADE_MAXIMA;
   fleetEditError.textContent = '';
   fleetEditModal.classList.remove('hidden');
-  fleetEditVehicleCodeInput.focus();
+  fleetEditVehiclePlateInput.focus();
 }
 
 function closeVehicleDeleteModal(){
@@ -504,11 +715,34 @@ function openVehicleDeleteModal(vehicleId){
   vehicleDeleteForm.reset();
   vehicleDeleteError.textContent = '';
   vehicleDeleteSummary.innerHTML =
-    '<strong>' + escapeHTML(vehicle.modelo || 'Veículo') + ' · ' + escapeHTML(vehicle.codigo) + '</strong>' +
-    '<small>' + escapeHTML(vehicle.filial) +
-      (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</small>';
+    '<strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
+      (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</strong>' +
+    '<small>' + escapeHTML(vehicle.filial) + '</small>';
   vehicleDeleteModal.classList.remove('hidden');
   vehicleDeleteJustification.focus();
+}
+
+function closeBranchDeleteModal(){
+  branchDeleteModal.classList.add('hidden');
+  branchDeleteForm.reset();
+  branchDeleteError.textContent = '';
+  branchDeleteSubmitBtn.disabled = false;
+  branchDeleteSubmitBtn.textContent = 'Excluir definitivamente';
+  branchDeleteId = null;
+}
+
+function openBranchDeleteModal(branchId){
+  if(!canManageFleet()) return;
+  const branch = getBranches().find(item => String(item.id) === String(branchId));
+  if(!branch) return;
+  branchDeleteId = branch.id;
+  branchDeleteForm.reset();
+  branchDeleteError.textContent = '';
+  const linkedVehicles = getVehicles().filter(vehicle => vehicle.filial === branch.nome).length;
+  branchDeleteSummary.innerHTML = '<strong>' + escapeHTML(branch.nome) + '</strong>' +
+    '<small>' + linkedVehicles + (linkedVehicles === 1 ? ' veículo vinculado' : ' veículos vinculados') + '</small>';
+  branchDeleteModal.classList.remove('hidden');
+  branchDeleteJustification.focus();
 }
 
 document.getElementById('fleetEditCloseBtn').addEventListener('click', closeFleetEditModal);
@@ -520,6 +754,50 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Escape' && !fleetEditModal.classList.contains('hidden')) closeFleetEditModal();
 });
 fleetEditVehiclePlateInput.addEventListener('input', function(){
+  this.value = this.value.toUpperCase();
+});
+document.getElementById('branchDeleteCloseBtn').addEventListener('click', closeBranchDeleteModal);
+document.getElementById('branchDeleteCancelBtn').addEventListener('click', closeBranchDeleteModal);
+branchDeleteModal.addEventListener('click', function(e){
+  if(e.target === branchDeleteModal) closeBranchDeleteModal();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && !branchDeleteModal.classList.contains('hidden')){
+    closeBranchDeleteModal();
+  }
+});
+
+branchDeleteForm.addEventListener('submit', async function(e){
+  e.preventDefault();
+  if(!canManageFleet() || !branchDeleteId) return;
+  const justification = branchDeleteJustification.value.trim();
+  branchDeleteError.textContent = '';
+  if(justification.length < 5){
+    branchDeleteError.textContent = 'Informe uma justificativa com pelo menos 5 caracteres.';
+    branchDeleteJustification.focus();
+    return;
+  }
+  branchDeleteSubmitBtn.disabled = true;
+  branchDeleteSubmitBtn.textContent = 'Excluindo...';
+  try{
+    await deleteBranchPermanently(branchDeleteId, justification);
+    await hydrateDatabaseState();
+    closeBranchDeleteModal();
+    renderFleetManagement();
+    renderCarSelector();
+    renderMainCalendar();
+    renderMyReservations();
+    renderAvailableRides();
+    renderBlocksManagement();
+    refreshDatePickers();
+  }catch(error){
+    if(error.code === 'STATE_CONFLICT') await hydrateDatabaseState();
+    branchDeleteError.textContent = error.message;
+    branchDeleteSubmitBtn.disabled = false;
+    branchDeleteSubmitBtn.textContent = 'Excluir definitivamente';
+  }
+});
+vehiclePlateInput.addEventListener('input', function(){
   this.value = this.value.toUpperCase();
 });
 document.getElementById('vehicleDeleteCloseBtn').addEventListener('click', closeVehicleDeleteModal);
@@ -605,35 +883,33 @@ fleetEditForm.addEventListener('submit', function(e){
     const list = getVehicles();
     const vehicle = list.find(item => String(item.id) === String(fleetEditId));
     const filial = fleetEditVehicleBranchSelect.value;
-    const codigo = fleetEditVehicleCodeInput.value.trim();
+    const marca = fleetEditVehicleBrandInput.value.trim();
     const modelo = fleetEditVehicleModelInput.value.trim();
     const placa = fleetEditVehiclePlateInput.value.trim().toUpperCase();
     const capacidade = Number(fleetEditVehicleCapacityInput.value);
-    if(!vehicle || !filial || !codigo || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > 20){
-      fleetEditError.textContent = 'Preencha filial, identificação, modelo e uma capacidade entre 1 e 20.';
+    if(!vehicle || !filial || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > 20){
+      fleetEditError.textContent = 'Preencha filial, placa, marca, modelo e uma capacidade entre 1 e 20.';
       return;
     }
     if(list.some(item =>
-      item.id !== vehicle.id && item.filial === filial &&
-      String(item.codigo).toLowerCase() === codigo.toLowerCase()
+      item.id !== vehicle.id && String(item.placa || '').toUpperCase() === placa
     )){
-      fleetEditError.textContent = 'Já existe um veículo com essa identificação na filial selecionada.';
+      fleetEditError.textContent = 'Já existe um veículo com essa placa.';
       return;
     }
     const oldFilial = vehicle.filial;
     const oldCode = String(vehicle.codigo);
     vehicle.filial = filial;
-    vehicle.codigo = codigo;
+    vehicle.marca = marca;
     vehicle.modelo = modelo;
     vehicle.placa = placa;
     vehicle.capacidade = capacidade;
     saveVehicles(list);
-    if(oldFilial !== filial || oldCode !== codigo){
+    if(oldFilial !== filial){
       const blocksUpdated = getVehicleBlocks();
       blocksUpdated.forEach(block => {
         if(block.filial === oldFilial && String(block.carro) === oldCode){
           block.filial = filial;
-          block.carro = codigo;
         }
       });
       saveVehicleBlocks(blocksUpdated);
@@ -641,12 +917,12 @@ fleetEditForm.addEventListener('submit', function(e){
       reservationsUpdated.forEach(reservation => {
         if(reservation.partida === oldFilial && String(reservation.carro) === oldCode){
           reservation.partida = filial;
-          reservation.carro = codigo;
         }
       });
       saveReservations(reservationsUpdated);
     }
-    logAudit('editou', 'veículo', vehicle.id, oldFilial + ' · ' + oldCode + ' → ' + filial + ' · ' + codigo);
+    logAudit('editou', 'veículo', vehicle.id,
+      oldFilial + ' → ' + filial + ' · ' + marca + ' ' + modelo + ' · ' + placa);
   }
 
   closeFleetEditModal();
@@ -692,7 +968,7 @@ function populateManagementVehicleSelectors(){
   const vehicles = getVehicles().filter(v => v.ativo !== false);
   const vehicleOptions = vehicles.map(v =>
     '<option value="' + escapeHTML(v.filial + '|' + v.codigo) + '">' +
-      escapeHTML(v.filial + ' · ' + (v.modelo || 'Veículo') + ' · ' + v.codigo + (v.placa ? ' · ' + v.placa : '')) +
+      escapeHTML(v.filial + ' · ' + getVehicleFullModel(v) + (v.placa ? ' · ' + v.placa : '')) +
     '</option>'
   ).join('');
   const blockVehicle = document.getElementById('blockVehicle');
@@ -715,18 +991,20 @@ function renderFleetManagement(){
   refreshBranchSelectors();
   const branches = getBranches();
   branchesList.innerHTML = branches.length ? branches.map(branch =>
-    '<div class="management-item">' +
+    '<div class="management-item' + (branch.ativo === false ? ' is-inactive' : '') + '">' +
       '<div><strong>' + escapeHTML(branch.nome) + '</strong><small>' + (branch.ativo === false ? 'Inativa' : 'Ativa') + '</small></div>' +
       '<div class="management-actions"><button type="button" class="secondary-btn branch-edit-btn" data-id="' + escapeHTML(branch.id) + '">Editar</button>' +
-      '<button type="button" class="secondary-btn branch-toggle-btn" data-id="' + escapeHTML(branch.id) + '">' + (branch.ativo === false ? 'Ativar' : 'Desativar') + '</button></div>' +
+      '<button type="button" class="secondary-btn branch-toggle-btn" data-id="' + escapeHTML(branch.id) + '">' + (branch.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
+      '<button type="button" class="delete-btn branch-delete-btn" data-id="' + escapeHTML(branch.id) + '">Excluir</button></div>' +
     '</div>'
   ).join('') : '<div class="empty-state">Nenhuma filial cadastrada.</div>';
 
   const vehicles = getVehicles();
   vehiclesList.innerHTML = vehicles.length ? vehicles.map(vehicle =>
-    '<div class="management-item">' +
-      '<div><strong>' + escapeHTML(vehicle.modelo || 'Veículo') + ' · ' + escapeHTML(vehicle.codigo) + '</strong>' +
-      '<small>' + escapeHTML(vehicle.filial) + (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
+    '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
+      '<div><strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
+        (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</strong>' +
+      '<small>' + escapeHTML(vehicle.filial) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
       '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
       '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
       '<button type="button" class="delete-btn vehicle-delete-btn" data-id="' + escapeHTML(vehicle.id) + '">Excluir</button></div>' +
@@ -752,6 +1030,12 @@ function renderFleetManagement(){
     });
   });
 
+  branchesList.querySelectorAll('.branch-delete-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      openBranchDeleteModal(this.getAttribute('data-id'));
+    });
+  });
+
   vehiclesList.querySelectorAll('.vehicle-toggle-btn').forEach(btn => {
     btn.addEventListener('click', function(){
       if(!canManageFleet()) return;
@@ -760,7 +1044,9 @@ function renderFleetManagement(){
       if(!vehicle) return;
       vehicle.ativo = vehicle.ativo === false;
       saveVehicles(list);
-      logAudit(vehicle.ativo ? 'ativou' : 'desativou', 'veículo', vehicle.id, vehicle.filial + ' · ' + vehicle.codigo);
+      logAudit(vehicle.ativo ? 'ativou' : 'desativou', 'veículo', vehicle.id,
+        vehicle.filial + ' · ' + getVehicleFullModel(vehicle) +
+        (vehicle.placa ? ' · ' + vehicle.placa : ''));
       renderFleetManagement();
       renderCarSelector();
       renderMainCalendar();
@@ -788,7 +1074,10 @@ if(branchForm){
     if(!nome) return;
     const list = getBranches();
     if(list.some(f => f.nome.toLowerCase() === nome.toLowerCase())){
-      alert('Já existe uma filial com esse nome.');
+      await showSiteAlert('Já existe uma filial com esse nome.', {
+        title:'Filial não cadastrada',
+        type:'warning'
+      });
       return;
     }
     const branch = { id: 'filial-' + Date.now(), nome: nome, ativo: true };
@@ -797,7 +1086,10 @@ if(branchForm){
       await saveBranches(list);
     }catch(error){
       await hydrateDatabaseState();
-      alert(error.message);
+      await showSiteAlert(error.message, {
+        title:'Não foi possível cadastrar a filial',
+        type:'danger'
+      });
       renderFleetManagement();
       return;
     }
@@ -812,23 +1104,32 @@ if(vehicleForm){
     e.preventDefault();
     if(!canManageFleet()) return;
     const filial = vehicleBranchSelect.value;
-    const codigo = vehicleCodeInput.value.trim();
+    const placa = vehiclePlateInput.value.trim().toUpperCase();
+    const marca = vehicleBrandInput.value.trim();
+    const modelo = vehicleModelInput.value.trim();
     const capacidade = Number(vehicleCapacityInput.value);
-    if(!filial || !codigo || !vehicleModelInput.value.trim() || !Number.isFinite(capacidade) || capacidade < 1){
-      alert('Preencha filial, identificação, modelo e capacidade.');
+    if(!filial || !placa || !marca || !modelo || !Number.isFinite(capacidade) || capacidade < 1){
+      await showSiteAlert('Preencha filial, placa, marca, modelo e capacidade.', {
+        title:'Revise os dados do veículo',
+        type:'warning'
+      });
       return;
     }
     const list = getVehicles();
-    if(list.some(v => v.filial === filial && String(v.codigo).toLowerCase() === codigo.toLowerCase())){
-      alert('Já existe um veículo com essa identificação na filial.');
+    if(list.some(v => String(v.placa || '').toUpperCase() === placa)){
+      await showSiteAlert('Já existe um veículo com essa placa.', {
+        title:'Veículo não cadastrado',
+        type:'warning'
+      });
       return;
     }
     const vehicle = {
       id: 'veiculo-' + Date.now(),
       filial: filial,
-      codigo: codigo,
-      placa: vehiclePlateInput.value.trim().toUpperCase(),
-      modelo: vehicleModelInput.value.trim(),
+      codigo: placa,
+      placa: placa,
+      marca: marca,
+      modelo: modelo,
       capacidade: capacidade,
       ativo: true
     };
@@ -837,11 +1138,15 @@ if(vehicleForm){
       await saveVehicles(list);
     }catch(error){
       await hydrateDatabaseState();
-      alert(error.message);
+      await showSiteAlert(error.message, {
+        title:'Não foi possível cadastrar o veículo',
+        type:'danger'
+      });
       renderFleetManagement();
       return;
     }
-    logAudit('cadastrou', 'veículo', vehicle.id, filial + ' · ' + codigo);
+    logAudit('cadastrou', 'veículo', vehicle.id,
+      filial + ' · ' + vehicle.marca + ' ' + vehicle.modelo + ' · ' + placa);
     vehicleForm.reset();
     vehicleCapacityInput.value = '5';
     renderFleetManagement();
@@ -862,7 +1167,8 @@ function renderBlocksManagement(){
   const blocks = getVehicleBlocks().slice().sort((a,b) => a.dataInicio.localeCompare(b.dataInicio));
   blocksList.innerHTML = blocks.length ? blocks.map(block =>
     '<div class="management-item block-item">' +
-      '<div><strong>' + escapeHTML(block.tipo) + ' · ' + escapeHTML(block.filial) + ' · ' + escapeHTML(block.carro) + '</strong>' +
+      '<div><strong>' + escapeHTML(block.tipo) + ' · ' + escapeHTML(block.filial) + ' · ' +
+        escapeHTML(getVehicleDisplayName({ partida:block.filial, carro:block.carro })) + '</strong>' +
       '<small>' + formatDate(block.dataInicio) + ' até ' + formatDate(block.dataFim) + (block.observacoes ? ' · ' + escapeHTML(block.observacoes) : '') + '</small></div>' +
       '<button type="button" class="delete-btn block-delete-btn" data-id="' + escapeHTML(block.id) + '">Remover</button>' +
     '</div>'
@@ -889,7 +1195,10 @@ if(blockForm){
     const dataInicio = document.getElementById('blockStart').value;
     const dataFim = document.getElementById('blockEnd').value;
     if(!key || !dataInicio || !dataFim || dataFim < dataInicio){
-      alert('Selecione o veículo e informe um período válido.');
+      await showSiteAlert('Selecione o veículo e informe um período válido.', {
+        title:'Revise os dados do bloqueio',
+        type:'warning'
+      });
       return;
     }
     const splitAt = key.lastIndexOf('|');
@@ -908,14 +1217,27 @@ if(blockForm){
       r.partida === block.filial && String(r.carro) === String(block.carro) &&
       !(r.dataVolta < dataInicio || r.dataIda > dataFim)
     );
-    if(reservations.length && !confirm('Existem ' + reservations.length + ' reservas no período. Deseja criar o bloqueio mesmo assim?')) return;
+    if(reservations.length && !await showSiteConfirm(
+      (reservations.length === 1
+        ? 'Existe 1 reserva no período.'
+        : 'Existem ' + reservations.length + ' reservas no período.') +
+      ' Deseja criar o bloqueio mesmo assim?',
+      {
+        title:'Reservas no período',
+        confirmText:'Criar bloqueio',
+        type:'warning'
+      }
+    )) return;
     const list = getVehicleBlocks();
     list.push(block);
     try{
       await saveVehicleBlocks(list);
     }catch(error){
       await hydrateDatabaseState();
-      alert(error.message);
+      await showSiteAlert(error.message, {
+        title:'Não foi possível criar o bloqueio',
+        type:'danger'
+      });
       renderBlocksManagement();
       return;
     }
@@ -937,16 +1259,20 @@ const operationError = document.getElementById('operationError');
 let operationReservationId = null;
 let operationPhase = null;
 
-function openOperationModal(reservationId, phase){
+async function openOperationModal(reservationId, phase){
   const reserva = getReservations().find(r => String(r.id) === String(reservationId));
   const currentUser = getCurrentUser();
   if(!reserva || !currentUser || (reserva.nome !== currentUser.nome && !isAdmin())) return;
   const operacao = reserva.operacao || {};
   if((phase === 'retirada' && operacao.retirada) || (phase === 'devolucao' && (!operacao.retirada || operacao.devolucao))) return;
   if(phase === 'retirada' && !canRegisterPickupNow(reserva)){
-    alert(
+    await showSiteAlert(
       'A retirada só pode ser registrada a partir de ' +
-      formatDate(reserva.dataIda) + ' às ' + reserva.horarioRetirada + '.'
+      formatPickupAvailableFrom(reserva) + '.',
+      {
+        title:'Retirada ainda indisponível',
+        type:'info'
+      }
     );
     return;
   }
@@ -956,7 +1282,8 @@ function openOperationModal(reservationId, phase){
   operationError.textContent = '';
   document.getElementById('operationPhotoHint').textContent = '';
   operationTitle.textContent = phase === 'retirada' ? 'Registrar retirada' : 'Registrar devolução';
-  operationSummary.textContent = reserva.partida + ' → ' + reserva.destino + ' · ' + reserva.carro + ' · ' + formatDate(reserva.dataIda);
+  operationSummary.textContent = reserva.partida + ' → ' + reserva.destino + ' · ' +
+    getVehicleDisplayName(reserva) + ' · ' + formatDate(reserva.dataIda);
   if(phase === 'devolucao' && operacao.retirada){
     document.getElementById('operationKm').min = String(operacao.retirada.quilometragem || 0);
   } else {
@@ -1006,7 +1333,7 @@ operationForm.addEventListener('submit', async function(e){
   if(operationPhase === 'retirada' && !canRegisterPickupNow(reserva)){
     operationError.textContent =
       'A retirada só pode ser registrada a partir de ' +
-      formatDate(reserva.dataIda) + ' às ' + reserva.horarioRetirada + '.';
+      formatPickupAvailableFrom(reserva) + '.';
     return;
   }
   const km = Number(document.getElementById('operationKm').value);
@@ -1056,7 +1383,7 @@ function formatDateTime(iso){
 }
 
 function renderAuditLog(){
-  if(!isAdmin()) return;
+  if(!canViewAudit()) return;
   const userFilter = auditUserFilter.value.trim().toLowerCase();
   const actionFilter = auditActionFilter.value;
   const list = getAuditLog().filter(entry => {
@@ -1097,7 +1424,7 @@ function getFilteredReportReservations(){
   return getReservations().filter(r => {
     if(filial && r.partida !== filial) return false;
     if(vehicleKey && carKey(r.partida, r.carro) !== vehicleKey) return false;
-    if(user && !String(r.nome).toLowerCase().includes(user) && !String(r.responsavel || '').toLowerCase().includes(user)) return false;
+    if(user && !String(r.nome).toLowerCase().includes(user)) return false;
     if(start && r.dataVolta < start) return false;
     if(end && r.dataIda > end) return false;
     return true;
@@ -1125,15 +1452,16 @@ function renderReports(){
   const tbody = document.getElementById('reportTableBody');
   tbody.innerHTML = list.length ? list.map(r =>
     '<tr>' +
+      '<td><strong>' + escapeHTML(getReservationNumberLabel(r)) + '</strong></td>' +
       '<td>' + formatDate(r.dataIda) + ' – ' + formatDate(r.dataVolta) + '</td>' +
       '<td>' + escapeHTML(r.partida) + '</td>' +
-      '<td>' + escapeHTML(r.carro) + '</td>' +
+      '<td>' + escapeHTML(getVehicleDisplayName(r)) + '</td>' +
       '<td>' + escapeHTML(r.nome) + '</td>' +
       '<td>' + escapeHTML(r.motivo || '') + '</td>' +
       '<td>' + reservationKm(r).toLocaleString('pt-BR') + '</td>' +
       '<td>' + escapeHTML(r.status || 'confirmada') + '</td>' +
     '</tr>'
-  ).join('') : '<tr><td colspan="7">Nenhuma reserva encontrada.</td></tr>';
+  ).join('') : '<tr><td colspan="8">Nenhuma reserva encontrada.</td></tr>';
 }
 
 reportInputs.forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', renderReports));
@@ -1157,9 +1485,10 @@ function operationDateTime(iso){
 
 function getReportExportData(){
   const headers = [
+    'ID da reserva',
     'Retirada prevista','Devolução prevista',
     'Retirada realizada','Devolução realizada',
-    'Filial','Carro','Usuário','Responsável','Motivo','Ocupantes',
+    'Filial','Carro','Usuário','Motivo','Ocupantes',
     'Km inicial','Km final','Km rodados',
     'Combustível retirada','Combustível devolução',
     'Avarias retirada','Avarias devolução','Status'
@@ -1169,12 +1498,12 @@ function getReportExportData(){
     const retirada = op.retirada || {};
     const devolucao = op.devolucao || {};
     return [
+      getReservationNumberLabel(r),
       exportDateTime(r.dataIda, r.horarioRetirada),
       exportDateTime(r.dataVolta, r.horarioDevolucao),
       operationDateTime(retirada.registradoEm),
       operationDateTime(devolucao.registradoEm),
-      r.partida, r.carro, r.nome, r.responsavel || r.nome,
-      r.motivo || '', getOcupantes(r),
+      r.partida, getVehicleDisplayName(r), r.nome, r.motivo || '', getOcupantes(r),
       retirada.quilometragem ?? '', devolucao.quilometragem ?? '', reservationKm(r),
       retirada.combustivel || '', devolucao.combustivel || '', retirada.avarias || '',
       devolucao.avarias || '', r.status || 'confirmada'
@@ -1231,7 +1560,7 @@ document.getElementById('exportCsvBtn').addEventListener('click', function(){
 document.getElementById('exportExcelBtn').addEventListener('click', function(){
   if(!canViewReports()) return;
   const data = getReportExportData();
-  const widths = [22,22,22,22,16,12,18,20,30,12,14,14,14,19,19,30,30,16];
+  const widths = [10,22,22,22,22,16,12,18,20,12,14,14,14,19,19,30,30,16];
   const workbook = buildXlsxWorkbook(data.headers, data.rows, widths);
   downloadReportFile(
     workbook,
@@ -1267,13 +1596,13 @@ function buildPrintableReport(list){
   const generatedAt = new Date().toLocaleString('pt-BR');
 
   const overviewRows = list.map(item => {
-    const vehicle = getVehicle(item.partida, item.carro);
     return '<tr>' +
+      '<td><strong>' + printableCell(getReservationNumberLabel(item)) + '</strong></td>' +
       '<td>' + printableCell(exportDateTime(item.dataIda, item.horarioRetirada)) + '<br><small>até ' +
         printableCell(exportDateTime(item.dataVolta, item.horarioDevolucao)) + '</small></td>' +
       '<td><strong>' + printableCell(item.partida) + ' → ' + printableCell(item.destino) + '</strong></td>' +
-      '<td>' + printableCell((vehicle && vehicle.modelo ? vehicle.modelo + ' · ' : '') + item.carro) + '</td>' +
-      '<td>' + printableCell(item.nome) + '<br><small>' + printableCell(item.responsavel || item.nome) + '</small></td>' +
+      '<td>' + printableCell(getVehicleDisplayName(item)) + '</td>' +
+      '<td>' + printableCell(item.nome) + '</td>' +
       '<td class="center">' + printableCell(getOcupantes(item)) + '</td>' +
       '<td class="right">' + printableCell(reservationKm(item).toLocaleString('pt-BR')) + '</td>' +
       '<td><span class="status">' + printableCell(item.status || 'confirmada') + '</span></td>' +
@@ -1297,7 +1626,7 @@ function buildPrintableReport(list){
       returnData.avarias ? 'Devolução: ' + returnData.avarias : ''
     ].filter(Boolean).join(' | ');
     return '<tr>' +
-      '<td><strong>' + printableCell(item.partida + ' · ' + item.carro) + '</strong><br><small>' +
+      '<td><strong>' + printableCell(getReservationNumberLabel(item) + ' · ' + item.partida + ' · ' + getVehicleDisplayName(item)) + '</strong><br><small>' +
         printableCell(item.nome) + '</small></td>' +
       '<td>' + pickupDetails + '</td>' +
       '<td>' + returnDetails + '</td>' +
@@ -1306,7 +1635,7 @@ function buildPrintableReport(list){
     '</tr>';
   }).join('');
 
-  const emptyRow = '<tr><td colspan="7" class="empty">Nenhuma reserva encontrada para os filtros selecionados.</td></tr>';
+  const emptyRow = '<tr><td colspan="8" class="empty">Nenhuma reserva encontrada para os filtros selecionados.</td></tr>';
   const emptyOperationRow = '<tr><td colspan="5" class="empty">Nenhum registro operacional encontrado.</td></tr>';
 
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
@@ -1330,8 +1659,8 @@ function buildPrintableReport(list){
       'tbody tr:nth-child(even){background:#f5f9fc}.center{text-align:center}.right{text-align:right}' +
       '.status{display:inline-block;padding:3px 6px;border-radius:9px;background:#dceaf5;color:#244d70;font-weight:700}' +
       '.pending{color:#9a5d25;font-style:italic}.empty{text-align:center;padding:22px;color:#62778a}' +
-      '.overview th:nth-child(1){width:16%}.overview th:nth-child(2){width:16%}.overview th:nth-child(3){width:14%}' +
-      '.overview th:nth-child(4){width:16%}.overview th:nth-child(5){width:8%}.overview th:nth-child(6){width:9%}.overview th:nth-child(7){width:11%}' +
+      '.overview th:nth-child(1){width:6%}.overview th:nth-child(2){width:15%}.overview th:nth-child(3){width:15%}.overview th:nth-child(4){width:13%}' +
+      '.overview th:nth-child(5){width:15%}.overview th:nth-child(6){width:8%}.overview th:nth-child(7){width:9%}.overview th:nth-child(8){width:11%}' +
       '.operations th:nth-child(1){width:15%}.operations th:nth-child(2),.operations th:nth-child(3){width:19%}' +
       '.operations th:nth-child(4){width:21%}.operations th:nth-child(5){width:26%}' +
       '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #dbe5ed;color:#7b8d9c;text-align:right;font-size:9px}' +
@@ -1348,7 +1677,7 @@ function buildPrintableReport(list){
         '<div><strong>' + users + '</strong><span>Usuários</span></div>' +
       '</section>' +
       '<h2>Visão geral das reservas</h2>' +
-      '<table class="overview"><thead><tr><th>Período previsto</th><th>Rota</th><th>Veículo</th><th>Usuário / responsável</th>' +
+      '<table class="overview"><thead><tr><th>ID</th><th>Período previsto</th><th>Rota</th><th>Veículo</th><th>Usuário</th>' +
         '<th>Ocupantes</th><th>Km rodados</th><th>Status</th></tr></thead><tbody>' + (overviewRows || emptyRow) + '</tbody></table>' +
       '<h2>Retirada, devolução e condições do veículo</h2>' +
       '<table class="operations"><thead><tr><th>Veículo / usuário</th><th>Retirada realizada</th><th>Devolução realizada</th>' +
@@ -1357,11 +1686,14 @@ function buildPrintableReport(list){
     '</body></html>';
 }
 
-document.getElementById('exportPdfBtn').addEventListener('click', function(){
+document.getElementById('exportPdfBtn').addEventListener('click', async function(){
   if(!canViewReports()) return;
   const reportWindow = window.open('', '_blank');
   if(!reportWindow){
-    alert('Permita a abertura de pop-ups para exportar o relatório em PDF.');
+    await showSiteAlert('Permita a abertura de pop-ups para exportar o relatório em PDF.', {
+      title:'Pop-up bloqueado',
+      type:'warning'
+    });
     return;
   }
   const list = getFilteredReportReservations();

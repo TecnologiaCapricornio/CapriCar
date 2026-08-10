@@ -26,6 +26,7 @@ let mobileViewYear = Number(todayISO().slice(0, 4));
 let mobileViewMonth = Number(todayISO().slice(5, 7)) - 1;
 
 const carSelector = document.getElementById('carSelector');
+const calendarBranchSelect = document.getElementById('calendarBranchSelect');
 const calendarVehicleFilter = document.getElementById('calendarVehicleFilter');
 const calendarVehicleSelect = document.getElementById('calendarVehicleSelect');
 const calendarGrid = document.getElementById('calendarGrid');
@@ -109,6 +110,12 @@ function getCarReservationsForDate(iso){
 function renderCarSelector(){
   syncCalendarCars();
   const selected = getSelectedCarInfo();
+  calendarBranchSelect.innerHTML = CALENDAR_BRANCHES.map(branch => {
+    const hasCars = TODOS_CARROS.some(car => car.filial === branch);
+    return '<option value="' + escapeHTML(branch) + '"' +
+      (selected && selected.filial === branch ? ' selected' : '') +
+      (hasCars ? '' : ' disabled') + '>' + escapeHTML(branch) + '</option>';
+  }).join('');
   carSelector.innerHTML = CALENDAR_BRANCHES.map(branch => {
     const branchCars = TODOS_CARROS.filter(car => car.filial === branch);
     const active = selected && selected.filial === branch ? ' active' : '';
@@ -123,8 +130,8 @@ function renderCarSelector(){
   if(branchCars.length > 1){
     calendarVehicleSelect.innerHTML = branchCars.map(car =>
       '<option value="' + escapeHTML(car.key) + '"' +
-      (car.key === calSelectedCarKey ? ' selected' : '') + '>Polo final ' +
-      escapeHTML(car.carro) + '</option>'
+      (car.key === calSelectedCarKey ? ' selected' : '') + '>' +
+      escapeHTML(getVehicleDisplayName({ partida:car.filial, carro:car.carro })) + '</option>'
     ).join('');
     calendarVehicleFilter.classList.remove('hidden');
   } else {
@@ -133,16 +140,23 @@ function renderCarSelector(){
   }
 }
 
-carSelector.addEventListener('click', function(event){
-  const button = event.target.closest('.car-tab-btn');
-  if(!button || button.disabled) return;
-  const branch = button.getAttribute('data-calendar-branch');
+function selectCalendarBranch(branch){
   const firstCar = TODOS_CARROS.find(car => car.filial === branch);
   if(!firstCar) return;
   calSelectedCarKey = firstCar.key;
   clearCalendarSelection();
   renderCarSelector();
   renderMainCalendar();
+}
+
+carSelector.addEventListener('click', function(event){
+  const button = event.target.closest('.car-tab-btn');
+  if(!button || button.disabled) return;
+  selectCalendarBranch(button.getAttribute('data-calendar-branch'));
+});
+
+calendarBranchSelect.addEventListener('change', function(){
+  selectCalendarBranch(this.value);
 });
 
 calendarVehicleSelect.addEventListener('change', function(){
@@ -254,12 +268,23 @@ function buildReservationEvent(reservation, iso){
   if(!layout) return '';
   const clippedClass = (layout.clippedStart ? ' clipped-start' : '') +
     (layout.clippedEnd ? ' clipped-end' : '');
-  return '<button type="button" class="week-reservation-event' + clippedClass + '"' +
+  const densityClass = layout.height < 48 ? ' is-short' : (layout.height < 96 ? ' is-medium' : ' is-detailed');
+  const vehicleName = getVehicleDisplayName(reservation);
+  const occupancy = getOcupantes(reservation) + '/' + getVehicleCapacity(reservation) + ' ocupantes';
+  const reason = reservation.motivo || 'Motivo não informado';
+  const accessibleSummary = (getReservationNumberLabel(reservation) ? getReservationNumberLabel(reservation) + '. ' : '') +
+    reservation.partida + ' para ' + reservation.destino + '. ' +
+    layout.label + '. ' + vehicleName + '. Solicitante: ' + (reservation.nome || 'Não informado') +
+    '. ' + occupancy + '. Motivo: ' + reason;
+  return '<button type="button" class="week-reservation-event' + clippedClass + densityClass + '"' +
     ' data-id="' + escapeHTML(reservation.id) + '" data-iso="' + iso + '"' +
+    ' aria-label="' + escapeHTML(accessibleSummary) + '" title="' + escapeHTML(accessibleSummary) + '"' +
     ' style="top:' + layout.top + 'px;height:' + layout.height + 'px">' +
-      '<strong>' + escapeHTML(layout.label) + '</strong>' +
-      '<span>' + escapeHTML(reservation.destino || 'Reserva') + '</span>' +
-      '<small>' + escapeHTML(reservation.nome || '') + '</small>' +
+      (getReservationNumberLabel(reservation) ? '<span class="calendar-event-id">' + escapeHTML(getReservationNumberLabel(reservation)) + '</span>' : '') +
+      '<span class="calendar-event-time">' + RESERVATION_CLOCK_ICON + '<strong>' + escapeHTML(layout.label) + '</strong></span>' +
+      '<span class="calendar-event-route">' + escapeHTML(reservation.partida) + ' → ' + escapeHTML(reservation.destino || 'Reserva') + '</span>' +
+      '<small class="calendar-event-vehicle">' + escapeHTML(vehicleName) + '</small>' +
+      '<small class="calendar-event-requester">Reservado por: ' + escapeHTML(reservation.nome || 'Não informado') + '</small>' +
     '</button>';
 }
 
@@ -360,7 +385,7 @@ function buildMobileDayCalendar(){
     '<div class="mobile-day-top">' +
       '<button type="button" class="mobile-day-back" aria-label="Voltar para o mês">&#8249;</button>' +
       '<div><span>Agenda do dia</span><strong>' + escapeHTML(formatMobileDayTitle(mobileSelectedISO)) + '</strong>' +
-      (info ? '<small>' + escapeHTML(info.filial) + ' · Polo final ' + escapeHTML(info.carro) + '</small>' : '') +
+      (info ? '<small>' + escapeHTML(info.filial) + '</small>' : '') +
       '</div>' +
     '</div>' +
     '<div class="mobile-day-scroll">' +
@@ -781,7 +806,7 @@ function showDayDetails(iso, focusReservationId){
     return (first ? first.inicio : 0) - (second ? second.inicio : 0);
   });
   let html = '<div class="day-details-title">' + escapeHTML(info.filial) +
-    ' &middot; Polo final ' + escapeHTML(info.carro) + ' &mdash; ' + formatDate(iso) + '</div>';
+    ' &mdash; <span class="reservation-moment-part">' + RESERVATION_CALENDAR_ICON + '<strong>' + formatDate(iso) + '</strong></span></div>';
 
   if(!list.length){
     html += '<div class="day-empty-msg">Nenhuma reserva deste carro nesta data.</div>';
@@ -789,17 +814,50 @@ function showDayDetails(iso, focusReservationId){
     list.forEach(reservation => {
       const ocupantes = getOcupantes(reservation);
       const vagas = getVagasRestantes(reservation);
-      const participant = currentUser &&
-        (isReservationCreator(reservation, currentUser) || isPassageiro(reservation, currentUser.nome));
-      const canJoin = currentUser && !participant && vagas > 0;
+      const isCreator = currentUser && isReservationCreator(reservation, currentUser);
+      const isPassenger = currentUser && isPassageiro(reservation, currentUser);
+      const participant = isCreator || isPassenger;
+      const canJoin = currentUser && !participant && vagas > 0 && reservationCanAcceptPassengers(reservation);
+      const completed = isReservationCompleted(reservation);
+      const operation = reservation.operacao || {};
+      const statusClass = operation.devolucao || completed
+        ? 'status-completed'
+        : (operation.retirada ? 'status-in-use' : 'status-waiting');
+      const statusLabel = normalizeReservationStatus(reservation.status) === 'encerrada_administrativamente'
+        ? 'Encerrada pela gestão'
+        : operation.devolucao || completed
+        ? 'Concluída'
+        : (operation.retirada ? 'Em uso' : 'Confirmada');
+      const roleBadge = isCreator
+        ? '<span class="role-badge creator">Motorista</span>'
+        : (isPassenger ? '<span class="role-badge passenger">Passageiro</span>' : '');
       const focusedClass = String(reservation.id) === String(focusReservationId) ? ' focused' : '';
       html += '<div class="day-detail-item' + focusedClass + '">' +
-        '<div class="route">' + escapeHTML(formatFaixaHorariaNoDia(reservation, iso)) +
-        ' &mdash; ' + escapeHTML(reservation.partida) + ' &rarr; ' + escapeHTML(reservation.destino) + '</div>' +
-        '<div class="meta">Solicitante: ' + escapeHTML(reservation.nome) + ' &middot; ' +
-        ocupantes + '/' + getVehicleCapacity(reservation) + ' ocupantes</div>' +
-        renderOcupantesHTML(reservation) +
-        (canJoin ? '<div class="day-actions"><button type="button" class="join-day-btn" data-id="' +
+        '<div class="reservation-info">' +
+          '<div class="reservation-card-top">' +
+            '<div>' +
+              '<div class="reservation-route">' + renderReservationNumber(reservation) + escapeHTML(reservation.partida) + ' &rarr; ' +
+                escapeHTML(reservation.destino) + '</div>' +
+              '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(reservation)) + '</div>' +
+            '</div>' +
+            '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
+          '</div>' +
+          '<div class="reservation-details reservation-period">' + renderReservationPeriod(reservation) + '</div>' +
+          '<div class="reservation-card-chips">' + roleBadge +
+            '<span class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' +
+              getVehicleCapacity(reservation) + ' ocupantes</span></span>' +
+          '</div>' +
+          '<details class="reservation-more-details">' +
+            '<summary>Ver detalhes da reserva</summary>' +
+            '<div class="reservation-more-content">' +
+              '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(reservation.nome) + '</div>' +
+              '<div class="reservation-business"><strong>Motivo:</strong> ' +
+                escapeHTML(reservation.motivo || 'Não informado') + '</div>' +
+              renderOcupantesHTML(reservation) +
+            '</div>' +
+          '</details>' +
+        '</div>' +
+        (canJoin ? '<div class="reservation-actions"><button type="button" class="join-day-btn" data-id="' +
           escapeHTML(reservation.id) + '">Entrar nessa carona</button></div>' : '') +
         '</div>';
     });
@@ -855,7 +913,7 @@ async function joinRideFromCalendar(id){
   const reserva = result.reserva;
   const vagasRestantes = getVagasRestantes(reserva);
   calConfirmationText.textContent = 'Você entrou na carona! ' + reserva.partida + ' → ' +
-    reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) +
+    reserva.destino + ' de ' + formatDate(reserva.dataIda) +
     ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' +
     reserva.horarioDevolucao + '. Vagas restantes: ' + vagasRestantes + '/' +
     getVehicleCapacity(reserva) + '.';

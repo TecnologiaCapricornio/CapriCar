@@ -8,6 +8,7 @@ const displayName = `Auditoria ${testSuffix}`;
 const reservationId = `audit-reservation-${testSuffix}`;
 const vehicleId = `audit-vehicle-${testSuffix}`;
 const reservationVehicleId = `audit-reservation-vehicle-${testSuffix}`;
+const branchId = `audit-branch-${testSuffix}`;
 const adminPassword = process.env.CAPRICAR_TEST_ADMIN_PASSWORD;
 const temporaryUserPassword = 'Auditoria-Temporaria@2026';
 let createdUserId = null;
@@ -57,6 +58,9 @@ function findSlot(state){
     const date = addDays(today, day);
     for(const vehicle of vehicles){
       for(const [start, end] of [['06:00','06:30'], ['20:00','20:30'], ['22:00','22:30']]){
+        const startMs = new Date(`${date}T${start}:00Z`).getTime();
+        const endMs = new Date(`${date}T${end}:00Z`).getTime();
+        const bufferMs = Number(state.rules.reservationBufferMinutes == null ? 60 : state.rules.reservationBufferMinutes) * 60 * 1000;
         const blocked = (state.blocks || []).some(block =>
           block.filial === vehicle.filial &&
           String(block.carro) === String(vehicle.codigo) &&
@@ -65,8 +69,8 @@ function findSlot(state){
         const conflict = (state.reservations || []).some(reservation =>
           reservation.partida === vehicle.filial &&
           String(reservation.carro) === String(vehicle.codigo) &&
-          `${date}T${start}` < `${reservation.dataVolta}T${reservation.horarioDevolucao}` &&
-          `${date}T${end}` > `${reservation.dataIda}T${reservation.horarioRetirada}`
+          startMs < new Date(`${reservation.dataVolta}T${reservation.horarioDevolucao}:00Z`).getTime() + bufferMs &&
+          endMs > new Date(`${reservation.dataIda}T${reservation.horarioRetirada}:00Z`).getTime() - bufferMs
         );
         if(!blocked && !conflict) return { date, start, end, vehicle };
       }
@@ -113,11 +117,26 @@ async function cleanup(){
         [JSON.stringify(cleanedVehicles)]
       );
     }
+    const branchState = await client.query(
+      `SELECT value
+         FROM application_state
+        WHERE collection_name = 'branches'
+        FOR UPDATE`
+    );
+    if(branchState.rows[0] && Array.isArray(branchState.rows[0].value)){
+      const cleanedBranches = branchState.rows[0].value.filter(item => String(item.id) !== branchId);
+      await client.query(
+        `UPDATE application_state
+            SET value = $1::jsonb, updated_at = NOW(), revision = revision + 1
+          WHERE collection_name = 'branches'`,
+        [JSON.stringify(cleanedBranches)]
+      );
+    }
     await client.query(
       `DELETE FROM audit_logs
-        WHERE entity_id IN ($1, $3, $4)
+        WHERE entity_id IN ($1, $3, $4, $5)
            OR (entity_type = 'user' AND entity_id = $2)`,
-      [reservationId, createdUserId, vehicleId, reservationVehicleId]
+      [reservationId, createdUserId, vehicleId, reservationVehicleId, branchId]
     );
     if(createdUserId) await client.query('DELETE FROM users WHERE id = $1', [createdUserId]);
   });
@@ -249,11 +268,68 @@ async function main(){
     });
     assert.equal(unknownCollection.response.status, 404);
 
+    const testBranch = {
+      id:branchId,
+      nome:`Filial temporária ${testSuffix}`,
+      ativo:true
+    };
+    const createTestBranch = await request('/api/state/branches', {
+      method:'PUT',
+      headers:auth(admin.cookie),
+      body:{ value:[...state.branches, testBranch], revision:revisions.branches }
+    });
+    assert.equal(createTestBranch.response.status, 200, createTestBranch.body && createTestBranch.body.error);
+    revisions.branches = createTestBranch.body.revision;
+
+    const bypassBranchJustification = await request('/api/state/branches', {
+      method:'PUT',
+      headers:auth(admin.cookie),
+      body:{ value:state.branches, revision:revisions.branches }
+    });
+    assert.equal(bypassBranchJustification.response.status, 400);
+
+    const branchWithoutJustification = await request(`/api/state/branches/${branchId}`, {
+      method:'DELETE',
+      headers:auth(admin.cookie),
+      body:{ justification:'', revision:revisions.branches }
+    });
+    assert.equal(branchWithoutJustification.response.status, 400);
+
+    const unauthorizedBranchDelete = await request(`/api/state/branches/${branchId}`, {
+      method:'DELETE',
+      headers:auth(testUser.cookie),
+      body:{ justification:'Teste de permissão', revision:revisions.branches }
+    });
+    assert.equal(unauthorizedBranchDelete.response.status, 403);
+
+    const permanentBranchDelete = await request(`/api/state/branches/${branchId}`, {
+      method:'DELETE',
+      headers:auth(admin.cookie),
+      body:{
+        justification:'Filial criada somente para testar a exclusão definitiva.',
+        revision:revisions.branches
+      }
+    });
+    assert.equal(permanentBranchDelete.response.status, 200, permanentBranchDelete.body && permanentBranchDelete.body.error);
+    revisions.branches = permanentBranchDelete.body.revision;
+
+    const afterBranchDelete = await request('/api/state/bootstrap', { headers:auth(admin.cookie) });
+    assert.equal(
+      afterBranchDelete.body.collections.branches.some(item => String(item.id) === branchId),
+      false
+    );
+    assert.ok(afterBranchDelete.body.audit.some(item =>
+      item.entityId === branchId &&
+      item.action === 'excluiu definitivamente' &&
+      item.details.includes('Justificativa:')
+    ));
+
     const testVehicle = {
       id:vehicleId,
       filial:state.branches[0].nome,
       codigo:`QA-${testSuffix.slice(-6)}`,
-      placa:'',
+      placa:`QA${testSuffix.slice(-5).toUpperCase()}`,
+      marca:'Marca teste',
       modelo:'Veículo temporário da auditoria',
       capacidade:5,
       ativo:true
@@ -262,6 +338,8 @@ async function main(){
       ...testVehicle,
       id:reservationVehicleId,
       codigo:`QR-${testSuffix.slice(-6)}`,
+      placa:`QR${testSuffix.slice(-5).toUpperCase()}`,
+      marca:'Marca teste',
       modelo:'Veículo temporário para reserva'
     };
     const createTestVehicle = await request('/api/state/vehicles', {

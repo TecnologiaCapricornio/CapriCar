@@ -13,7 +13,6 @@ const dataVoltaInput = document.getElementById('dataVolta');
 const horarioRetiradaSelect = document.getElementById('horarioRetirada');
 const horarioDevolucaoSelect = document.getElementById('horarioDevolucao');
 const motivoInput = document.getElementById('motivo');
-const responsavelInput = document.getElementById('responsavel');
 const passageirosWidget = createPassengerListWidget('passageirosListContainer');
 const confirmation = document.getElementById('confirmation');
 const confirmationText = document.getElementById('confirmation-text');
@@ -26,8 +25,29 @@ const historyReservationsCount = document.getElementById('historyReservationsCou
 const mobileReservationBackBtn = document.getElementById('mobileReservationBackBtn');
 const mobileReservationNextBtn = document.getElementById('mobileReservationNextBtn');
 const mobileReservationStepLabel = document.getElementById('mobileReservationStepLabel');
+const rodizioWarning = document.getElementById('rodizioWarning');
 let mobileReservationStep = 1;
 let myReservationsView = 'active';
+
+function refreshRodizioWarning(){
+  updateRodizioWarning(rodizioWarning, {
+    partida:partidaSelect.value,
+    destino:getDestinoValue(),
+    carro:carroSelect.value,
+    dataIda:dataIdaInput.value,
+    dataVolta:dataVoltaInput.value,
+    horarioRetirada:horarioRetiradaSelect.value,
+    horarioDevolucao:horarioDevolucaoSelect.value
+  });
+}
+
+[
+  partidaSelect, destinoSelect, destinoOutroInput, carroSelect,
+  dataIdaInput, dataVoltaInput, horarioRetiradaSelect, horarioDevolucaoSelect
+].forEach(element => {
+  element.addEventListener('input', refreshRodizioWarning);
+  element.addEventListener('change', refreshRodizioWarning);
+});
 
 function showCreatedReservationInMyReservations(message){
   renderMyReservations();
@@ -79,6 +99,7 @@ function refreshAvailableTimeOptions(){
   if(hasCompletePeriod && !availability.pickup.length){
     setError('horarioRetirada', 'Não há horários disponíveis para este carro no período selecionado.');
   }
+  syncAllTimePickerControls();
 }
 
 function isMobileReservationWizard(){
@@ -96,7 +117,7 @@ function showMobileReservationStep(step, shouldScroll){
   });
   mobileReservationBackBtn.disabled = mobileReservationStep === 1;
   mobileReservationStepLabel.textContent = 'Etapa ' + mobileReservationStep + ' de 3';
-  if(shouldScroll && isMobileReservationWizard()){
+  if(shouldScroll){
     form.closest('.card').scrollIntoView({ behavior:'smooth', block:'start' });
   }
 }
@@ -166,7 +187,7 @@ function validateMobileReservationStep(step){
         null
       );
       if(conflicts.length){
-        setError('horarioRetirada', 'Este carro já está reservado neste horário. ' + buildConflictMessage(conflicts));
+        setError('horarioRetirada', reservationConflictPrefix() + buildConflictMessage(conflicts));
         setError('horarioDevolucao', 'Escolha outro horário para continuar.');
         valid = false;
       }
@@ -190,12 +211,10 @@ function validateMobileReservationStep(step){
 }
 
 mobileReservationBackBtn.addEventListener('click', function(){
-  if(!isMobileReservationWizard()) return;
   showMobileReservationStep(mobileReservationStep - 1, true);
 });
 
 mobileReservationNextBtn.addEventListener('click', function(){
-  if(!isMobileReservationWizard()) return;
   if(!validateMobileReservationStep(mobileReservationStep)) return;
   showMobileReservationStep(mobileReservationStep + 1, true);
 });
@@ -212,7 +231,7 @@ function setError(fieldId, message){
 
 function clearAllErrors(){
   [
-    'partida','destino','carro','motivo','responsavel',
+    'partida','destino','carro','motivo',
     'dataIda','dataVolta','horarioRetirada','horarioDevolucao','passageirosConfirmados'
   ].forEach(id => setError(id, ''));
 }
@@ -240,12 +259,14 @@ function toggleDestinoOutro(){
 // horário ocupado continuam disponíveis para novas reservas em horário livre —
 // o bloqueio de horário específico é feito na validação do formulário
 // (findConflictingReservations), não no date picker.
-function getCarReservedDates(partida, carro){
+function getCarReservedDates(partida, carro, excludeId){
   const set = new Set();
   if(!partida || !carro) return set;
 
   const reservas = getReservations().filter(r =>
-    !isReservationCompleted(r) && r.partida === partida && r.carro === carro
+    !isReservationCompleted(r) &&
+    (excludeId == null || String(r.id) !== String(excludeId)) &&
+    r.partida === partida && r.carro === carro
   );
   if(reservas.length === 0) return set;
 
@@ -274,12 +295,30 @@ function getCarReservedDates(partida, carro){
   return set;
 }
 
-function populateCarroOptions(){
+// Datas que possuem ao menos uma faixa de horário ocupada. Diferentemente de
+// getCarReservedDates, estes dias continuam selecionáveis: o usuário escolhe
+// depois um dos horários ainda livres.
+function getCarOccupiedDates(partida, carro, excludeId){
+  const set = new Set();
+  if(!partida || !carro) return set;
+  getReservations().forEach(reservation => {
+    if(isReservationCompleted(reservation)) return;
+    if(excludeId != null && String(reservation.id) === String(excludeId)) return;
+    if(reservation.partida !== partida || String(reservation.carro) !== String(carro)) return;
+    eachDateISOInRange(reservation.dataIda, reservation.dataVolta, iso => set.add(iso));
+  });
+  return set;
+}
+
+function populateCarroOptions(preserveSelection){
   const partida = partidaSelect.value;
   const carros = getVehicles().filter(v => v.ativo !== false && v.filial === partida);
+  const currentCarro = carroSelect.value;
   carroSelect.innerHTML = '<option value="">Selecione...</option>' +
-    carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(v.modelo || 'Veículo') + ' · ' + escapeHTML(v.codigo) + (v.placa ? ' · ' + escapeHTML(v.placa) : '') + '</option>').join('');
-  carroSelect.value = '';
+    carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(getVehicleFullModel(v)) + (v.placa ? ' · ' + escapeHTML(v.placa) : '') + '</option>').join('');
+  carroSelect.value = preserveSelection && carros.some(v => String(v.codigo) === String(currentCarro))
+    ? currentCarro
+    : '';
   if(carros.length){
     fieldCarro.classList.remove('hidden');
   } else {
@@ -325,7 +364,9 @@ function renderReservationItem(res, opts){
   const statusClass = operacao.devolucao || completed
     ? 'status-completed'
     : (operacao.retirada ? 'status-in-use' : 'status-waiting');
-  const statusLabel = operacao.devolucao || completed
+  const statusLabel = normalizeReservationStatus(res.status) === 'encerrada_administrativamente'
+    ? 'Encerrada pela gestão'
+    : operacao.devolucao || completed
     ? 'Concluída'
     : (operacao.retirada ? 'Em uso' : 'Confirmada');
   const item = document.createElement('div');
@@ -334,14 +375,13 @@ function renderReservationItem(res, opts){
     '<div class="reservation-info">' +
       '<div class="reservation-card-top">' +
         '<div>' +
-          '<div class="reservation-route">' + escapeHTML(res.partida) + ' &rarr; ' + escapeHTML(res.destino) + '</div>' +
-          '<span class="reservation-car">Polo final ' + escapeHTML(res.carro) + '</span>' +
+          '<div class="reservation-route">' + renderReservationNumber(res) + escapeHTML(res.partida) + ' &rarr; ' + escapeHTML(res.destino) + '</div>' +
+          '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(res)) + '</div>' +
         '</div>' +
         '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
       '</div>' +
       '<div class="reservation-details reservation-period">' +
-        '<span><strong>Ida</strong> ' + formatDate(res.dataIda) + (res.horarioRetirada ? ' · ' + res.horarioRetirada : '') + '</span>' +
-        '<span><strong>Volta</strong> ' + formatDate(res.dataVolta) + (res.horarioDevolucao ? ' · ' + res.horarioDevolucao : '') + '</span>' +
+        renderReservationPeriod(res) +
       '</div>' +
       '<div class="reservation-card-chips">' +
         '<span class="role-badge ' + (isCreator ? 'creator' : 'passenger') + '">' + (isCreator ? 'Motorista' : 'Passageiro') + '</span>' +
@@ -352,7 +392,6 @@ function renderReservationItem(res, opts){
         '<div class="reservation-more-content">' +
           '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(res.nome) + '</div>' +
           '<div class="reservation-business"><strong>Motivo:</strong> ' + escapeHTML(res.motivo || 'Não informado') + '</div>' +
-          '<div class="reservation-business"><strong>Responsável:</strong> ' + escapeHTML(res.responsavel || res.nome) + '</div>' +
         '</div>' +
       '</details>' +
       renderOperationDetails(res) +
@@ -363,7 +402,7 @@ function renderReservationItem(res, opts){
         : '') +
       (canOperate && !operacao.retirada
         ? '<button class="operation-btn" data-phase="retirada" data-id="' + escapeHTML(res.id) + '"' +
-          (pickupAvailable ? '' : ' disabled title="Disponível somente na data e no horário agendados"') +
+          (pickupAvailable ? '' : ' data-pickup-info="true" title="Consultar quando a retirada será liberada"') +
           '>' + (pickupAvailable ? 'Registrar retirada' : 'Retirada ainda indisponível') + '</button>'
         : '') +
       (canOperate && operacao.retirada && !operacao.devolucao ? '<button class="operation-btn" data-phase="devolucao" data-id="' + escapeHTML(res.id) + '">Registrar devolução</button>' : '') +
@@ -380,7 +419,7 @@ function renderMyReservations(){
     return;
   }
   const participantReservations = getReservations().filter(r =>
-    isPassageiro(r, currentUser.nome)
+    isPassageiro(r, currentUser)
   );
   const activeList = participantReservations.filter(r => !isReservationCompleted(r));
   const historyList = participantReservations.filter(isReservationCompleted);
@@ -432,17 +471,27 @@ function bindDeleteButtons(container){
       const old = getReservations().find(r => String(r.id) === String(id));
       const currentUser = getCurrentUser();
       if(!isReservationCreator(old, currentUser)){
-        alert('Somente o criador pode cancelar esta reserva. Como passageiro, use “Sair da carona”.');
+        await showSiteAlert('Somente o criador pode cancelar esta reserva. Como passageiro, use “Sair da carona”.', {
+          title:'Ação não permitida',
+          type:'warning'
+        });
         renderMyReservations();
         return;
       }
-      if(!confirm('Tem certeza que deseja excluir esta reserva?')) return;
+      if(!await showSiteConfirm('Tem certeza que deseja cancelar esta reserva?', {
+        title:'Cancelar reserva',
+        confirmText:'Sim, cancelar',
+        type:'danger'
+      })) return;
       const updated = getReservations().filter(r => String(r.id) !== String(id));
       try{
         await saveReservations(updated);
       }catch(error){
         await hydrateDatabaseState();
-        alert(error.message);
+        await showSiteAlert(error.message, {
+          title:'Não foi possível cancelar',
+          type:'danger'
+        });
         renderMyReservations();
         return;
       }
@@ -473,7 +522,7 @@ function bindLeaveButtons(container){
       }
 
       const reserva = result.reserva;
-      minhasConfirmationText.textContent = 'Você saiu da carona! ' + reserva.partida + ' → ' + reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) + ' a ' + formatDate(reserva.dataVolta) + '.';
+      minhasConfirmationText.textContent = 'Você saiu da carona! ' + reserva.partida + ' → ' + reserva.destino + ' de ' + formatDate(reserva.dataIda) + ' a ' + formatDate(reserva.dataVolta) + '.';
       minhasConfirmation.classList.add('show');
 
       renderMyReservations();
@@ -502,7 +551,7 @@ function validateForm(){
   const currentUser = getCurrentUser();
   const vehicle = getVehicle(partida, carro);
   const limitePassageiros = Math.max(0, Number(vehicle && vehicle.capacidade ? vehicle.capacidade : CAPACIDADE_MAXIMA) - 1);
-  const validacaoPassageiros = validarListaPassageiros(currentUser ? currentUser.nome : '', passageirosWidget.getNomes(), limitePassageiros);
+  const validacaoPassageiros = validarListaPassageiros(currentUser ? currentUser.nome : '', passageirosWidget.getPassengers(), limitePassageiros);
 
   if(!partida){
     setError('partida', 'Selecione o local de partida.');
@@ -547,18 +596,13 @@ function validateForm(){
     valid = false;
   }
 
+  if(dataIda && horarioRetirada && isReservationPickupInPast(dataIda, horarioRetirada)){
+    setError('horarioRetirada', 'Este horário já passou. Escolha um horário futuro.');
+    valid = false;
+  }
+
   if(!validacaoPassageiros.ok){
     setError('passageirosConfirmados', validacaoPassageiros.message);
-    valid = false;
-  }
-
-  if(!motivoInput.value.trim()){
-    setError('motivo', 'Informe o motivo da viagem.');
-    valid = false;
-  }
-
-  if(!responsavelInput.value.trim()){
-    setError('responsavel', 'Informe o responsável pela viagem.');
     valid = false;
   }
 
@@ -585,7 +629,7 @@ function validateForm(){
   if(valid && partida && carro && dataIda && dataVolta && horarioRetirada && horarioDevolucao){
     const conflitos = findConflictingReservations(partida, carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, null);
     if(conflitos.length > 0){
-      const msg = 'Este carro já está reservado neste horário. ' + buildConflictMessage(conflitos);
+      const msg = reservationConflictPrefix() + buildConflictMessage(conflitos);
       setError('horarioRetirada', msg);
       setError('horarioDevolucao', 'Verifique o calendário: horários ocupados para este carro.');
       valid = false;
@@ -620,17 +664,25 @@ form.addEventListener('submit', async function(e){
     return;
   }
 
+  const pendingReturn = getPendingReturnReservation(currentUser);
+  if(pendingReturn){
+    await showSiteAlert(pendingReturnReservationMessage(pendingReturn), {
+      title:'Devolução pendente',
+      type:'warning'
+    });
+    switchTab('minhas');
+    return;
+  }
+
   if(!validateForm()){
-    if(isMobileReservationWizard()){
-      const stepOneHasError = ['partida','destino','carro'].some(id =>
-        document.getElementById('error-' + id).textContent
-      );
-      const stepTwoHasError = ['dataIda','dataVolta','horarioRetirada','horarioDevolucao'].some(id =>
-        document.getElementById('error-' + id).textContent
-      );
-      if(stepOneHasError) showMobileReservationStep(1, true);
-      else if(stepTwoHasError) showMobileReservationStep(2, true);
-    }
+    const stepOneHasError = ['partida','destino','carro'].some(id =>
+      document.getElementById('error-' + id).textContent
+    );
+    const stepTwoHasError = ['dataIda','dataVolta','horarioRetirada','horarioDevolucao'].some(id =>
+      document.getElementById('error-' + id).textContent
+    );
+    if(stepOneHasError) showMobileReservationStep(1, true);
+    else if(stepTwoHasError) showMobileReservationStep(2, true);
     return;
   }
 
@@ -647,10 +699,9 @@ form.addEventListener('submit', async function(e){
     horarioRetirada: horarioRetiradaSelect.value,
     horarioDevolucao: horarioDevolucaoSelect.value,
     motivo: motivoInput.value.trim(),
-    responsavel: responsavelInput.value.trim(),
     status: 'confirmada',
     criadoEm: new Date().toISOString(),
-    passageiros: [{ nome: currentUser.nome }].concat(validarListaPassageiros(currentUser.nome, passageirosWidget.getNomes(), Math.max(0, getVehicleCapacity({ partida: partidaSelect.value, carro: carroSelect.value }) - 1)).passageiros),
+    passageiros: [{ nome:currentUser.nome, usuarioId:currentUser.id }].concat(validarListaPassageiros(currentUser.nome, passageirosWidget.getPassengers(), Math.max(0, getVehicleCapacity({ partida: partidaSelect.value, carro: carroSelect.value }) - 1)).passageiros),
     passageirosConfirmados: 0
   };
 
@@ -663,13 +714,14 @@ form.addEventListener('submit', async function(e){
     setError('horarioRetirada', error.message);
     return;
   }
-  logAudit('criou', 'reserva', reserva.id, reserva.partida + ' → ' + reserva.destino + ' · ' + reserva.carro);
+  Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
+  logAudit('criou', 'reserva', reserva.id, getReservationNumberLabel(reserva) + ' · ' + reserva.partida + ' → ' + reserva.destino + ' · ' + reserva.carro);
   renderMainCalendar();
   renderAvailableRides();
 
   const vagasRestantes = getVagasRestantes(reserva);
   const qtdConfirmados = getPassageirosConfirmados(reserva);
-  const successMessage = 'Reserva confirmada! ' + reserva.partida + ' → ' + reserva.destino + ' (Polo final ' + reserva.carro + ') de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Você + ' + qtdConfirmados + (qtdConfirmados === 1 ? ' passageiro confirmado' : ' passageiros confirmados') + '. Vagas restantes: ' + vagasRestantes + '.';
+  const successMessage = 'Reserva ' + getReservationNumberLabel(reserva) + ' confirmada! ' + reserva.partida + ' → ' + reserva.destino + ' de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Você + ' + qtdConfirmados + (qtdConfirmados === 1 ? ' passageiro confirmado' : ' passageiros confirmados') + '. Vagas restantes: ' + vagasRestantes + '.';
 
   form.reset();
   fieldCarro.classList.add('hidden');
@@ -678,6 +730,7 @@ form.addEventListener('submit', async function(e){
   populateDestinoOptions();
   toggleDestinoOutro();
   clearAllErrors();
+  refreshRodizioWarning();
   refreshDatePickers();
   checkAndShowCompatibleRides();
   showMobileReservationStep(1, false);

@@ -2,6 +2,7 @@
 const STORAGE_KEY = 'capricar_reservas';
 const USER_KEY = 'capricar_user';
 const USERS_KEY = 'capricar_usuarios';
+const USER_DIRECTORY_KEY = 'capricar_diretorio_usuarios';
 const BRANCHES_KEY = 'capricar_filiais';
 const VEHICLES_KEY = 'capricar_veiculos';
 const BLOCKS_KEY = 'capricar_bloqueios';

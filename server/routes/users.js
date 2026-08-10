@@ -1,15 +1,16 @@
 const express = require('express');
 const { query, withTransaction } = require('../db');
 const { hashPassword, createSessionToken } = require('../security');
-const { publicUser, requireAdmin } = require('../auth');
+const { publicUser, requirePermission } = require('../auth');
 
 const router = express.Router();
-router.use(requireAdmin);
+router.use(requirePermission('users'));
 
 const USER_SELECT = `
   SELECT id, username, display_name, role, active,
          can_manage_reservations, can_manage_fleet,
-         can_manage_blocks, can_view_reports,
+         can_manage_blocks, can_view_reports, can_view_audit,
+         can_manage_rules, can_manage_users,
          created_at, updated_at
     FROM users
    WHERE deleted_at IS NULL`;
@@ -20,7 +21,10 @@ function normalizePermissions(value){
     reservations:permissions.reservations === true,
     fleet:permissions.fleet === true,
     blocks:permissions.blocks === true,
-    reports:permissions.reports === true
+    reports:permissions.reports === true,
+    audit:permissions.audit === true,
+    rules:permissions.rules === true,
+    users:permissions.users === true
   };
 }
 
@@ -55,12 +59,14 @@ router.post('/', async (req, res) => {
     const inserted = await client.query(
       `INSERT INTO users (
          username, display_name, password_hash, role, active,
-         can_manage_reservations, can_manage_fleet, can_manage_blocks, can_view_reports
-       ) VALUES ($1, $2, $3, 'user', TRUE, $4, $5, $6, $7)
+         can_manage_reservations, can_manage_fleet, can_manage_blocks, can_view_reports,
+         can_view_audit, can_manage_rules, can_manage_users
+       ) VALUES ($1, $2, $3, 'user', TRUE, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         username, displayName, passwordHash,
-        permissions.reservations, permissions.fleet, permissions.blocks, permissions.reports
+        permissions.reservations, permissions.fleet, permissions.blocks, permissions.reports,
+        permissions.audit, permissions.rules, permissions.users
       ]
     );
     await audit(client, req.user.id, 'created', inserted.rows[0].id, { username });
@@ -92,12 +98,20 @@ router.patch('/:id', async (req, res) => {
     );
     const current = locked.rows[0];
     if(!current) return null;
+    if(current.role === 'admin' && req.user.role !== 'admin'){
+      throw Object.assign(new Error('A conta principal de administrador só pode ser alterada pelo próprio administrador.'), {
+        status:403
+      });
+    }
     const isAdminAccount = current.role === 'admin';
     const permissions = permissionsWereSent ? requestedPermissions : {
       reservations:current.can_manage_reservations,
       fleet:current.can_manage_fleet,
       blocks:current.can_manage_blocks,
-      reports:current.can_view_reports
+      reports:current.can_view_reports,
+      audit:current.can_view_audit,
+      rules:current.can_manage_rules,
+      users:current.can_manage_users
     };
     const updated = await client.query(
       `UPDATE users
@@ -107,7 +121,10 @@ router.patch('/:id', async (req, res) => {
               can_manage_reservations = CASE WHEN role = 'admin' THEN TRUE ELSE $5 END,
               can_manage_fleet = CASE WHEN role = 'admin' THEN TRUE ELSE $6 END,
               can_manage_blocks = CASE WHEN role = 'admin' THEN TRUE ELSE $7 END,
-              can_view_reports = CASE WHEN role = 'admin' THEN TRUE ELSE $8 END
+              can_view_reports = CASE WHEN role = 'admin' THEN TRUE ELSE $8 END,
+              can_view_audit = CASE WHEN role = 'admin' THEN TRUE ELSE $9 END,
+              can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $10 END,
+              can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $11 END
         WHERE id = $1
         RETURNING *`,
       [
@@ -115,7 +132,10 @@ router.patch('/:id', async (req, res) => {
         isAdminAccount || permissions.reservations,
         isAdminAccount || permissions.fleet,
         isAdminAccount || permissions.blocks,
-        isAdminAccount || permissions.reports
+        isAdminAccount || permissions.reports,
+        isAdminAccount || permissions.audit,
+        isAdminAccount || permissions.rules,
+        isAdminAccount || permissions.users
       ]
     );
     await audit(client, req.user.id, 'updated', current.id, {
@@ -192,6 +212,9 @@ router.delete('/:id', async (req, res) => {
               can_manage_fleet = FALSE,
               can_manage_blocks = FALSE,
               can_view_reports = FALSE,
+              can_view_audit = FALSE,
+              can_manage_rules = FALSE,
+              can_manage_users = FALSE,
               deleted_at = NOW(),
               deleted_by = $4,
               deletion_reason = $5,

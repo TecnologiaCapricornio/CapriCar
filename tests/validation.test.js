@@ -20,14 +20,17 @@ const vehicles = [{
   filial:'São Paulo',
   codigo:'89',
   placa:'ABC1D23',
-  modelo:'Volkswagen Polo',
+  marca:'Volkswagen',
+  modelo:'Polo',
   capacidade:5,
   ativo:true
 }];
 const rules = {
   maxConsecutiveDays:10,
   maxAdvanceDays:30,
-  maxReservationsInWindow:2
+  maxReservationsInWindow:2,
+  reservationBufferMinutes:60,
+  pickupAdvanceMinutes:15
 };
 
 function reservation(overrides){
@@ -37,8 +40,7 @@ function reservation(overrides){
     partida:'São Paulo',
     destino:'São Carlos',
     carro:'89',
-    motivo:'Reunião',
-    responsavel:'Usuário Teste',
+    motivo:'',
     dataIda:isoIn(2),
     dataVolta:isoIn(2),
     horarioRetirada:'08:00',
@@ -70,18 +72,62 @@ test('recusa conflito de horário para o mesmo veículo', () => {
   });
   assert.throws(
     () => validateReservations([reservation(), second], context()),
-    /conflitantes/
+    /margem configurada/
   );
 });
 
-test('permite horários adjacentes', () => {
+test('exige uma hora livre entre reservas', () => {
   const second = reservation({
     id:'r2',
     nome:'Outro Usuário',
     horarioRetirada:'10:00',
     horarioDevolucao:'11:00'
   });
-  assert.doesNotThrow(() => validateReservations([reservation(), second], context()));
+  assert.throws(
+    () => validateReservations([reservation(), second], context()),
+    /margem configurada/
+  );
+  assert.doesNotThrow(() => validateReservations([
+    reservation(),
+    { ...second, horarioRetirada:'11:00', horarioDevolucao:'12:00' }
+  ], context()));
+  assert.doesNotThrow(() => validateReservations([
+    reservation(),
+    second
+  ], context({ rules:{ ...rules, reservationBufferMinutes:0 } })));
+});
+
+test('exige placa no cadastro do veículo', () => {
+  assert.throws(
+    () => validateVehicles([{ ...vehicles[0], placa:'' }], branches),
+    /placa do veículo/
+  );
+});
+
+test('exige marca e modelo separados no cadastro do veículo', () => {
+  assert.throws(
+    () => validateVehicles([{ ...vehicles[0], marca:'' }], branches),
+    /marca do veículo/
+  );
+  assert.throws(
+    () => validateVehicles([{ ...vehicles[0], modelo:'' }], branches),
+    /modelo do veículo/
+  );
+});
+
+test('recusa nova reserva com horário de retirada no passado', () => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit'
+  }).format(new Date());
+  assert.throws(
+    () => validateReservations([reservation({
+      dataIda:today,
+      dataVolta:today,
+      horarioRetirada:'00:00',
+      horarioDevolucao:'00:30'
+    })], context()),
+    /já passou/
+  );
 });
 
 test('recusa período acima do limite e antecedência excessiva', () => {
@@ -152,4 +198,51 @@ test('recusa mais reservas por usuário do que a regra permite', () => {
     () => validateReservations(list, context()),
     /no máximo 2 reservas/
   );
+});
+
+test('impede nova reserva enquanto o mesmo usuário tem devolução pendente', () => {
+  const pending = reservation({
+    id:'pending',
+    criadorUsuarioId:'user-1',
+    operacao:{ retirada:{
+      quilometragem:100,
+      combustivel:'Cheio',
+      avarias:'',
+      registradoPor:'Usuário Teste',
+      registradoEm:new Date().toISOString(),
+      fotos:[]
+    } }
+  });
+  const newReservation = reservation({
+    id:'new',
+    criadorUsuarioId:'user-1',
+    dataIda:isoIn(4),
+    dataVolta:isoIn(4)
+  });
+
+  assert.throws(
+    () => validateReservations([pending, newReservation], context({ currentReservations:[pending] })),
+    /devolução pendente/
+  );
+  assert.doesNotThrow(() => validateReservations([
+    pending,
+    { ...newReservation, criadorUsuarioId:'user-2', nome:'Outro Usuário' }
+  ], context({ currentReservations:[pending] })));
+  assert.doesNotThrow(() => validateReservations([
+    { ...pending, motivo:'Edição permitida' }
+  ], context({ currentReservations:[pending] })));
+
+  const administrativelyClosed = {
+    ...pending,
+    status:'encerrada_administrativamente',
+    encerramentoAdministrativo:{
+      justificativa:'Veículo devolvido sem registro pelo motorista.',
+      registradoPor:'Administrador',
+      registradoEm:new Date().toISOString()
+    }
+  };
+  assert.doesNotThrow(() => validateReservations([
+    administrativelyClosed,
+    newReservation
+  ], context({ currentReservations:[administrativelyClosed] })));
 });

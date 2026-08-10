@@ -1,6 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { query, closePool } = require('../db');
+const { migrateLegacyReservations } = require('../reservations-store');
 
 const projectRoot = path.join(__dirname, '..', '..');
 
@@ -40,6 +41,8 @@ async function main(){
     const applied = await applyMigration(migration.name, migration.path);
     console.log(applied ? `Aplicada: ${migration.name}` : `Já aplicada: ${migration.name}`);
   }
+  const migratedReservations = await migrateLegacyReservations();
+  console.log(`Reservas normalizadas migradas: ${migratedReservations}`);
 }
 
 main()

@@ -1,9 +1,16 @@
 const express = require('express');
 const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
+const {
+  notifyReservationCancellation,
+  notifyReservationPassengerAdditions
+} = require('../notifications');
+const { numberReservations } = require('../reservation-numbers');
+const { getBranchDeletionBlockers } = require('../branch-deletion');
+const { listAllReservations } = require('../reservations-store');
 
 const router = express.Router();
-const COLLECTIONS = ['reservations', 'branches', 'vehicles', 'blocks', 'rules'];
+const COLLECTIONS = ['branches', 'vehicles', 'blocks', 'rules'];
 
 function canManage(user, permission){
   return user.role === 'admin' || user.permissions[permission] === true;
@@ -37,8 +44,8 @@ function requireCollectionAccess(req, res, next){
   if(name === 'blocks' && !canManage(req.user, 'blocks')){
     return res.status(403).json({ error:'Sem permissão para alterar bloqueios.' });
   }
-  if(name === 'rules' && req.user.role !== 'admin'){
-    return res.status(403).json({ error:'Somente o administrador pode alterar as regras.' });
+  if(name === 'rules' && !canManage(req.user, 'rules')){
+    return res.status(403).json({ error:'Sem permissão para alterar as regras.' });
   }
   next();
 }
@@ -83,8 +90,38 @@ function withoutOperationFields(reservation){
   return clone;
 }
 
-function validateReservationReplacement(current, incoming, user){
+function withoutAdministrativeClosureFields(reservation){
+  const clone = withoutOperationFields(reservation);
+  delete clone.encerramentoAdministrativo;
+  return clone;
+}
+
+function passengerIdentityCounts(reservation){
+  const counts = new Map();
+  for(const passenger of (Array.isArray(reservation && reservation.passageiros) ? reservation.passageiros : [])){
+    const userId = String(passenger && passenger.usuarioId || '').trim().toLowerCase();
+    const name = String(passenger && passenger.nome || '').trim().toLocaleLowerCase('pt-BR');
+    const key = userId ? `user:${userId}` : `${passenger && passenger.externo === true ? 'external' : 'name'}:${name}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return counts;
+}
+
+function hasPassengerAdditions(previous, reservation){
+  const before = passengerIdentityCounts(previous);
+  const after = passengerIdentityCounts(reservation);
+  for(const [key, count] of after){
+    if(count > (before.get(key) || 0)) return true;
+  }
+  return Number(reservation.passageirosConfirmados || 0) > Number(previous.passageirosConfirmados || 0);
+}
+
+function validateReservationReplacement(current, incoming, user, rules){
   const privileged = canManage(user, 'reservations');
+  const configuredPickupAdvance = rules && rules.pickupAdvanceMinutes;
+  const pickupAdvanceMinutes = configuredPickupAdvance == null
+    ? 15
+    : Math.min(1440, Math.max(0, Number(configuredPickupAdvance) || 0));
   if(!Array.isArray(incoming)) throw Object.assign(new Error('Formato de reservas inválido.'), { status:400 });
 
   const currentById = new Map(
@@ -105,18 +142,56 @@ function validateReservationReplacement(current, incoming, user){
     const hadPickup = !!(previous.operacao && previous.operacao.retirada);
     const hadReturn = !!(previous.operacao && previous.operacao.devolucao);
     const hasPickup = !!(reservation.operacao && reservation.operacao.retirada);
+    if(hasPassengerAdditions(previous, reservation) && hadPickup){
+      throw Object.assign(new Error(
+        'Não é mais possível adicionar passageiros: a retirada do veículo já foi registrada.'
+      ), { status:409 });
+    }
     if(!hadPickup && hasPickup){
       const scheduledPickup = scheduledPickupTimestamp(previous);
-      if(scheduledPickup == null || Date.now() < scheduledPickup){
+      const pickupAvailableFrom = scheduledPickup == null
+        ? null
+        : scheduledPickup - pickupAdvanceMinutes * 60 * 1000;
+      if(pickupAvailableFrom == null || Date.now() < pickupAvailableFrom){
+        const availableLabel = pickupAvailableFrom == null ? '' : new Intl.DateTimeFormat('pt-BR', {
+          timeZone:'America/Sao_Paulo',
+          day:'2-digit',
+          month:'2-digit',
+          year:'numeric',
+          hour:'2-digit',
+          minute:'2-digit'
+        }).format(new Date(pickupAvailableFrom));
         throw Object.assign(new Error(
-          `A retirada só pode ser registrada a partir de ${previous.dataIda} às ${previous.horarioRetirada}.`
+          `A retirada só pode ser registrada a partir de ${availableLabel || 'do horário permitido'}.`
         ), { status:409 });
       }
     }
     if(hadReturn){
       throw Object.assign(new Error('Uma reserva concluída não pode mais ser alterada.'), { status:409 });
     }
+    if(normalizedStatus(previous.status) === 'encerrada_administrativamente'){
+      throw Object.assign(new Error('Uma reserva encerrada pela gestão não pode mais ser alterada.'), { status:409 });
+    }
     if(hadPickup){
+      const administrativeClosure =
+        privileged &&
+        normalizedStatus(reservation.status) === 'encerrada_administrativamente' &&
+        reservation.encerramentoAdministrativo &&
+        !(reservation.operacao && reservation.operacao.devolucao);
+      if(administrativeClosure){
+        const coreUnchanged =
+          JSON.stringify(withoutAdministrativeClosureFields(previous)) ===
+          JSON.stringify(withoutAdministrativeClosureFields(reservation));
+        const pickupUnchanged =
+          JSON.stringify(previous.operacao.retirada) ===
+          JSON.stringify(reservation.operacao && reservation.operacao.retirada);
+        if(!coreUnchanged || !pickupUnchanged){
+          throw Object.assign(new Error(
+            'O encerramento administrativo não pode alterar os dados da retirada ou da reserva.'
+          ), { status:409 });
+        }
+        continue;
+      }
       const coreUnchanged =
         JSON.stringify(withoutOperationFields(previous)) ===
         JSON.stringify(withoutOperationFields(reservation));
@@ -161,6 +236,7 @@ function validateReservationReplacement(current, incoming, user){
 }
 
 router.get('/bootstrap', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const stateResult = await query(
     'SELECT collection_name, value, revision FROM application_state WHERE collection_name = ANY($1::text[])',
     [COLLECTIONS]
@@ -172,7 +248,7 @@ router.get('/bootstrap', async (req, res) => {
     revisions[row.collection_name] = Number(row.revision);
   });
 
-  const auditResult = req.user.role === 'admin'
+  const auditResult = canManage(req.user, 'audit')
     ? await query(
       `SELECT a.id, a.created_at,
               COALESCE(a.details->>'originalUser', u.display_name, 'Sistema') AS actor_name,
@@ -184,16 +260,24 @@ router.get('/bootstrap', async (req, res) => {
     )
     : { rows:[] };
 
-  const usersResult = req.user.role === 'admin'
+  const usersResult = canManage(req.user, 'users')
     ? await query(
       `SELECT id, username, display_name AS nome, role, active,
               can_manage_reservations, can_manage_fleet,
-              can_manage_blocks, can_view_reports
+              can_manage_blocks, can_view_reports, can_view_audit,
+              can_manage_rules, can_manage_users
          FROM users
         WHERE deleted_at IS NULL
         ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`
     )
     : { rows:[] };
+
+  const userDirectoryResult = await query(
+    `SELECT id, display_name AS nome
+       FROM users
+      WHERE active = TRUE AND deleted_at IS NULL
+      ORDER BY display_name`
+  );
 
   const users = usersResult.rows.map(row => ({
     id:row.id,
@@ -205,7 +289,10 @@ router.get('/bootstrap', async (req, res) => {
       reservations:row.can_manage_reservations,
       fleet:row.can_manage_fleet,
       blocks:row.can_manage_blocks,
-      reports:row.can_view_reports
+      reports:row.can_view_reports,
+      audit:row.can_view_audit,
+      rules:row.can_manage_rules,
+      users:row.can_manage_users
     }
   }));
 
@@ -221,11 +308,21 @@ router.get('/bootstrap', async (req, res) => {
       : String(row.details && row.details.description || '')
   }));
 
-  res.json({ collections, revisions, users, audit });
+  res.json({
+    collections,
+    revisions,
+    users,
+    userDirectory:userDirectoryResult.rows.map(row => ({
+      id:String(row.id),
+      nome:row.nome,
+      active:true
+    })),
+    audit
+  });
 });
 
 router.put('/:name', requireCollectionAccess, async (req, res) => {
-  const value = req.body && req.body.value;
+  let value = req.body && req.body.value;
   const expectedRevision = Number(req.body && req.body.revision);
   if(value == null || (req.params.name !== 'rules' && !Array.isArray(value))){
     return res.status(400).json({ error:'Conteúdo inválido.' });
@@ -235,7 +332,7 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
     return res.status(400).json({ error:'Versao dos dados invalida. Atualize a pagina e tente novamente.' });
   }
 
-  const revision = await withTransaction(async client => {
+  const savedState = await withTransaction(async client => {
     const locked = await client.query(
       `SELECT collection_name, value, revision
          FROM application_state
@@ -255,9 +352,12 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
       error.currentRevision = currentRevision;
       throw error;
     }
-    const current = values[req.params.name] || [];
+    let current = values[req.params.name] || [];
     if(req.params.name === 'reservations'){
-      validateReservationReplacement(current, value, req.user);
+      current = await numberReservations(client, current, null);
+      value = await numberReservations(client, value, current);
+      values.reservations = current;
+      validateReservationReplacement(current, value, req.user, values.rules || {});
     }
     if(req.params.name === 'vehicles'){
       const incomingIds = new Set(value.map(vehicle => String(vehicle.id)));
@@ -272,8 +372,35 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
       branches:req.params.name === 'branches' ? value : (values.branches || []),
       vehicles:req.params.name === 'vehicles' ? value : (values.vehicles || []),
       blocks:req.params.name === 'blocks' ? value : (values.blocks || []),
-      rules:req.params.name === 'rules' ? value : (values.rules || null)
+      rules:req.params.name === 'rules' ? value : (values.rules || null),
+      currentReservations:req.params.name === 'reservations' ? current : (values.reservations || []),
+      currentVehicles:req.params.name === 'vehicles' ? current : (values.vehicles || [])
     });
+    if(req.params.name === 'reservations'){
+      const currentById = new Map(current.map(reservation => [String(reservation.id), reservation]));
+      for(const reservation of value){
+        await notifyReservationPassengerAdditions(
+          client,
+          currentById.get(String(reservation.id)) || null,
+          reservation,
+          req.user
+        );
+      }
+      const incomingIds = new Set(value.map(reservation => String(reservation.id)));
+      const cancelled = current.filter(reservation => !incomingIds.has(String(reservation.id)));
+      for(const reservation of cancelled){
+        await notifyReservationCancellation(client, reservation, req.user);
+      }
+    }
+    if(req.params.name === 'branches'){
+      const incomingIds = new Set(value.map(branch => String(branch.id)));
+      const removed = current.filter(branch => !incomingIds.has(String(branch.id)));
+      if(removed.length){
+        throw Object.assign(new Error(
+          'Use a opção Excluir e informe a justificativa para remover uma filial definitivamente.'
+        ), { status:400 });
+      }
+    }
     const saved = await client.query(
       `INSERT INTO application_state (collection_name, value, updated_by, revision)
        VALUES ($1, $2::jsonb, $3, 1)
@@ -285,9 +412,105 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
        RETURNING revision`,
       [req.params.name, JSON.stringify(value), req.user.id]
     );
-    return Number(saved.rows[0].revision);
+    return {
+      revision:Number(saved.rows[0].revision),
+      value:req.params.name === 'reservations' ? value : undefined
+    };
   });
-  res.json({ ok:true, revision });
+  res.json({ ok:true, revision:savedState.revision, value:savedState.value });
+});
+
+router.delete('/branches/:id', async (req, res) => {
+  if(!canManage(req.user, 'fleet')){
+    return res.status(403).json({ error:'Sem permissão para excluir filiais.' });
+  }
+  const branchId = String(req.params.id || '').trim();
+  const justification = String(req.body && req.body.justification || '').trim();
+  const expectedRevision = Number(req.body && req.body.revision);
+  if(!branchId || branchId.length > 100){
+    return res.status(400).json({ error:'Filial inválida.' });
+  }
+  if(
+    justification.length < 5 || justification.length > 500 ||
+    /[<>]/.test(justification) || /[\u0000-\u001F]/.test(justification)
+  ){
+    return res.status(400).json({
+      error:'Informe uma justificativa válida, entre 5 e 500 caracteres.'
+    });
+  }
+  if(!Number.isSafeInteger(expectedRevision) || expectedRevision < 0){
+    return res.status(400).json({ error:'Versão dos dados inválida. Atualize a página e tente novamente.' });
+  }
+
+  const result = await withTransaction(async client => {
+    const locked = await client.query(
+      `SELECT collection_name, value, revision
+         FROM application_state
+        WHERE collection_name = ANY($1::text[])
+        FOR UPDATE`,
+      [COLLECTIONS]
+    );
+    const rows = Object.fromEntries(locked.rows.map(row => [row.collection_name, row]));
+    const branchesRow = rows.branches;
+    if(!branchesRow){
+      throw Object.assign(new Error('Cadastro de filiais não encontrado.'), { status:409 });
+    }
+    if(Number(branchesRow.revision) !== expectedRevision){
+      const error = new Error('As filiais foram alteradas por outra pessoa. Atualize a página e tente novamente.');
+      error.status = 409;
+      error.code = 'STATE_CONFLICT';
+      error.currentRevision = Number(branchesRow.revision);
+      throw error;
+    }
+    const branches = Array.isArray(branchesRow.value) ? branchesRow.value : [];
+    const branch = branches.find(item => String(item.id) === branchId);
+    if(!branch){
+      throw Object.assign(new Error('Essa filial já foi excluída ou não existe.'), { status:404 });
+    }
+    const vehicles = Array.isArray(rows.vehicles && rows.vehicles.value) ? rows.vehicles.value : [];
+    const reservations = await listAllReservations(client);
+    const { linkedVehicles, activeReservations } = getBranchDeletionBlockers(
+      branch,
+      vehicles,
+      reservations
+    );
+    if(linkedVehicles.length){
+      throw Object.assign(new Error(
+        `Não é possível excluir: transfira ou exclua primeiro ${linkedVehicles.length} veículo(s) vinculado(s) a esta filial.`
+      ), { status:409 });
+    }
+    if(activeReservations.length){
+      throw Object.assign(new Error(
+        `Não é possível excluir: existem ${activeReservations.length} reserva(s) ativa(s) envolvendo esta filial.`
+      ), { status:409 });
+    }
+
+    const nextBranches = branches.filter(item => String(item.id) !== branchId);
+    validateCollection('branches', nextBranches, {});
+    const saved = await client.query(
+      `UPDATE application_state
+          SET value = $1::jsonb, updated_by = $2, updated_at = NOW(), revision = revision + 1
+        WHERE collection_name = 'branches'
+        RETURNING revision`,
+      [JSON.stringify(nextBranches), req.user.id]
+    );
+    await client.query(
+      `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'excluiu definitivamente', 'filial', $2, $3::jsonb)`,
+      [
+        req.user.id,
+        branchId,
+        JSON.stringify({
+          description:`${branch.nome} · Justificativa: ${justification}`,
+          justification,
+          branch
+        })
+      ]
+    );
+    return { branch, revision:Number(saved.rows[0].revision) };
+  });
+
+  res.json({ ok:true, ...result });
 });
 
 router.delete('/vehicles/:id', async (req, res) => {
@@ -330,9 +553,7 @@ router.delete('/vehicles/:id', async (req, res) => {
     const rows = Object.fromEntries(locked.rows.map(row => [row.collection_name, row]));
     const vehiclesRow = rows.vehicles;
     const blocksRow = rows.blocks;
-    const reservations = Array.isArray(rows.reservations && rows.reservations.value)
-      ? rows.reservations.value
-      : [];
+    const reservations = await listAllReservations(client);
     if(!vehiclesRow){
       throw Object.assign(new Error('Cadastro de veículos não encontrado.'), { status:409 });
     }
@@ -357,7 +578,7 @@ router.delete('/vehicles/:id', async (req, res) => {
       ) return false;
       const status = normalizedStatus(reservation.status);
       const completed = !!(reservation.operacao && reservation.operacao.devolucao);
-      return !completed && !['concluida', 'cancelada'].includes(status) &&
+      return !completed && !['concluida', 'cancelada', 'encerrada_administrativamente'].includes(status) &&
         String(reservation.dataVolta || '') >= today;
     });
     if(pendingReservations.length){
@@ -381,7 +602,10 @@ router.delete('/vehicles/:id', async (req, res) => {
     }
     const nextBlocks = blocks.filter(block => !linkedBlocks.includes(block));
 
-    validateCollection('vehicles', nextVehicles, { branches:rows.branches && rows.branches.value || [] });
+    validateCollection('vehicles', nextVehicles, {
+      branches:rows.branches && rows.branches.value || [],
+      currentVehicles:vehicles
+    });
     validateCollection('blocks', nextBlocks, { vehicles:nextVehicles });
 
     const savedVehicles = await client.query(

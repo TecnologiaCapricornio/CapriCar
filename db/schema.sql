@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
   can_manage_fleet BOOLEAN NOT NULL DEFAULT FALSE,
   can_manage_blocks BOOLEAN NOT NULL DEFAULT FALSE,
   can_view_reports BOOLEAN NOT NULL DEFAULT FALSE,
+  can_view_audit BOOLEAN NOT NULL DEFAULT FALSE,
+  can_manage_rules BOOLEAN NOT NULL DEFAULT FALSE,
+  can_manage_users BOOLEAN NOT NULL DEFAULT FALSE,
   deleted_at TIMESTAMPTZ,
   deleted_by UUID REFERENCES users(id) ON DELETE SET NULL,
   deletion_reason VARCHAR(500),
@@ -28,6 +31,7 @@ CREATE INDEX IF NOT EXISTS users_deleted_at_idx
 
 CREATE TABLE IF NOT EXISTS branches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  legacy_id VARCHAR(120),
   name VARCHAR(120) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -37,11 +41,17 @@ CREATE TABLE IF NOT EXISTS branches (
 CREATE UNIQUE INDEX IF NOT EXISTS branches_name_unique
   ON branches (LOWER(name));
 
+CREATE UNIQUE INDEX IF NOT EXISTS branches_legacy_id_unique
+  ON branches (legacy_id)
+  WHERE legacy_id IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS vehicles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  legacy_id VARCHAR(120),
   branch_id UUID NOT NULL REFERENCES branches(id) ON UPDATE CASCADE,
   code VARCHAR(40) NOT NULL,
   plate VARCHAR(10),
+  brand VARCHAR(120) NOT NULL,
   model VARCHAR(120) NOT NULL,
   capacity SMALLINT NOT NULL DEFAULT 5
     CHECK (capacity BETWEEN 1 AND 20),
@@ -56,6 +66,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS vehicles_branch_code_unique
 CREATE UNIQUE INDEX IF NOT EXISTS vehicles_plate_unique
   ON vehicles (UPPER(plate))
   WHERE plate IS NOT NULL AND plate <> '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS vehicles_legacy_id_unique
+  ON vehicles (legacy_id)
+  WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS reservation_rules (
   id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -79,7 +93,11 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS reservations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  legacy_id VARCHAR(120) NOT NULL,
+  reservation_number BIGINT,
   requester_id UUID NOT NULL REFERENCES users(id),
+  requester_name VARCHAR(120) NOT NULL,
+  requester_email VARCHAR(160) NOT NULL DEFAULT '',
   responsible_name VARCHAR(120) NOT NULL,
   branch_id UUID NOT NULL REFERENCES branches(id),
   vehicle_id UUID NOT NULL REFERENCES vehicles(id),
@@ -87,14 +105,27 @@ CREATE TABLE IF NOT EXISTS reservations (
   reason TEXT NOT NULL,
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
+  confirmed_passenger_count SMALLINT NOT NULL DEFAULT 0
+    CHECK (confirmed_passenger_count BETWEEN 0 AND 20),
   status VARCHAR(24) NOT NULL DEFAULT 'confirmed'
-    CHECK (status IN ('confirmed', 'in_use', 'completed', 'cancelled')),
+    CHECK (status IN ('confirmed', 'in_use', 'completed', 'cancelled', 'administratively_closed')),
+  administrative_closed_at TIMESTAMPTZ,
+  administrative_closed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  administrative_closed_by_name VARCHAR(120),
+  administrative_closure_reason TEXT,
   cancelled_at TIMESTAMPTZ,
   cancelled_by UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK (ends_at > starts_at)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS reservations_legacy_id_unique
+  ON reservations (legacy_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS reservations_number_unique
+  ON reservations (reservation_number)
+  WHERE reservation_number IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS reservations_vehicle_period_idx
   ON reservations (vehicle_id, starts_at, ends_at);
@@ -110,6 +141,8 @@ CREATE TABLE IF NOT EXISTS reservation_passengers (
   reservation_id UUID NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   passenger_name VARCHAR(120) NOT NULL,
+  is_external BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order SMALLINT NOT NULL DEFAULT 0,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   left_at TIMESTAMPTZ
 );
@@ -156,6 +189,7 @@ CREATE TABLE IF NOT EXISTS operation_photos (
   original_name VARCHAR(255),
   content_type VARCHAR(100),
   file_size_bytes BIGINT CHECK (file_size_bytes IS NULL OR file_size_bytes >= 0),
+  data_url TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -174,6 +208,45 @@ CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx
 
 CREATE INDEX IF NOT EXISTS audit_logs_actor_idx
   ON audit_logs (actor_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  notification_type VARCHAR(40) NOT NULL,
+  title VARCHAR(160) NOT NULL,
+  message TEXT NOT NULL,
+  reservation_id TEXT,
+  dedupe_key VARCHAR(240) NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, dedupe_key)
+);
+
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS brand VARCHAR(120);
+
+UPDATE vehicles
+   SET brand = SPLIT_PART(BTRIM(model), ' ', 1),
+       model = CASE
+         WHEN POSITION(' ' IN BTRIM(model)) > 0
+           THEN SUBSTRING(BTRIM(model) FROM POSITION(' ' IN BTRIM(model)) + 1)
+         ELSE model
+       END
+ WHERE brand IS NULL OR BTRIM(brand) = '';
+
+ALTER TABLE vehicles ALTER COLUMN brand SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS notifications_user_created_idx
+  ON notifications (user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS reservation_number_counter (
+  id SMALLINT PRIMARY KEY CHECK (id = 1),
+  last_number BIGINT NOT NULL DEFAULT 0 CHECK (last_number >= 0)
+);
+
+INSERT INTO reservation_number_counter (id, last_number)
+VALUES (1, 0)
+ON CONFLICT (id) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER

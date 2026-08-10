@@ -4,6 +4,93 @@
   display:none;
 }
 
+/* A Nova Reserva usa o mesmo assistente por etapas em qualquer tamanho de tela. */
+#reservaForm .mobile-reservation-progress{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin:12px 0 18px;
+}
+
+#reservaForm .mobile-reservation-progress span{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:9px 7px;
+  border:1px solid rgba(111,168,216,.13);
+  border-radius:12px;
+  background:rgba(255,255,255,.025);
+  color:var(--texto-muted);
+  font-size:.72rem;
+  font-weight:600;
+  line-height:1.2;
+  text-align:center;
+}
+
+#reservaForm .mobile-reservation-progress strong{
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:1px solid var(--card-border);
+  border-radius:50%;
+  background:rgba(255,255,255,.04);
+  color:var(--texto-muted);
+  font-size:.78rem;
+}
+
+#reservaForm .mobile-reservation-progress span.active{
+  border-color:rgba(101,170,242,.36);
+  background:rgba(82,150,218,.09);
+  color:var(--texto);
+}
+
+#reservaForm .mobile-reservation-progress span.active strong{
+  border-color:#65aaf2;
+  background:linear-gradient(135deg,#4f8dcc,#315982);
+  color:#fff;
+  box-shadow:0 0 0 4px rgba(82,150,218,.13);
+}
+
+#reservaForm[data-mobile-step="1"] .mobile-reservation-step:not([data-reservation-step="1"]),
+#reservaForm[data-mobile-step="2"] .mobile-reservation-step:not([data-reservation-step="2"]),
+#reservaForm[data-mobile-step="3"] .mobile-reservation-step:not([data-reservation-step="3"]){
+  display:none !important;
+}
+
+#reservaForm .mobile-wizard-actions{
+  display:grid;
+  grid-template-columns:minmax(110px,.8fr) auto minmax(120px,1fr);
+  align-items:center;
+  gap:12px;
+  margin-top:10px;
+}
+
+#reservaForm .mobile-wizard-actions button{
+  width:100%;
+  min-height:45px;
+  padding:10px 14px;
+}
+
+#mobileReservationStepLabel{
+  color:var(--texto-muted);
+  font-size:.74rem;
+  white-space:nowrap;
+}
+
+#mobileReservationBackBtn:disabled{
+  visibility:hidden;
+}
+
+#reservaForm[data-mobile-step="3"] #mobileReservationNextBtn{
+  display:none;
+}
+
+#reservaForm[data-mobile-step="3"] .mobile-wizard-actions{
+  grid-template-columns:minmax(120px,1fr) auto;
+}
+
 .mobile-nav-toggle{
   display:none;
 }
@@ -69,16 +156,13 @@
     min-height:42px;
     padding:7px 2px;
     border-radius:11px;
-    font-size:0;
+    font-size:.68rem;
     line-height:1.2;
     white-space:nowrap;
   }
 
   .tab-btn::after{
-    content:attr(data-mobile-label);
-    font-size:.68rem;
-    font-weight:700;
-    letter-spacing:-.01em;
+    content:none;
   }
 
   main{
@@ -133,6 +217,47 @@
   .modal-card{
     max-width:100%;
     margin:auto 0;
+  }
+
+  .notification-panel{
+    position:fixed;
+    top:calc(64px + env(safe-area-inset-top, 0px));
+    right:10px;
+    left:10px;
+    width:auto;
+    max-height:calc(100dvh - 78px - env(safe-area-inset-top, 0px));
+  }
+
+  .notification-list{
+    max-height:calc(100dvh - 160px - env(safe-area-inset-top, 0px));
+  }
+
+  .time-picker-popover{
+    position:fixed;
+    z-index:1500;
+    top:auto;
+    right:12px;
+    bottom:max(12px, env(safe-area-inset-bottom, 0px));
+    left:12px;
+    width:auto;
+    max-height:min(68dvh, 470px);
+    padding:16px;
+    border-radius:20px;
+  }
+
+  .row .field:last-child .time-picker-popover{
+    right:12px;
+    left:12px;
+  }
+
+  .time-picker-options{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    max-height:min(52dvh, 330px);
+  }
+
+  .time-picker-option{
+    min-height:44px;
+    font-size:.88rem;
   }
 }
 
@@ -204,7 +329,7 @@
   }
 
   .tab-btn::after{
-    font-size:.7rem;
+    content:none;
   }
 
   #adminTabBtn:not(.hidden){
@@ -243,6 +368,10 @@
   .card{
     padding:18px 13px;
     border-radius:18px;
+  }
+
+  #panel-nova .card{
+    padding:16px 13px;
   }
 
   .card h2{
@@ -284,6 +413,11 @@
 
   .date-popup{
     width:min(280px,calc(100vw - 28px));
+  }
+
+  .date-popup.range-style-date-popup{
+    width:min(350px,calc(100vw - 28px));
+    padding:12px 8px;
   }
 
   .calendar-grid{
@@ -387,6 +521,10 @@
     margin:18px 0 22px;
   }
 
+  #reservaForm .mobile-reservation-progress{
+    margin:12px 0 14px;
+  }
+
   .mobile-reservation-progress span{
     display:flex;
     flex-direction:column;
@@ -475,7 +613,7 @@
 }
 
 @media (max-width:350px){
-  .tab-btn::after{
+  .tab-btn{
     font-size:.67rem;
   }
 
