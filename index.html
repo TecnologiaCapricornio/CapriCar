@@ -5,17 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#10253f">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script>
-  (function(){
-    try{
-      var savedTheme = localStorage.getItem('capricar_theme');
-      var preferredTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : preferredTheme);
-    }catch(error){
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
-  })();
-</script>
+<script src="js/theme-init.js?v=20260824-1"></script>
 <title>CapriCar | Reserva de Carros Corporativos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
