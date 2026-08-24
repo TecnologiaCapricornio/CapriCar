@@ -1,0 +1,69 @@
+const js = require('@eslint/js');
+
+module.exports = [
+  js.configs.recommended,
+  {
+    files:['server/**/*.js'],
+    languageOptions:{
+      sourceType:'commonjs',
+      ecmaVersion:2022,
+      globals:{
+        require:'readonly',
+        module:'readonly',
+        exports:'writable',
+        process:'readonly',
+        __dirname:'readonly',
+        console:'readonly',
+        Buffer:'readonly',
+        setTimeout:'readonly',
+        clearTimeout:'readonly'
+      }
+    },
+    rules:{
+      'no-unused-vars':['warn', { argsIgnorePattern:'^_', varsIgnorePattern:'^_' }]
+    }
+  },
+  {
+    files:['js/**/*.js'],
+    languageOptions:{
+      sourceType:'script',
+      ecmaVersion:2022,
+      globals:{
+        window:'readonly',
+        document:'readonly',
+        console:'readonly',
+        fetch:'readonly',
+        localStorage:'readonly',
+        navigator:'readonly',
+        FormData:'readonly',
+        FileReader:'readonly',
+        Intl:'readonly',
+        setTimeout:'readonly',
+        clearTimeout:'readonly',
+        setInterval:'readonly',
+        clearInterval:'readonly'
+      }
+    },
+    rules:{
+      'no-unused-vars':['warn', { argsIgnorePattern:'^_', varsIgnorePattern:'^_' }]
+    }
+  },
+  {
+    files:['tests/**/*.js'],
+    languageOptions:{
+      sourceType:'commonjs',
+      ecmaVersion:2022,
+      globals:{
+        require:'readonly',
+        module:'readonly',
+        process:'readonly',
+        __dirname:'readonly',
+        console:'readonly',
+        Buffer:'readonly'
+      }
+    }
+  },
+  {
+    ignores:['node_modules/**', 'backups/**', 'server/uploads/**', 'output/**']
+  }
+];
