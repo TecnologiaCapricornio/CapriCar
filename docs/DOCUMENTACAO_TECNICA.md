@@ -382,6 +382,7 @@ Saúde: `http://localhost:3000/api/health`.
 | `BACKUP_RETENTION_DAYS` | Não | Retenção local |
 | `PG_DUMP_PATH` | Não | Caminho do `pg_dump` |
 | `PG_RESTORE_PATH` | Não | Caminho do `pg_restore` |
+| `BACKUP_ENCRYPTION_KEY` | Não | Se definida, cifra novos backups (AES-256-GCM) e remove o `.backup` em texto claro |
 
 O `.env` real é secreto e não deve ser versionado nem colocado em ZIP público.
 
@@ -498,10 +499,19 @@ PG_DUMP_PATH=C:\Program Files\PostgreSQL\18\bin\pg_dump.exe
 PG_RESTORE_PATH=C:\Program Files\PostgreSQL\18\bin\pg_restore.exe
 ```
 
+Se `BACKUP_ENCRYPTION_KEY` estiver definida, o arquivo gerado é
+`arquivo.backup.enc`. A mesma chave é obrigatória para restaurar.
+
 Restaurar:
 
 ```powershell
 npm run db:restore -- backups\arquivo.backup --confirm=capricar
+```
+
+Ou, para um backup cifrado:
+
+```powershell
+npm run db:restore -- backups\arquivo.backup.enc --confirm=capricar
 ```
 
 A restauração limpa e substitui o banco configurado. Pare o CapriCar e crie um
