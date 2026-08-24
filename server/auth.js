@@ -72,11 +72,13 @@ function requireAdmin(req, res, next){
   next();
 }
 
+function userCanManage(user, permission){
+  return !!user && (user.role === 'admin' || user.permissions[permission] === true);
+}
+
 function requirePermission(permission){
   return function(req, res, next){
-    if(req.user && (req.user.role === 'admin' || req.user.permissions[permission] === true)){
-      return next();
-    }
+    if(userCanManage(req.user, permission)) return next();
     return res.status(403).json({ error:'Você não possui permissão para esta operação.' });
   };
 }
@@ -88,5 +90,6 @@ module.exports = {
   publicUser,
   requireAuth,
   requireAdmin,
-  requirePermission
+  requirePermission,
+  userCanManage
 };
