@@ -79,13 +79,7 @@ function saveVehicleBlocks(list){
 }
 
 function getReservationRules(){
-  const defaults = {
-    maxConsecutiveDays: 10,
-    maxAdvanceDays: 30,
-    maxReservationsInWindow: 2,
-    reservationBufferMinutes: 60,
-    pickupAdvanceMinutes:15
-  };
+  const defaults = DEFAULT_RESERVATION_RULES;
   try{
     const stored = JSON.parse(localStorage.getItem(RULES_KEY) || 'null');
     if(!stored) return defaults;
@@ -107,15 +101,15 @@ function getReservationRules(){
 
 function saveReservationRules(rules){
   const normalized = {
-    maxConsecutiveDays: Math.max(1, Number(rules.maxConsecutiveDays) || 10),
-    maxAdvanceDays: Math.max(1, Number(rules.maxAdvanceDays) || 30),
-    maxReservationsInWindow: Math.max(1, Number(rules.maxReservationsInWindow) || 2),
+    maxConsecutiveDays: Math.max(1, Number(rules.maxConsecutiveDays) || DEFAULT_RESERVATION_RULES.maxConsecutiveDays),
+    maxAdvanceDays: Math.max(1, Number(rules.maxAdvanceDays) || DEFAULT_RESERVATION_RULES.maxAdvanceDays),
+    maxReservationsInWindow: Math.max(1, Number(rules.maxReservationsInWindow) || DEFAULT_RESERVATION_RULES.maxReservationsInWindow),
     reservationBufferMinutes: Number.isFinite(Number(rules.reservationBufferMinutes))
       ? Math.min(1440, Math.max(0, Number(rules.reservationBufferMinutes)))
-      : 60,
+      : DEFAULT_RESERVATION_RULES.reservationBufferMinutes,
     pickupAdvanceMinutes:Number.isFinite(Number(rules.pickupAdvanceMinutes))
       ? Math.min(1440, Math.max(0, Number(rules.pickupAdvanceMinutes)))
-      : 15
+      : DEFAULT_RESERVATION_RULES.pickupAdvanceMinutes
   };
   localStorage.setItem(RULES_KEY, JSON.stringify(normalized));
   if(typeof queueCollectionSync === 'function'){

@@ -1,6 +1,7 @@
 const express = require('express');
 const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
+const { DEFAULT_RESERVATION_RULES } = require('../../js/reservation-defaults');
 const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions
@@ -120,7 +121,7 @@ function validateReservationReplacement(current, incoming, user, rules){
   const privileged = canManage(user, 'reservations');
   const configuredPickupAdvance = rules && rules.pickupAdvanceMinutes;
   const pickupAdvanceMinutes = configuredPickupAdvance == null
-    ? 15
+    ? DEFAULT_RESERVATION_RULES.pickupAdvanceMinutes
     : Math.min(1440, Math.max(0, Number(configuredPickupAdvance) || 0));
   if(!Array.isArray(incoming)) throw Object.assign(new Error('Formato de reservas inválido.'), { status:400 });
 

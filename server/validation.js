@@ -1,3 +1,5 @@
+const { DEFAULT_RESERVATION_RULES } = require('../js/reservation-defaults');
+
 class ValidationError extends Error {
   constructor(message, status = 400){
     super(message);
@@ -223,11 +225,7 @@ function validateReservations(value, context){
   assert(Array.isArray(value) && value.length <= 20000, 'Lista de reservas inválida.');
   ensureUniqueIds(value, 'reservas');
   const rules = {
-    maxConsecutiveDays:10,
-    maxAdvanceDays:30,
-    maxReservationsInWindow:2,
-    reservationBufferMinutes:60,
-    pickupAdvanceMinutes:15,
+    ...DEFAULT_RESERVATION_RULES,
     ...(context.rules || {})
   };
   validateRules(rules);
