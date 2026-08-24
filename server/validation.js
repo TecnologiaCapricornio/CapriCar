@@ -9,6 +9,46 @@ function assert(condition, message){
   if(!condition) throw new ValidationError(message);
 }
 
+const MAX_PHOTO_BYTES = 1024 * 1024;
+const IMAGE_SIGNATURES = {
+  png:[[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
+  jpeg:[[0xFF, 0xD8, 0xFF]],
+  gif:[[0x47, 0x49, 0x46, 0x38, 0x37, 0x61], [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]]
+};
+
+function matchesSignature(buffer, signature){
+  return buffer.length >= signature.length &&
+    signature.every((byte, index) => buffer[index] === byte);
+}
+
+function bufferLooksLikeImage(buffer, subtype){
+  if(subtype === 'webp'){
+    return matchesSignature(buffer, [0x52, 0x49, 0x46, 0x46]) &&
+      buffer.length >= 12 && buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+  }
+  const normalized = subtype === 'jpg' ? 'jpeg' : subtype;
+  const signatures = IMAGE_SIGNATURES[normalized] || [];
+  return signatures.some(signature => matchesSignature(buffer, signature));
+}
+
+// Confere o conteúdo real da imagem (assinatura de bytes), não apenas o
+// rótulo "data:image/..." informado pelo cliente, e recusa formatos como
+// SVG que podem conter script.
+function validatePhotoDataUrl(value){
+  const match = /^data:image\/(png|jpe?g|gif|webp);base64,([A-Za-z0-9+/]+={0,2})$/
+    .exec(String(value || ''));
+  assert(match, 'A foto deve ser uma imagem em formato PNG, JPEG, GIF ou WEBP.');
+  const [, subtype, base64] = match;
+  let decoded;
+  try{
+    decoded = Buffer.from(base64, 'base64');
+  }catch(error){
+    throw new ValidationError('A foto enviada está corrompida.');
+  }
+  assert(decoded.length > 0 && decoded.length <= MAX_PHOTO_BYTES, 'A foto deve ter no máximo 1 MB.');
+  assert(bufferLooksLikeImage(decoded, subtype), 'O conteúdo da foto não corresponde a uma imagem válida.');
+}
+
 function text(value, label, max, required = true){
   const normalized = String(value == null ? '' : value).trim();
   assert(!required || normalized.length > 0, `Informe ${label}.`);
@@ -151,9 +191,7 @@ function validateOperation(operation){
       text(photo.nome, 'o nome da foto', 255, false);
       text(photo.tipo, 'o tipo da foto', 100, false);
       if(photo.id && photo.url && !photo.dados) return;
-      const data = String(photo.dados || '');
-      assert(data.startsWith('data:image/') && data.length <= 1400000,
-        'A foto deve ser uma imagem de até 1 MB.');
+      validatePhotoDataUrl(photo.dados);
     });
   }
   if(operation.retirada && operation.devolucao){
