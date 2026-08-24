@@ -43,7 +43,7 @@
   border-radius:999px;
   padding:8px 14px;
   font-weight:700;
-  font-size:.8rem;
+  font-size:var(--fs-sm);
   cursor:pointer;
   white-space:nowrap;
 }
@@ -80,7 +80,7 @@
 .rules-explanation{
   margin:-6px 0 18px;
   color:var(--texto-muted);
-  font-size:.84rem;
+  font-size:var(--fs-sm);
   line-height:1.55;
 }
 
@@ -92,7 +92,7 @@
 }
 
 .compact-form .submit-btn{
-  font-size:.86rem;
+  font-size:var(--fs-sm);
   padding:11px 14px;
 }
 
@@ -173,7 +173,7 @@
 
 .report-summary span{
   color:var(--texto-muted);
-  font-size:.76rem;
+  font-size:var(--fs-xs);
   margin-top:3px;
 }
 
@@ -243,7 +243,7 @@
   border-radius:999px;
   background:rgba(111,168,216,.12);
   color:#bcd5e8;
-  font-size:var(--fs-2xs);
+  font-size:var(--fs-xs);
   font-weight:700;
 }
 
@@ -265,7 +265,7 @@
   width:100%;
   min-width:900px;
   border-collapse:collapse;
-  font-size:.78rem;
+  font-size:var(--fs-xs);
 }
 
 .report-table th,
@@ -412,7 +412,7 @@
 #operationPhotoHint{
   margin:4px 0 0;
   padding:8px 10px;
-  font-size:.76rem;
+  font-size:var(--fs-xs);
 }
 
 #operationPhotoHint:empty,
@@ -430,7 +430,7 @@
 
 .reservation-business{
   color:var(--texto-muted);
-  font-size:.77rem;
+  font-size:var(--fs-xs);
   line-height:1.45;
 }
 
@@ -440,7 +440,7 @@
   border-radius:999px;
   background:rgba(51,212,136,.13);
   color:#9be9c4;
-  font-size:var(--fs-2xs);
+  font-size:var(--fs-xs);
   font-weight:700;
   margin-top:4px;
 }
@@ -448,7 +448,7 @@
 .operation-details{
   margin-top:8px;
   color:#cfe2f1;
-  font-size:.76rem;
+  font-size:var(--fs-xs);
 }
 
 .operation-details summary{
@@ -502,7 +502,7 @@
   padding:7px 8px;
   border-top:1px solid rgba(111,168,216,.18);
   color:#bfe2fa;
-  font-size:var(--fs-2xs);
+  font-size:var(--fs-xs);
   font-weight:800;
   text-align:center;
   text-decoration:none;
