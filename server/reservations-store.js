@@ -220,7 +220,7 @@ function photoPayload(photo){
   const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/s);
   let size = null;
   if(match){
-    try{ size = Buffer.from(match[2], 'base64').length; }catch(error){ size = null; }
+    try{ size = Buffer.from(match[2], 'base64').length; }catch{ size = null; }
   }
   return {
     dataUrl,

@@ -42,7 +42,7 @@ function validatePhotoDataUrl(value){
   let decoded;
   try{
     decoded = Buffer.from(base64, 'base64');
-  }catch(error){
+  }catch{
     throw new ValidationError('A foto enviada está corrompida.');
   }
   assert(decoded.length > 0 && decoded.length <= MAX_PHOTO_BYTES, 'A foto deve ter no máximo 1 MB.');
