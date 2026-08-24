@@ -22,6 +22,9 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if(config.production){
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; " +
