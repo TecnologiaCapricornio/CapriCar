@@ -3,11 +3,16 @@ const { query, withTransaction } = require('../db');
 const { appConfig } = require('../config');
 const { hashPassword, verifyPassword, createSessionToken, hashSessionToken } = require('../security');
 const { SESSION_COOKIE, parseCookies, publicUser, requireAuth } = require('../auth');
+const {
+  LOGIN_WINDOW_MS,
+  LOGIN_MAX_FAILURES,
+  attemptKey,
+  activeAttempt,
+  registerFailure,
+  clearAttempts
+} = require('../login-attempts');
 
 const router = express.Router();
-const loginAttempts = new Map();
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_FAILURES = 8;
 const dummyPasswordHash = hashPassword('CapriCar-Dummy-Password@2026');
 
 function cookieOptions(){
@@ -21,19 +26,6 @@ function cookieOptions(){
   };
 }
 
-function attemptKey(req, username){
-  return `${req.ip || req.socket.remoteAddress || 'local'}|${username}`;
-}
-
-function activeAttempt(key){
-  const value = loginAttempts.get(key);
-  if(!value || Date.now() - value.startedAt >= LOGIN_WINDOW_MS){
-    loginAttempts.delete(key);
-    return null;
-  }
-  return value;
-}
-
 router.post('/login', async (req, res) => {
   const username = String(req.body && req.body.username || '').trim().toLowerCase();
   const password = String(req.body && req.body.password || '');
@@ -45,11 +37,11 @@ router.post('/login', async (req, res) => {
   }
 
   const key = attemptKey(req, username);
-  const attempt = activeAttempt(key);
+  const attempt = await activeAttempt(key);
   if(attempt && attempt.failures >= LOGIN_MAX_FAILURES){
     res.setHeader(
       'Retry-After',
-      String(Math.ceil((LOGIN_WINDOW_MS - (Date.now() - attempt.startedAt)) / 1000))
+      String(Math.ceil((LOGIN_WINDOW_MS - (Date.now() - new Date(attempt.started_at).getTime())) / 1000))
     );
     return res.status(429).json({
       error:'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
@@ -70,12 +62,10 @@ router.post('/login', async (req, res) => {
     ? await verifyPassword(password, account.password_hash)
     : await verifyPassword(password, await dummyPasswordHash);
   if(!account || !passwordMatches){
-    const current = activeAttempt(key) || { failures:0, startedAt:Date.now() };
-    current.failures += 1;
-    loginAttempts.set(key, current);
+    await registerFailure(key);
     return res.status(401).json({ error:'Usuário ou senha incorretos.' });
   }
-  loginAttempts.delete(key);
+  await clearAttempts(key);
 
   const token = createSessionToken();
   const config = appConfig();

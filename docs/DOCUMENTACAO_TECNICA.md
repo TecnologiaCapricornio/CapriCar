@@ -246,6 +246,7 @@ Tabelas relacionais usadas diretamente:
 
 - `users`;
 - `user_sessions`;
+- `login_attempts`;
 - `audit_logs`;
 - `schema_migrations`.
 
