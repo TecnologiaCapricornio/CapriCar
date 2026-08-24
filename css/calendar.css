@@ -94,7 +94,7 @@
     justify-content:center;
     padding:10px 4px;
     color:#7594ad;
-    font-size:.58rem;
+    font-size:var(--fs-2xs);
     font-weight:750;
   }
 
@@ -117,7 +117,7 @@
   .week-day-header span{
     margin-bottom:4px;
     color:#8faac0;
-    font-size:.62rem;
+    font-size:var(--fs-2xs);
     font-weight:800;
     letter-spacing:.08em;
   }
@@ -162,7 +162,7 @@
     padding-right:9px;
     color:#7897b0;
     text-align:right;
-    font-size:.59rem;
+    font-size:var(--fs-2xs);
     line-height:1;
     transform:translateY(-4px);
   }
@@ -253,7 +253,7 @@
   .week-reservation-event strong{
     max-width:100%;
     overflow:hidden;
-    font-size:.67rem;
+    font-size:var(--fs-2xs);
     line-height:1.15;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -262,7 +262,7 @@
   .week-reservation-event span{
     max-width:100%;
     overflow:hidden;
-    font-size:.68rem;
+    font-size:var(--fs-2xs);
     font-weight:750;
     line-height:1.2;
     text-overflow:ellipsis;
@@ -273,7 +273,7 @@
     max-width:100%;
     overflow:hidden;
     color:#d4e7f5;
-    font-size:.58rem;
+    font-size:var(--fs-2xs);
     line-height:1.2;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -284,7 +284,7 @@
   }
 
   .week-reservation-event .calendar-event-id{
-    font-size:.72rem;
+    font-size:var(--fs-2xs);
     font-weight:700;
   }
 
@@ -327,7 +327,7 @@
     position:absolute;
     right:5px;
     color:#cde6f7;
-    font-size:.58rem;
+    font-size:var(--fs-2xs);
   }
 
   .week-reservation-event.clipped-start::before{
@@ -359,11 +359,11 @@
   }
 
   .week-selection-preview strong{
-    font-size:.7rem;
+    font-size:var(--fs-2xs);
   }
 
   .week-selection-preview span{
-    font-size:.62rem;
+    font-size:var(--fs-2xs);
   }
 
   .week-now-line{
@@ -396,7 +396,7 @@
 
   .calendar-weekday{
     text-align:center;
-    font-size:0.7rem;
+    font-size:var(--fs-2xs);
     font-weight:700;
     color:#8fbadb;
     padding-bottom:4px;
@@ -456,7 +456,7 @@
     margin-top:3px;
     background:var(--azul-claro);
     color:#fff;
-    font-size:0.63rem;
+    font-size:var(--fs-2xs);
     font-weight:700;
     padding:1px 6px;
     border-radius:10px;
@@ -468,7 +468,7 @@
     display:flex;
     gap:16px;
     margin-top:14px;
-    font-size:0.72rem;
+    font-size:var(--fs-2xs);
     color:var(--texto-muted);
     flex-wrap:wrap;
   }
@@ -688,7 +688,7 @@
   }
 
   .date-popup-weekday{
-    font-size:0.62rem;
+    font-size:var(--fs-2xs);
     color:var(--texto-muted);
     text-align:center;
     font-weight:700;
@@ -739,7 +739,7 @@
     display:flex;
     gap:10px;
     margin-top:8px;
-    font-size:0.66rem;
+    font-size:var(--fs-2xs);
     color:var(--texto-muted);
     flex-wrap:wrap;
   }
@@ -802,7 +802,7 @@
     background:transparent;
     color:var(--azul-claro);
     padding:6px 13px;
-    font-size:.7rem;
+    font-size:var(--fs-2xs);
     font-weight:700;
     cursor:pointer;
   }
@@ -818,7 +818,7 @@
 
   .calendar-mobile-branch-filter label{
     color:#91abc0;
-    font-size:.68rem;
+    font-size:var(--fs-2xs);
     font-weight:800;
     text-transform:uppercase;
     letter-spacing:.05em;
@@ -947,7 +947,7 @@
   }
 
   .week-header-corner{
-    font-size:.52rem;
+    font-size:var(--fs-2xs);
   }
 
   .weekly-calendar.mobile-month-mode{
@@ -984,7 +984,7 @@
   .mobile-month-weekdays span{
     color:#91a9bd;
     text-align:center;
-    font-size:.63rem;
+    font-size:var(--fs-2xs);
     font-weight:800;
   }
 
@@ -1026,7 +1026,7 @@
     height:27px;
     margin:0 auto 4px;
     border-radius:50%;
-    font-size:.74rem;
+    font-size:var(--fs-2xs);
   }
 
   .mobile-month-day.today strong{
@@ -1060,7 +1060,7 @@
     border-radius:3px;
     background:rgba(58,106,149,.72);
     color:#fff;
-    font-size:.5rem;
+    font-size:var(--fs-2xs);
     font-weight:700;
     line-height:1.25;
     text-overflow:ellipsis;
@@ -1070,7 +1070,7 @@
   .mobile-month-more{
     padding-left:4px;
     color:#9fc3df;
-    font-size:.5rem;
+    font-size:var(--fs-2xs);
     font-weight:700;
   }
 
@@ -1147,7 +1147,7 @@
 
   .mobile-day-top span{
     color:#84a3bc;
-    font-size:.62rem;
+    font-size:var(--fs-2xs);
     font-weight:800;
     text-transform:uppercase;
     letter-spacing:.08em;
@@ -1162,7 +1162,7 @@
   .mobile-day-top small{
     margin-top:3px;
     color:#92b3cc;
-    font-size:.65rem;
+    font-size:var(--fs-2xs);
   }
 
   .mobile-day-scroll{
@@ -1190,7 +1190,7 @@
 
   .mobile-day-mode .week-time-label{
     padding-right:8px;
-    font-size:.62rem;
+    font-size:var(--fs-2xs);
   }
 
   .mobile-day-mode .week-days.mobile-one-day{
@@ -1218,7 +1218,7 @@
   }
 
   .mobile-day-mode .week-reservation-event strong{
-    font-size:.72rem;
+    font-size:var(--fs-2xs);
   }
 
   .mobile-day-mode .week-reservation-event span{
@@ -1285,7 +1285,7 @@
 
   .mobile-selection-sheet span{
     color:#8ba8be;
-    font-size:.62rem;
+    font-size:var(--fs-2xs);
     font-weight:750;
   }
 
@@ -1306,7 +1306,7 @@
     padding:8px 12px;
     border-radius:999px;
     font:inherit;
-    font-size:.7rem;
+    font-size:var(--fs-2xs);
     font-weight:800;
     cursor:pointer;
   }
@@ -1358,7 +1358,7 @@
 
 .range-picker-caption{
   color:var(--texto-muted);
-  font-size:.68rem;
+  font-size:var(--fs-2xs);
   font-weight:700;
   text-transform:uppercase;
   letter-spacing:.06em;
@@ -1436,7 +1436,7 @@
 .range-calendar-topline span{
   margin-top:2px;
   color:var(--texto-muted);
-  font-size:.64rem;
+  font-size:var(--fs-2xs);
 }
 
 .range-calendar-header{
@@ -1479,7 +1479,7 @@
   padding:3px 0 5px;
   color:#8fa7bd;
   text-align:center;
-  font-size:.62rem;
+  font-size:var(--fs-2xs);
   font-weight:800;
   text-transform:uppercase;
 }
@@ -1497,7 +1497,7 @@
   background:transparent;
   color:#dbe8f3;
   cursor:pointer;
-  font-size:.72rem;
+  font-size:var(--fs-2xs);
   font-weight:650;
 }
 
@@ -1600,7 +1600,7 @@
   gap:10px;
   margin:10px 3px 0;
   color:var(--texto-muted);
-  font-size:.62rem;
+  font-size:var(--fs-2xs);
 }
 
 .range-calendar-legend span{
@@ -1640,7 +1640,7 @@
 .range-apply-btn{
   padding:7px 12px;
   border-radius:999px;
-  font-size:.7rem;
+  font-size:var(--fs-2xs);
   font-weight:750;
   cursor:pointer;
 }

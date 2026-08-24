@@ -243,7 +243,7 @@
   border-radius:999px;
   background:rgba(111,168,216,.12);
   color:#bcd5e8;
-  font-size:.68rem;
+  font-size:var(--fs-2xs);
   font-weight:700;
 }
 
@@ -440,7 +440,7 @@
   border-radius:999px;
   background:rgba(51,212,136,.13);
   color:#9be9c4;
-  font-size:.7rem;
+  font-size:var(--fs-2xs);
   font-weight:700;
   margin-top:4px;
 }
@@ -502,7 +502,7 @@
   padding:7px 8px;
   border-top:1px solid rgba(111,168,216,.18);
   color:#bfe2fa;
-  font-size:.68rem;
+  font-size:var(--fs-2xs);
   font-weight:800;
   text-align:center;
   text-decoration:none;

@@ -17,4 +17,15 @@
     --radius-lg:20px;
     --radius-md:14px;
     --radius-sm:10px;
+
+    /* Escala tipográfica. --fs-2xs é o piso legível (12px) - nenhum texto
+       com informação real deveria usar algo menor que isso. */
+    --fs-2xs:0.75rem;
+    --fs-xs:0.8125rem;
+    --fs-sm:0.875rem;
+    --fs-base:1rem;
+    --fs-md:1.125rem;
+    --fs-lg:1.25rem;
+    --fs-xl:1.4rem;
+    --fs-2xl:2rem;
   }
