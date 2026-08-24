@@ -247,19 +247,29 @@ loginForm.addEventListener('submit', async function(e){
 
   if(!valid) return;
 
+  let user;
   try{
     const authentication = await apiRequest('/api/auth/login', {
       method:'POST',
       body:{ username:nome, password:senha }
     });
-    const user = accountToSession(authentication.user);
+    user = accountToSession(authentication.user);
     setCurrentUser(user);
-    await hydrateDatabaseState();
-    showApp(user);
   }catch(error){
     clearCurrentUser();
     setLoginError('loginEmail', error.message || 'Usuário ou senha incorretos.');
+    return;
   }
+
+  // A autenticação já foi aceita pelo servidor neste ponto - uma falha ao
+  // sincronizar os dados não deve derrubar a sessão nem aparecer como se
+  // fosse usuário ou senha incorretos.
+  try{
+    await hydrateDatabaseState();
+  }catch(error){
+    console.error('Falha ao sincronizar dados após o login:', error);
+  }
+  showApp(user);
 });
 
 profileBtn.addEventListener('click', function(){
