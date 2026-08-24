@@ -374,7 +374,8 @@
 
         <div class="admin-section-tabs" id="adminSectionTabs">
           <button type="button" class="admin-section-btn active" data-admin-section="reservas">Reservas</button>
-          <button type="button" class="admin-section-btn" data-admin-section="frota">Filiais e veículos</button>
+          <button type="button" class="admin-section-btn" data-admin-section="frota">Filiais</button>
+          <button type="button" class="admin-section-btn" data-admin-section="veiculos">Veículos</button>
           <button type="button" class="admin-section-btn" data-admin-section="bloqueios">Bloqueios</button>
           <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
           <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
@@ -435,7 +436,11 @@
               </form>
               <div id="branchesList" class="management-list"></div>
             </div>
+          </div>
+        </div>
 
+        <div class="admin-section-panel hidden" id="admin-section-veiculos">
+          <div class="admin-grid">
             <div class="admin-subcard">
               <h3>Veículos</h3>
               <form id="vehicleForm" class="compact-form">
@@ -531,6 +536,32 @@
                 <option value="devolveu">Devolveu veículo</option>
               </select>
             </div>
+          </div>
+          <div class="row admin-filter-row">
+            <div class="field range-picker-field" id="field-auditPeriod">
+              <label for="auditRangePickerTrigger">Período</label>
+              <button type="button" class="range-picker-trigger" id="auditRangePickerTrigger" aria-expanded="false">
+                <span class="range-picker-value"><span class="range-picker-caption">De</span><strong data-range-start-label>Selecionar data</strong></span>
+                <span class="range-picker-arrow">→</span>
+                <span class="range-picker-value"><span class="range-picker-caption">Até</span><strong data-range-end-label>Selecionar data</strong></span>
+                <span class="range-picker-icon" aria-hidden="true">▦</span>
+              </button>
+              <input type="hidden" id="auditStart">
+              <input type="hidden" id="auditEnd">
+              <div class="reservation-range-calendar hidden" id="auditRangeCalendar"></div>
+              <div class="range-picker-hint" data-range-hint>Selecione a data inicial e depois a data final (opcional).</div>
+            </div>
+            <div class="field">
+              <label for="auditStartTime">Hora inicial</label>
+              <input type="time" id="auditStartTime">
+            </div>
+            <div class="field">
+              <label for="auditEndTime">Hora final</label>
+              <input type="time" id="auditEndTime">
+            </div>
+          </div>
+          <div class="report-actions">
+            <button type="button" class="submit-btn" id="exportAuditPdfBtn">Exportar PDF</button>
           </div>
           <div id="auditList" class="audit-list"></div>
         </div>

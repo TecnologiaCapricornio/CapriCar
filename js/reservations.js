@@ -495,7 +495,6 @@ function bindDeleteButtons(container){
         renderMyReservations();
         return;
       }
-      logAudit('cancelou', 'reserva', id, old ? old.partida + ' → ' + old.destino : 'Reserva cancelada');
       renderMyReservations();
       renderMainCalendar();
       renderAvailableRides();
@@ -715,7 +714,6 @@ form.addEventListener('submit', async function(e){
     return;
   }
   Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
-  logAudit('criou', 'reserva', reserva.id, getReservationNumberLabel(reserva) + ' · ' + reserva.partida + ' → ' + reserva.destino + ' · ' + reserva.carro);
   renderMainCalendar();
   renderAvailableRides();
 

@@ -130,6 +130,7 @@ function canAccessAdminSection(section){
   const permissionBySection = {
     reservas:'reservations',
     frota:'fleet',
+    veiculos:'fleet',
     bloqueios:'blocks',
     relatorios:'reports',
     auditoria:'audit',
@@ -159,7 +160,7 @@ const profileRole = document.getElementById('profileRole');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','frota','bloqueios','relatorios','auditoria','regras','usuarios'];
+  const orderedSections = ['reservas','frota','veiculos','bloqueios','relatorios','auditoria','regras','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');

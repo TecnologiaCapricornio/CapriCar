@@ -287,7 +287,6 @@ operationForm.addEventListener('submit', async function(e){
     reserva.status = operationPhase === 'retirada' ? 'em uso' : 'concluída';
     list[idx] = reserva;
     await saveReservations(list);
-    logAudit(operationPhase === 'retirada' ? 'retirou' : 'devolveu', 'reserva', reserva.id, reserva.partida + ' · ' + reserva.carro + ' · km ' + km);
     closeOperationModal();
     renderMyReservations();
     if(canManageReservations()) renderAdminTab();

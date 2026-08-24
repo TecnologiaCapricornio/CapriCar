@@ -6,6 +6,10 @@
 const auditList = document.getElementById('auditList');
 const auditUserFilter = document.getElementById('auditUserFilter');
 const auditActionFilter = document.getElementById('auditActionFilter');
+const auditStartDate = document.getElementById('auditStart');
+const auditEndDate = document.getElementById('auditEnd');
+const auditStartTime = document.getElementById('auditStartTime');
+const auditEndTime = document.getElementById('auditEndTime');
 
 function formatDateTime(iso){
   if(!iso) return '';
@@ -13,15 +17,62 @@ function formatDateTime(iso){
   return date.toLocaleString('pt-BR');
 }
 
-function renderAuditLog(){
-  if(!canViewAudit()) return;
+// Compara no fuso do navegador, igual ao resto da interface (ver
+// formatDateTime acima) - o servidor grava created_at em UTC, então essa
+// conversão é a mesma que toLocaleString já faz para exibir a data.
+function auditEntryWithinPeriod(entry){
+  const startDate = auditStartDate.value;
+  const endDate = auditEndDate.value;
+  const startTime = auditStartTime.value;
+  const endTime = auditEndTime.value;
+  if(!startDate && !endDate && !startTime && !endTime) return true;
+  const entryDate = new Date(entry.timestamp);
+  if(Number.isNaN(entryDate.getTime())) return true;
+  const entryISO = isoFromParts(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+  if(startDate && entryISO < startDate) return false;
+  if(endDate && entryISO > endDate) return false;
+  const entryMinutes = entryDate.getHours() * 60 + entryDate.getMinutes();
+  if(startTime){
+    const [h, m] = startTime.split(':').map(Number);
+    if(entryMinutes < h * 60 + m) return false;
+  }
+  if(endTime){
+    const [h, m] = endTime.split(':').map(Number);
+    if(entryMinutes > h * 60 + m) return false;
+  }
+  return true;
+}
+
+function auditFilterText(){
+  const parts = [];
+  const userFilter = auditUserFilter.value.trim();
+  const actionFilter = auditActionFilter.value;
+  if(userFilter) parts.push('usuário contém "' + userFilter + '"');
+  if(actionFilter) parts.push('ação: ' + auditActionFilter.selectedOptions[0].textContent);
+  if(auditStartDate.value || auditEndDate.value){
+    parts.push('período: ' + (auditStartDate.value ? formatDate(auditStartDate.value) : 'início') +
+      ' até ' + (auditEndDate.value ? formatDate(auditEndDate.value) : 'hoje'));
+  }
+  if(auditStartTime.value || auditEndTime.value){
+    parts.push('horário: ' + (auditStartTime.value || '00:00') + ' às ' + (auditEndTime.value || '23:59'));
+  }
+  return parts.length ? parts.join(' · ') : 'nenhum filtro aplicado';
+}
+
+function getFilteredAuditEntries(){
   const userFilter = auditUserFilter.value.trim().toLowerCase();
   const actionFilter = auditActionFilter.value;
-  const list = getAuditLog().filter(entry => {
+  return getAuditLog().filter(entry => {
     if(userFilter && !String(entry.user).toLowerCase().includes(userFilter)) return false;
     if(actionFilter && entry.action !== actionFilter) return false;
+    if(!auditEntryWithinPeriod(entry)) return false;
     return true;
   });
+}
+
+function renderAuditLog(){
+  if(!canViewAudit()) return;
+  const list = getFilteredAuditEntries();
   auditList.innerHTML = list.length ? list.slice(0, 500).map(entry =>
     '<div class="audit-entry">' +
       '<div class="audit-marker"></div>' +
@@ -31,8 +82,80 @@ function renderAuditLog(){
   ).join('') : '<div class="empty-state">Nenhum evento encontrado.</div>';
 }
 
-[auditUserFilter, auditActionFilter].forEach(el => {
+[auditUserFilter, auditActionFilter, auditStartTime, auditEndTime].forEach(el => {
   el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', renderAuditLog);
+});
+[auditStartDate, auditEndDate].forEach(el => {
+  el.addEventListener('change', renderAuditLog);
+});
+
+function printableAuditCell(value){
+  return escapeHTML(value == null || value === '' ? '—' : String(value));
+}
+
+function buildPrintableAuditReport(list){
+  const generatedAt = new Date().toLocaleString('pt-BR');
+  const rows = list.map(entry =>
+    '<tr>' +
+      '<td>' + printableAuditCell(formatDateTime(entry.timestamp)) + '</td>' +
+      '<td>' + printableAuditCell(entry.user) + '</td>' +
+      '<td>' + printableAuditCell(entry.action) + '</td>' +
+      '<td>' + printableAuditCell(entry.entity) + '</td>' +
+      '<td>' + printableAuditCell(entry.details) + '</td>' +
+    '</tr>'
+  ).join('');
+  const emptyRow = '<tr><td colspan="5" class="empty">Nenhum evento encontrado para os filtros selecionados.</td></tr>';
+
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
+    '<title>Auditoria CapriCar - ' + printableAuditCell(todayISO()) + '</title>' +
+    '<style>' +
+      '@page{size:A4 landscape;margin:12mm}' +
+      '*{box-sizing:border-box}' +
+      'body{margin:0;color:#172b3d;background:#fff;font:11px Arial,sans-serif}' +
+      '.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid #3a6a95}' +
+      '.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:11px;background:#1e3a5a;color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px}' +
+      'h1{margin:0;color:#1e3a5a;font-size:21px}' +
+      '.subtitle,.meta{color:#62778a}.meta{text-align:right;line-height:1.5}' +
+      '.filters{margin:10px 0;padding:8px 10px;border-radius:7px;background:#edf3f8;color:#3e566b}' +
+      'table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}' +
+      'thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}' +
+      'th{padding:8px 7px;background:#1e3a5a;color:#fff;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.25px}' +
+      'td{padding:7px;border:1px solid #dbe5ed;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}' +
+      'tbody tr:nth-child(even){background:#f5f9fc}.empty{text-align:center;padding:22px;color:#62778a}' +
+      'th:nth-child(1){width:16%}th:nth-child(2){width:16%}th:nth-child(3){width:14%}th:nth-child(4){width:14%}th:nth-child(5){width:40%}' +
+      '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #dbe5ed;color:#7b8d9c;text-align:right;font-size:9px}' +
+      '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
+    '</style></head><body>' +
+      '<header class="header"><div class="brand"><div class="mark">CC</div><div><h1>Auditoria</h1>' +
+        '<div class="subtitle">CapriCar · Gestão de veículos e reservas</div></div></div>' +
+        '<div class="meta"><strong>Emitido em</strong><br>' + printableAuditCell(generatedAt) + '</div></header>' +
+      '<div class="filters"><strong>Filtros:</strong> ' + printableAuditCell(auditFilterText()) + '</div>' +
+      '<table><thead><tr><th>Data e hora</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr></thead>' +
+        '<tbody>' + (rows || emptyRow) + '</tbody></table>' +
+      '<div class="footer">Auditoria gerada pelo CapriCar · ' + printableAuditCell(generatedAt) + '</div>' +
+    '</body></html>';
+}
+
+document.getElementById('exportAuditPdfBtn').addEventListener('click', async function(){
+  if(!canViewAudit()) return;
+  const auditWindow = window.open('', '_blank');
+  if(!auditWindow){
+    await showSiteAlert('Permita a abertura de pop-ups para exportar a auditoria em PDF.', {
+      title:'Pop-up bloqueado',
+      type:'warning'
+    });
+    return;
+  }
+  const list = getFilteredAuditEntries();
+  auditWindow.document.open();
+  auditWindow.document.write(buildPrintableAuditReport(list));
+  auditWindow.document.close();
+  auditWindow.opener = null;
+  logAudit('exportou', 'auditoria PDF', todayISO(), list.length + ' eventos exportados');
+  auditWindow.setTimeout(function(){
+    auditWindow.focus();
+    auditWindow.print();
+  }, 350);
 });
 
 /* =========================================================

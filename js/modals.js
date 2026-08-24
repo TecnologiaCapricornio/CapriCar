@@ -398,7 +398,6 @@ quickReserveForm.addEventListener('submit', async function(e){
     return;
   }
   Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
-  logAudit('criou', 'reserva', reserva.id, getReservationNumberLabel(reserva) + ' · ' + reserva.partida + ' → ' + reserva.destino + ' · reserva rápida');
 
   closeQuickReserveModal();
 
@@ -965,6 +964,28 @@ createReservationRangePicker(
     emptyHint:'Selecione a data inicial e depois a data final.'
   }
 );
+
+const auditStartDateInput = document.getElementById('auditStart');
+const auditEndDateInput = document.getElementById('auditEnd');
+if(auditStartDateInput && auditEndDateInput){
+  createReservationRangePicker(
+    auditStartDateInput,
+    auditEndDateInput,
+    document.getElementById('auditRangePickerTrigger'),
+    document.getElementById('auditRangeCalendar'),
+    () => new Set(),
+    {
+      allowPast:true,
+      maxAdvanceDays:null,
+      maxRangeDays:null,
+      startTitle:'Escolha a data inicial',
+      endTitle:'Escolha a data final',
+      startSubtitle:'Início do período da auditoria',
+      endSubtitle:'Fim do período da auditoria',
+      emptyHint:'Selecione a data inicial e depois a data final (opcional).'
+    }
+  );
+}
 
 function getAdminUnavailableDates(){
   const adminDeparture = document.getElementById('aPartida');

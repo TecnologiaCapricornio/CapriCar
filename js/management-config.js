@@ -9,6 +9,7 @@ function renderAdminSection(section){
   if(!canAccessAdminSection(section)) return;
   if(section === 'reservas') renderAdminTab();
   if(section === 'frota') renderFleetManagement();
+  if(section === 'veiculos') renderFleetManagement();
   if(section === 'bloqueios') renderBlocksManagement();
   if(section === 'auditoria') renderAuditLog();
   if(section === 'relatorios') renderReports();
