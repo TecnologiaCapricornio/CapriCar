@@ -209,6 +209,8 @@ flowchart LR
 
 Scripts:
 
+- `js/reservation-defaults.js`: valores padrão das regras de reserva,
+  compartilhados com o servidor;
 - `js/config.js`: chaves e valores globais;
 - `js/utils.js`: datas, conflitos e horários;
 - `js/api.js`: API e sincronização;
@@ -219,9 +221,14 @@ Scripts:
 - `js/calendar.js`: calendário principal;
 - `js/modals.js`: reserva rápida e datas;
 - `js/admin.js`: reservas administrativas;
-- `js/management.js`: usuários, frota, operação e relatórios;
+- `js/management-operations.js`: retirada, devolução e fotos de operação;
+- `js/management-config.js`: navegação do painel e regras de reserva;
+- `js/management-users.js`: usuários e permissões;
+- `js/management-fleet.js`: filiais e veículos;
+- `js/management-blocks.js`: bloqueios da frota;
+- `js/management-reports.js`: auditoria e relatórios;
 - `js/xlsx-export.js`: Excel;
-- `js/app.js`: inicialização.
+- `js/app.js`: inicialização (carregado por último).
 
 ### 6.2 Servidor
 
