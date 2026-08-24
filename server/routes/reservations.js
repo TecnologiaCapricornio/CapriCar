@@ -1,5 +1,5 @@
 const express = require('express');
-const { withTransaction, query } = require('../db');
+const { withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
 const {
   canViewAllReservations,
