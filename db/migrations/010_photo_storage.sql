@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE operation_photos ALTER COLUMN data_url DROP NOT NULL;
+
+COMMIT;

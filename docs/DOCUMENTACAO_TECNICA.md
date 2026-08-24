@@ -242,7 +242,19 @@ Arquivos:
 
 ### 6.3 Persistência atual
 
-Tabelas relacionais usadas diretamente:
+**Reservas usam as tabelas relacionais**, não mais `application_state`:
+`reservations`, `reservation_passengers`, `vehicle_operations` e
+`operation_photos`. A interface fala com elas por `GET /api/reservations` e
+`POST /api/reservations/sync` (implementados em `server/routes/reservations.js`
+e `server/reservations-store.js`).
+
+Isso é resultado de `npm run db:migrate` rodar `migrateLegacyReservations()`
+a cada execução: qualquer conteúdo ainda existente em
+`application_state.value` para a coleção `reservations` é migrado para as
+tabelas relacionais e a coleção é apagada. Em qualquer banco onde as
+migrações já rodaram, essa coleção não existe mais.
+
+Outras tabelas relacionais usadas diretamente:
 
 - `users`;
 - `user_sessions`;
@@ -250,22 +262,24 @@ Tabelas relacionais usadas diretamente:
 - `audit_logs`;
 - `schema_migrations`.
 
-Coleções operacionais em `application_state.value` como JSONB:
+Coleções que **ainda** ficam em `application_state.value` como JSONB:
 
-- `reservations`;
 - `branches`;
 - `vehicles`;
 - `blocks`;
 - `rules`.
 
-Cada coleção tem uma `revision`. Se outra pessoa salvar antes, a API retorna
-`409 STATE_CONFLICT` e a interface carrega a versão atual.
+Cada uma tem uma `revision`; se outra pessoa salvar antes, a API retorna
+`409 STATE_CONFLICT` e a interface carrega a versão atual. Essas quatro
+coleções são servidas por `server/routes/state.js`.
 
-O banco também contém tabelas normalizadas de reservas, passageiros, operações
-e bloqueios. Elas representam a estrutura planejada para uma evolução futura,
-mas a interface atual usa `application_state` como fonte operacional. Portanto,
-a tabela relacional `reservations` não deve ser tratada como a fonte das
-reservas exibidas atualmente.
+`server/routes/state.js` também expõe `PUT /api/state/reservations`, herdado
+de antes dessa migração. A rota continua funcional isoladamente (e é o que os
+testes em `tests/core.test.js`, `tests/validation.test.js` e
+`tests/api-integration.test.js` exercitam), mas **não é mais chamada pela
+interface** — o `current` que ela enxerga é sempre vazio, já que a coleção
+JSONB correspondente foi apagada pela migração. Tratar isso é um item de
+limpeza pendente (ver seção 18).
 
 ### 6.4 Cache local
 
@@ -428,12 +442,25 @@ O `.env` real é secreto e não deve ser versionado nem colocado em ZIP público
 | GET | `/api/catalog/vehicles` | Autenticado |
 | GET | `/api/catalog/reservation-rules` | Autenticado |
 
-### 11.4 Estado operacional
+### 11.4 Reservas
+
+| Método | Endpoint | Acesso |
+|---|---|---|
+| GET | `/api/reservations` | Autenticado — retorna as reservas visíveis ao usuário |
+| POST | `/api/reservations/sync` | Autenticado, com regras — cria/edita/cancela em lote |
+| GET | `/api/reservations/:reservationId/photos/:photoId` | Autenticado, dono/passageiro/gestão |
+
+Essa é a via usada pela interface hoje (ver seção 6.3). As fotos ficam em
+`server/uploads/operacoes/`; a rota de foto serve o arquivo do disco quando
+existe, com fallback para `operation_photos.data_url` em fotos gravadas antes
+dessa mudança.
+
+### 11.5 Estado operacional
 
 | Método | Endpoint | Acesso |
 |---|---|---|
 | GET | `/api/state/bootstrap` | Autenticado |
-| PUT | `/api/state/reservations` | Autenticado, com regras |
+| PUT | `/api/state/reservations` | Herdado, não usado pela interface (ver seção 6.3) |
 | PUT | `/api/state/branches` | Permissão `fleet` |
 | PUT | `/api/state/vehicles` | Permissão `fleet` |
 | PUT | `/api/state/blocks` | Permissão `blocks` |
@@ -492,6 +519,14 @@ npm run db:backup
 ```
 
 O backup customizado fica em `backups/`. A retenção padrão é 30 dias.
+
+As fotos de retirada/devolução ficam em `server/uploads/operacoes/`, fora do
+PostgreSQL. `npm run db:backup` copia esse conteúdo para
+`backups/uploads-<timestamp>/` (cifrando cada foto individualmente quando
+`BACKUP_ENCRYPTION_KEY` está definida). A restauração dessas fotos ainda é
+manual: copie o conteúdo de volta para `server/uploads/operacoes/`
+(descriptografando cada arquivo, se necessário) — `npm run db:restore` cuida
+apenas do PostgreSQL.
 
 Se necessário:
 
@@ -638,27 +673,27 @@ exponha diretamente o PostgreSQL.
 
 Limitações:
 
-- coleções operacionais são documentos JSON completos;
-- fotos ficam na coleção como dados de imagem;
+- `branches`, `vehicles`, `blocks` e `rules` ainda são documentos JSON
+  completos em `application_state` (reservas já usam tabelas relacionais,
+  ver seção 6.3);
+- `server/routes/state.js` ainda expõe `PUT /api/state/reservations`, rota
+  herdada que não é mais chamada pela interface — candidata a remoção;
 - backup é local por padrão;
 - sem recuperação de senha por e-mail;
 - sem MFA ou SSO;
-- sem CI/CD;
 - sem agendador de backup;
-- PDF depende da impressão do navegador;
-- tabelas normalizadas ainda não são a fonte principal.
+- PDF depende da impressão do navegador.
 
 Recomendações:
 
-1. migrar operações para tabelas relacionais;
-2. armazenar fotos em object storage;
-3. criar CRUD por entidade;
-4. implementar SSO e MFA;
-5. automatizar backup externo;
-6. adicionar monitoramento;
-7. criar CI;
-8. versionar releases e changelog;
-9. criar ambiente de homologação.
+1. migrar `branches`, `vehicles`, `blocks` e `rules` para tabelas
+   relacionais, e remover a rota `PUT /api/state/reservations` herdada;
+2. criar CRUD por entidade;
+3. implementar SSO e MFA;
+4. automatizar backup externo;
+5. adicionar monitoramento;
+6. versionar releases e changelog;
+7. criar ambiente de homologação.
 
 ## 19. Responsabilidades
 
