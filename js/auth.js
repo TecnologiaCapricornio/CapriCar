@@ -38,6 +38,7 @@ function normalizeSystemUser(account){
     nome:String(account.nome || account.username || '').trim(),
     role:account.role === 'admin' ? 'admin' : (account.role === 'facilities' ? 'facilities' : 'user'),
     active:account.active !== false,
+    authProvider:account.authProvider === 'entra' ? 'entra' : 'local',
     permissions:normalizeUserPermissions(account.permissions)
   };
 }
@@ -150,6 +151,8 @@ const appScreen = document.getElementById('appScreen');
 const loginForm = document.getElementById('loginForm');
 const loginNomeInput = document.getElementById('loginNome');
 const loginEmailInput = document.getElementById('loginEmail');
+const ssoDivider = document.getElementById('ssoDivider');
+const ssoLoginBtn = document.getElementById('ssoLoginBtn');
 
 const headerUserName = document.getElementById('headerUserName');
 const avatarInitials = document.getElementById('avatarInitials');
@@ -277,6 +280,46 @@ loginForm.addEventListener('submit', async function(e){
   }
   showApp(user);
 });
+
+ssoLoginBtn.addEventListener('click', function(){
+  window.location.href = '/api/auth/sso/login';
+});
+
+// Este bloco depende de APIs de navegador (fetch/URLSearchParams/history)
+// que nao existem no sandbox usado por tests/permissions.test.js para
+// carregar este arquivo - por isso so roda em um browser de verdade.
+if(typeof window !== 'undefined' && typeof URLSearchParams !== 'undefined'){
+  // Consulta se o login via Microsoft foi configurado no servidor - o botao
+  // so aparece quando ha credenciais do Entra ID no .env (ver server/sso.js).
+  (async function checkSsoAvailability(){
+    try{
+      const status = await apiRequest('/api/auth/sso/status');
+      if(status.enabled){
+        ssoDivider.classList.remove('hidden');
+        ssoLoginBtn.classList.remove('hidden');
+      }
+    }catch(error){
+      console.error('Falha ao consultar status do login via Microsoft:', error);
+    }
+  })();
+
+  // O callback do SSO (server/routes/sso.js) redireciona de volta para "/"
+  // com ?error=... quando o login via Microsoft nao pode ser concluido.
+  (function showSsoErrorIfAny(){
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('error');
+    if(!code) return;
+    const messages = {
+      sso_denied:'Login via Microsoft cancelado.',
+      sso_state:'Sessão de login via Microsoft expirada. Tente novamente.',
+      sso_conflict:'Já existe uma conta local com esse usuário. Fale com um administrador.',
+      sso_failed:'Não foi possível concluir o login via Microsoft.',
+      sso_disabled:'Login via Microsoft não está configurado.'
+    };
+    setLoginError('loginEmail', messages[code] || 'Não foi possível concluir o login via Microsoft.');
+    window.history.replaceState({}, '', window.location.pathname);
+  })();
+}
 
 profileBtn.addEventListener('click', function(){
   profileModal.classList.remove('hidden');

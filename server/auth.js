@@ -1,5 +1,6 @@
-const { query } = require('./db');
-const { hashSessionToken } = require('./security');
+const { query, withTransaction } = require('./db');
+const { appConfig } = require('./config');
+const { createSessionToken, hashSessionToken } = require('./security');
 
 const SESSION_COOKIE = 'capricar_session';
 
@@ -13,6 +14,44 @@ function parseCookies(header){
     if(key) cookies[key] = decodeURIComponent(value);
   });
   return cookies;
+}
+
+function cookieOptions(){
+  const config = appConfig();
+  return {
+    httpOnly:true,
+    sameSite:'lax',
+    secure:config.secureCookie,
+    maxAge:config.sessionTtlHours * 60 * 60 * 1000,
+    path:'/'
+  };
+}
+
+// Emite uma sessao para o usuario indicado, seja apos login local ou SSO -
+// as duas rotas de login compartilham essa mesma logica de cookie/transacao.
+async function issueSession(res, userId){
+  const token = createSessionToken();
+  const config = appConfig();
+  await withTransaction(async client => {
+    await client.query('DELETE FROM user_sessions WHERE expires_at <= NOW()');
+    await client.query(
+      `INSERT INTO user_sessions (token_hash, user_id, expires_at)
+       VALUES ($1, $2, NOW() + ($3 * INTERVAL '1 hour'))`,
+      [hashSessionToken(token), userId, config.sessionTtlHours]
+    );
+    await client.query(
+      `DELETE FROM user_sessions
+        WHERE token_hash IN (
+          SELECT token_hash
+            FROM user_sessions
+           WHERE user_id = $1
+           ORDER BY created_at DESC
+           OFFSET 10
+        )`,
+      [userId]
+    );
+  });
+  res.cookie(SESSION_COOKIE, token, cookieOptions());
 }
 
 function permissionsFromRow(row){
@@ -35,6 +74,7 @@ function publicUser(row){
     nome:row.display_name,
     role:row.role,
     active:row.active,
+    authProvider:row.auth_provider || 'local',
     permissions:permissionsFromRow(row)
   };
 }
@@ -87,6 +127,8 @@ function requirePermission(permission){
 module.exports = {
   SESSION_COOKIE,
   parseCookies,
+  cookieOptions,
+  issueSession,
   permissionsFromRow,
   publicUser,
   requireAuth,

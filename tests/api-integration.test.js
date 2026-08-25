@@ -85,21 +85,10 @@ function findSlot(state){
 
 async function cleanup(){
   await withTransaction(async client => {
-    const state = await client.query(
-      `SELECT value
-         FROM application_state
-        WHERE collection_name = 'reservations'
-        FOR UPDATE`
-    );
-    if(state.rows[0] && Array.isArray(state.rows[0].value)){
-      const cleaned = state.rows[0].value.filter(item => String(item.id) !== reservationId);
-      await client.query(
-        `UPDATE application_state
-            SET value = $1::jsonb, updated_at = NOW(), revision = revision + 1
-          WHERE collection_name = 'reservations'`,
-        [JSON.stringify(cleaned)]
-      );
-    }
+    // Reservas ficam na tabela relacional "reservations" (legacy_id guarda o
+    // id enviado pelo cliente), nao mais em application_state - ver
+    // server/reservations-store.js.
+    await client.query('DELETE FROM reservations WHERE legacy_id = $1', [reservationId]);
     const vehicleState = await client.query(
       `SELECT value
          FROM application_state
@@ -191,23 +180,29 @@ async function main(){
     assert.equal(bootstrapResult.response.status, 200);
     const state = bootstrapResult.body.collections;
     const revisions = { ...bootstrapResult.body.revisions };
-    const currentReservations = state.reservations || [];
-    const initialReservationRevision = revisions.reservations;
-    const sameState = await request('/api/state/reservations', {
+    // As reservas nao ficam mais em application_state (ver server/reservations-store.js),
+    // entao o teste de conflito otimista (STATE_CONFLICT) usa "rules", que continua
+    // sendo uma colecao JSONB de verdade.
+    const initialRulesRevision = revisions.rules;
+    const sameState = await request('/api/state/rules', {
       method:'PUT',
       headers:auth(admin.cookie),
-      body:{ value:currentReservations, revision:revisions.reservations }
+      body:{ value:state.rules, revision:revisions.rules }
     });
     assert.equal(sameState.response.status, 200, sameState.body && sameState.body.error);
-    revisions.reservations = sameState.body.revision;
+    revisions.rules = sameState.body.revision;
 
-    const staleState = await request('/api/state/reservations', {
+    const staleState = await request('/api/state/rules', {
       method:'PUT',
       headers:auth(admin.cookie),
-      body:{ value:currentReservations, revision:initialReservationRevision }
+      body:{ value:state.rules, revision:initialRulesRevision }
     });
     assert.equal(staleState.response.status, 409);
     assert.equal(staleState.body.code, 'STATE_CONFLICT');
+
+    const currentReservationsResult = await request('/api/reservations', { headers:auth(admin.cookie) });
+    assert.equal(currentReservationsResult.response.status, 200);
+    const currentReservations = currentReservationsResult.body.reservations || [];
 
     const weakPassword = await request('/api/users', {
       method:'POST',
@@ -398,6 +393,9 @@ async function main(){
       item.details.includes('Justificativa:')
     ));
 
+    // Reservas nao usam mais PUT /api/state/reservations (colecao removida
+    // quando os dados foram normalizados - ver server/routes/reservations.js);
+    // o caminho real hoje e POST /api/reservations/sync.
     const slot = findSlot({
       reservations:currentReservations,
       vehicles:[reservationTestVehicle],
@@ -421,67 +419,66 @@ async function main(){
       status:'confirmada',
       criadoEm:new Date().toISOString()
     };
-    const ownSave = await request('/api/state/reservations', {
-      method:'PUT',
+    const ownSave = await request('/api/reservations/sync', {
+      method:'POST',
       headers:auth(testUser.cookie),
-      body:{ value:[...currentReservations, ownReservation], revision:revisions.reservations }
+      body:{ changes:[{ type:'upsert', reservation:ownReservation }] }
     });
     assert.equal(ownSave.response.status, 200, ownSave.body && ownSave.body.error);
-    revisions.reservations = ownSave.body.revision;
 
-    if(currentReservations.length){
-      const tampered = currentReservations.map((item, index) =>
-        index === 0 ? { ...item, motivo:'Alterado sem permissão' } : item
-      );
-      const forbiddenEdit = await request('/api/state/reservations', {
-        method:'PUT',
+    const foreignReservation = currentReservations.find(item =>
+      String(item.criadorUsuarioId) !== String(testUser.user.id)
+    );
+    if(foreignReservation){
+      const forbiddenEdit = await request('/api/reservations/sync', {
+        method:'POST',
         headers:auth(testUser.cookie),
-        body:{ value:[...tampered, ownReservation], revision:revisions.reservations }
+        body:{
+          changes:[{
+            type:'upsert',
+            reservation:{ ...foreignReservation, motivo:'Alterado sem permissão' }
+          }]
+        }
       });
       assert.equal(forbiddenEdit.response.status, 403);
     }
 
-    const xssAttempt = await request('/api/state/reservations', {
-      method:'PUT',
+    const xssAttempt = await request('/api/reservations/sync', {
+      method:'POST',
       headers:auth(testUser.cookie),
       body:{
-        revision:revisions.reservations,
-        value:[
-          ...currentReservations,
-          { ...ownReservation, motivo:'<img src=x onerror=alert(1)>' }
-        ]
+        changes:[{
+          type:'upsert',
+          reservation:{ ...ownReservation, id:`${reservationId}-xss`, motivo:'<img src=x onerror=alert(1)>' }
+        }]
       }
     });
     assert.equal(xssAttempt.response.status, 400);
 
-    const overCapacity = await request('/api/state/reservations', {
-      method:'PUT',
+    const overCapacity = await request('/api/reservations/sync', {
+      method:'POST',
       headers:auth(testUser.cookie),
       body:{
-        revision:revisions.reservations,
-        value:[
-          ...currentReservations,
-          {
+        changes:[{
+          type:'upsert',
+          reservation:{
             ...ownReservation,
+            id:`${reservationId}-cap`,
             passageiros:Array.from({ length:21 }, (_, index) => ({ nome:`Pessoa ${index}` }))
           }
-        ]
+        }]
       }
     });
     assert.equal(overCapacity.response.status, 400);
 
-    const conflict = {
-      ...ownReservation,
-      id:`${reservationId}-conflict`,
-      nome:displayName,
-      motivo:'Conflito proposital'
-    };
-    const conflictAttempt = await request('/api/state/reservations', {
-      method:'PUT',
+    const conflictAttempt = await request('/api/reservations/sync', {
+      method:'POST',
       headers:auth(testUser.cookie),
       body:{
-        value:[...currentReservations, ownReservation, conflict],
-        revision:revisions.reservations
+        changes:[{
+          type:'upsert',
+          reservation:{ ...ownReservation, id:`${reservationId}-conflict`, motivo:'Conflito proposital' }
+        }]
       }
     });
     assert.equal(conflictAttempt.response.status, 400);
@@ -489,10 +486,11 @@ async function main(){
     const stateBeforeProtectedDelete = await request('/api/state/bootstrap', {
       headers:auth(admin.cookie)
     });
+    const reservationsBeforeProtectedDelete = await request('/api/reservations', { headers:auth(admin.cookie) });
     const protectedVehicle = stateBeforeProtectedDelete.body.collections.vehicles.find(item =>
       String(item.id) === reservationVehicleId
     );
-    const protectedReservation = stateBeforeProtectedDelete.body.collections.reservations.find(item =>
+    const protectedReservation = (reservationsBeforeProtectedDelete.body.reservations || []).find(item =>
       String(item.id) === reservationId
     );
     assert.ok(protectedVehicle);

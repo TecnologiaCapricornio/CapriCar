@@ -242,10 +242,14 @@ Arquivos:
 - `server/index.js`: aplicação Express;
 - `server/config.js`: `.env`;
 - `server/db.js`: pool e transações;
-- `server/auth.js`: sessão e autorização;
+- `server/auth.js`: sessão e autorização (login local e SSO compartilham a
+  mesma emissão de sessão via `issueSession`);
 - `server/security.js`: senhas e tokens;
 - `server/validation.js`: validações;
-- `server/routes/`: APIs;
+- `server/sso.js`: cliente MSAL, provisionamento (JIT e importação em massa)
+  de usuários do Entra ID;
+- `server/routes/`: APIs (inclui `sso.js`, as rotas públicas de login via
+  Microsoft);
 - `server/scripts/`: migração, seed, backup e restauração.
 
 ### 6.3 Persistência atual
@@ -281,13 +285,12 @@ Cada uma tem uma `revision`; se outra pessoa salvar antes, a API retorna
 `409 STATE_CONFLICT` e a interface carrega a versão atual. Essas quatro
 coleções são servidas por `server/routes/state.js`.
 
-`server/routes/state.js` também expõe `PUT /api/state/reservations`, herdado
-de antes dessa migração. A rota continua funcional isoladamente (e é o que os
-testes em `tests/core.test.js`, `tests/validation.test.js` e
-`tests/api-integration.test.js` exercitam), mas **não é mais chamada pela
-interface** — o `current` que ela enxerga é sempre vazio, já que a coleção
-JSONB correspondente foi apagada pela migração. Tratar isso é um item de
-limpeza pendente (ver seção 18).
+`PUT /api/state/reservations`, herdado de antes dessa migração, foi removido
+— `reservations` não faz parte de `COLLECTIONS` em `server/routes/state.js`
+desde a normalização, então a rota só devolvia `404 Coleção desconhecida`.
+As reservas são criadas, editadas e canceladas via `POST /api/reservations/sync`
+(`server/routes/reservations.js`), que usa a mesma validação
+(`validateReservations`, em `server/validation.js`) que a rota antiga usava.
 
 ### 6.4 Cache local
 
@@ -406,6 +409,10 @@ Saúde: `http://localhost:3000/api/health`.
 | `PG_DUMP_PATH` | Não | Caminho do `pg_dump` |
 | `PG_RESTORE_PATH` | Não | Caminho do `pg_restore` |
 | `BACKUP_ENCRYPTION_KEY` | Não | Se definida, cifra novos backups (AES-256-GCM) e remove o `.backup` em texto claro |
+| `ENTRA_TENANT_ID` | Não | Login via Microsoft Entra ID — se ausente (junto com `ENTRA_CLIENT_ID`/`ENTRA_CLIENT_SECRET`), o SSO fica desabilitado e só o login local funciona |
+| `ENTRA_CLIENT_ID` | Não | Application (client) ID do App Registration no Entra ID |
+| `ENTRA_CLIENT_SECRET` | Não | Segredo do cliente gerado no App Registration |
+| `ENTRA_REDIRECT_URI` | Não | URI de redirecionamento do callback OAuth, padrão `http://localhost:3000/api/auth/sso/callback` — deve bater exatamente com a URI registrada no Azure Portal |
 
 O `.env` real é secreto e não deve ser versionado nem colocado em ZIP público.
 
@@ -432,6 +439,9 @@ O `.env` real é secreto e não deve ser versionado nem colocado em ZIP público
 | POST | `/api/auth/login` | Público |
 | POST | `/api/auth/logout` | Sessão atual |
 | GET | `/api/auth/me` | Autenticado |
+| GET | `/api/auth/sso/status` | Público — `{enabled, graphImportEnabled}`, sem segredo na resposta |
+| GET | `/api/auth/sso/login` | Público — redireciona para o Entra ID; `503` se SSO não configurado |
+| GET | `/api/auth/sso/callback` | Público — troca o código pelo token, cria/atualiza o usuário e a sessão, redireciona para `/` |
 
 ### 11.2 Usuários — administrador
 
@@ -439,6 +449,7 @@ O `.env` real é secreto e não deve ser versionado nem colocado em ZIP público
 |---|---|---|
 | GET | `/api/users` | Listar |
 | POST | `/api/users` | Criar |
+| POST | `/api/users/sso-import` | Importar usuários do Entra ID via Microsoft Graph (`503` se SSO não configurado) |
 | PATCH | `/api/users/:id` | Alterar |
 | DELETE | `/api/users/:id` | Exclusão lógica justificada |
 
@@ -468,7 +479,6 @@ dessa mudança.
 | Método | Endpoint | Acesso |
 |---|---|---|
 | GET | `/api/state/bootstrap` | Autenticado |
-| PUT | `/api/state/reservations` | Herdado, não usado pela interface (ver seção 6.3) |
 | PUT | `/api/state/branches` | Permissão `branches` |
 | PUT | `/api/state/vehicles` | Permissão `fleet` |
 | PUT | `/api/state/blocks` | Permissão `blocks` |
@@ -685,24 +695,25 @@ Limitações:
 - `branches`, `vehicles`, `blocks` e `rules` ainda são documentos JSON
   completos em `application_state` (reservas já usam tabelas relacionais,
   ver seção 6.3);
-- `server/routes/state.js` ainda expõe `PUT /api/state/reservations`, rota
-  herdada que não é mais chamada pela interface — candidata a remoção;
 - backup é local por padrão;
 - sem recuperação de senha por e-mail;
-- sem MFA ou SSO;
+- sem MFA; SSO via Microsoft Entra ID é suportado como método adicional ao
+  login local, mas opcional (ver seção 9 — só ativa com as variáveis
+  `ENTRA_*` definidas) e a importação de usuários corporativos não mapeia
+  grupos do Entra para permissões automaticamente;
 - sem agendador de backup;
 - PDF depende da impressão do navegador.
 
 Recomendações:
 
-1. migrar `branches`, `vehicles`, `blocks` e `rules` para tabelas
-   relacionais, e remover a rota `PUT /api/state/reservations` herdada;
+1. migrar `branches`, `vehicles`, `blocks` e `rules` para tabelas relacionais;
 2. criar CRUD por entidade;
-3. implementar SSO e MFA;
-4. automatizar backup externo;
-5. adicionar monitoramento;
-6. versionar releases e changelog;
-7. criar ambiente de homologação.
+3. implementar MFA;
+4. mapear grupos do Entra ID para permissões na importação automática;
+5. automatizar backup externo;
+6. adicionar monitoramento;
+7. versionar releases e changelog;
+8. criar ambiente de homologação.
 
 ## 19. Responsabilidades
 

@@ -2,15 +2,7 @@ const express = require('express');
 const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
 const { userCanManage } = require('../auth');
-const {
-  normalizedStatus,
-  validateReservationReplacement
-} = require('../services/reservation-lifecycle');
-const {
-  notifyReservationCancellation,
-  notifyReservationPassengerAdditions
-} = require('../notifications');
-const { numberReservations } = require('../reservation-numbers');
+const { normalizedStatus } = require('../services/reservation-lifecycle');
 const { getBranchDeletionBlockers } = require('../branch-deletion');
 const { listAllReservations } = require('../reservations-store');
 
@@ -164,13 +156,7 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
       error.currentRevision = currentRevision;
       throw error;
     }
-    let current = values[req.params.name] || [];
-    if(req.params.name === 'reservations'){
-      current = await numberReservations(client, current, null);
-      value = await numberReservations(client, value, current);
-      values.reservations = current;
-      validateReservationReplacement(current, value, req.user, values.rules || {});
-    }
+    const current = values[req.params.name] || [];
     if(req.params.name === 'vehicles'){
       const incomingIds = new Set(value.map(vehicle => String(vehicle.id)));
       const removed = current.filter(vehicle => !incomingIds.has(String(vehicle.id)));
@@ -185,25 +171,8 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
       vehicles:req.params.name === 'vehicles' ? value : (values.vehicles || []),
       blocks:req.params.name === 'blocks' ? value : (values.blocks || []),
       rules:req.params.name === 'rules' ? value : (values.rules || null),
-      currentReservations:req.params.name === 'reservations' ? current : (values.reservations || []),
       currentVehicles:req.params.name === 'vehicles' ? current : (values.vehicles || [])
     });
-    if(req.params.name === 'reservations'){
-      const currentById = new Map(current.map(reservation => [String(reservation.id), reservation]));
-      for(const reservation of value){
-        await notifyReservationPassengerAdditions(
-          client,
-          currentById.get(String(reservation.id)) || null,
-          reservation,
-          req.user
-        );
-      }
-      const incomingIds = new Set(value.map(reservation => String(reservation.id)));
-      const cancelled = current.filter(reservation => !incomingIds.has(String(reservation.id)));
-      for(const reservation of cancelled){
-        await notifyReservationCancellation(client, reservation, req.user);
-      }
-    }
     if(req.params.name === 'branches'){
       const incomingIds = new Set(value.map(branch => String(branch.id)));
       const removed = current.filter(branch => !incomingIds.has(String(branch.id)));
@@ -224,12 +193,9 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
        RETURNING revision`,
       [req.params.name, JSON.stringify(value), req.user.id]
     );
-    return {
-      revision:Number(saved.rows[0].revision),
-      value:req.params.name === 'reservations' ? value : undefined
-    };
+    return { revision:Number(saved.rows[0].revision) };
   });
-  res.json({ ok:true, revision:savedState.revision, value:savedState.value });
+  res.json({ ok:true, revision:savedState.revision });
 });
 
 router.delete('/branches/:id', async (req, res) => {

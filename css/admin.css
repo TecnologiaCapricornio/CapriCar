@@ -67,6 +67,28 @@
   color:#fff;
 }
 
+.admin-subcard-header{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:16px;
+}
+
+.admin-subcard-header h3{
+  margin:0;
+}
+
+.sso-import-btn{
+  width:auto;
+  font-size:var(--fs-sm);
+  padding:11px 14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
 .rules-card{
   max-width:680px;
   margin:0 auto;
@@ -84,6 +106,11 @@
   flex-direction:column;
   gap:12px;
   margin-bottom:18px;
+}
+
+.compact-form > .submit-btn{
+  width:auto;
+  align-self:flex-start;
 }
 
 .compact-form .submit-btn{
@@ -183,6 +210,18 @@
 .report-actions .submit-btn,
 .report-actions .secondary-btn{
   width:auto;
+  font-size:var(--fs-sm);
+  padding:11px 14px;
+}
+
+.export-btn svg{
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
 }
 
 .user-management-grid{
@@ -252,6 +291,11 @@
 
 .user-status-inactive{
   color:var(--vermelho);
+}
+
+.user-auth-badge{
+  color:#65aaf2;
+  font-weight:700;
 }
 
 @media (max-width:520px){
@@ -562,23 +606,3 @@
   }
 }
 
-.datetime-field-inputs{
-  display:flex;
-  gap:8px;
-}
-
-.datetime-field-inputs input[type="date"]{
-  flex:1.4;
-  min-width:0;
-}
-
-.datetime-field-inputs input[type="time"]{
-  flex:1;
-  min-width:0;
-}
-
-@media (max-width:520px){
-  .datetime-field-inputs{
-    flex-direction:column;
-  }
-}

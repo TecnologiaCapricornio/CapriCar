@@ -1,8 +1,7 @@
 const express = require('express');
-const { query, withTransaction } = require('../db');
-const { appConfig } = require('../config');
-const { hashPassword, verifyPassword, createSessionToken, hashSessionToken } = require('../security');
-const { SESSION_COOKIE, parseCookies, publicUser, requireAuth } = require('../auth');
+const { query } = require('../db');
+const { hashPassword, verifyPassword, hashSessionToken } = require('../security');
+const { SESSION_COOKIE, parseCookies, cookieOptions, issueSession, publicUser, requireAuth } = require('../auth');
 const {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_FAILURES,
@@ -14,17 +13,6 @@ const {
 
 const router = express.Router();
 const dummyPasswordHash = hashPassword('CapriCar-Dummy-Password@2026');
-
-function cookieOptions(){
-  const config = appConfig();
-  return {
-    httpOnly:true,
-    sameSite:'lax',
-    secure:config.secureCookie,
-    maxAge:config.sessionTtlHours * 60 * 60 * 1000,
-    path:'/'
-  };
-}
 
 router.post('/login', async (req, res) => {
   const username = String(req.body && req.body.username || '').trim().toLowerCase();
@@ -67,28 +55,7 @@ router.post('/login', async (req, res) => {
   }
   await clearAttempts(key);
 
-  const token = createSessionToken();
-  const config = appConfig();
-  await withTransaction(async client => {
-    await client.query('DELETE FROM user_sessions WHERE expires_at <= NOW()');
-    await client.query(
-      `INSERT INTO user_sessions (token_hash, user_id, expires_at)
-       VALUES ($1, $2, NOW() + ($3 * INTERVAL '1 hour'))`,
-      [hashSessionToken(token), account.id, config.sessionTtlHours]
-    );
-    await client.query(
-      `DELETE FROM user_sessions
-        WHERE token_hash IN (
-          SELECT token_hash
-            FROM user_sessions
-           WHERE user_id = $1
-           ORDER BY created_at DESC
-           OFFSET 10
-        )`,
-      [account.id]
-    );
-  });
-  res.cookie(SESSION_COOKIE, token, cookieOptions());
+  await issueSession(res, account.id);
   res.json({ user:publicUser(account) });
 });
 

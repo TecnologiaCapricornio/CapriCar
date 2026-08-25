@@ -4,6 +4,7 @@ const { query, closePool } = require('./db');
 const { appConfig } = require('./config');
 const { requireAuth } = require('./auth');
 const authRoutes = require('./routes/auth');
+const ssoRoutes = require('./routes/sso');
 const userRoutes = require('./routes/users');
 const catalogRoutes = require('./routes/catalog');
 const stateRoutes = require('./routes/state');
@@ -50,6 +51,7 @@ app.get('/api/health', async (req, res) => {
   const result = await query('SELECT current_database() AS database, NOW() AS server_time');
   res.json({ ok:true, database:result.rows[0].database, serverTime:result.rows[0].server_time });
 });
+app.use('/api/auth/sso', ssoRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', requireAuth, userRoutes);
 app.use('/api/catalog', requireAuth, catalogRoutes);
