@@ -31,8 +31,11 @@ function requireCollectionAccess(req, res, next){
   if(!COLLECTIONS.includes(name)){
     return res.status(404).json({ error:'Coleção desconhecida.' });
   }
-  if(['branches', 'vehicles'].includes(name) && !userCanManage(req.user, 'fleet')){
-    return res.status(403).json({ error:'Sem permissão para alterar a frota.' });
+  if(name === 'branches' && !userCanManage(req.user, 'branches')){
+    return res.status(403).json({ error:'Sem permissão para alterar as filiais.' });
+  }
+  if(name === 'vehicles' && !userCanManage(req.user, 'fleet')){
+    return res.status(403).json({ error:'Sem permissão para alterar veículos.' });
   }
   if(name === 'blocks' && !userCanManage(req.user, 'blocks')){
     return res.status(403).json({ error:'Sem permissão para alterar bloqueios.' });
@@ -71,7 +74,7 @@ router.get('/bootstrap', async (req, res) => {
   const usersResult = userCanManage(req.user, 'users')
     ? await query(
       `SELECT id, username, display_name AS nome, role, active,
-              can_manage_reservations, can_manage_fleet,
+              can_manage_reservations, can_manage_branches, can_manage_fleet,
               can_manage_blocks, can_view_reports, can_view_audit,
               can_manage_rules, can_manage_users
          FROM users
@@ -95,6 +98,7 @@ router.get('/bootstrap', async (req, res) => {
     active:row.active,
     permissions:{
       reservations:row.can_manage_reservations,
+      branches:row.can_manage_branches,
       fleet:row.can_manage_fleet,
       blocks:row.can_manage_blocks,
       reports:row.can_view_reports,
@@ -229,7 +233,7 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
 });
 
 router.delete('/branches/:id', async (req, res) => {
-  if(!userCanManage(req.user, 'fleet')){
+  if(!userCanManage(req.user, 'branches')){
     return res.status(403).json({ error:'Sem permissão para excluir filiais.' });
   }
   const branchId = String(req.params.id || '').trim();

@@ -552,7 +552,8 @@ function createReservationRangePicker(startInput, endInput, triggerEl, calendarE
       const disabled = otherMonth || isPast || isUnavailable || isBeyondAdvance || isAfterMaxEnd || crossesUnavailable;
       const isStart = iso === startInput.value;
       const isEnd = iso === endInput.value;
-      const inRange = startInput.value && endInput.value && iso > startInput.value && iso < endInput.value;
+      const hasFullRange = startInput.value && endInput.value && startInput.value !== endInput.value;
+      const inRange = hasFullRange && iso >= startInput.value && iso <= endInput.value;
 
       let classes = 'range-calendar-day';
       if(otherMonth) classes += ' other-month';
@@ -964,28 +965,6 @@ createReservationRangePicker(
     emptyHint:'Selecione a data inicial e depois a data final.'
   }
 );
-
-const auditStartDateInput = document.getElementById('auditStart');
-const auditEndDateInput = document.getElementById('auditEnd');
-if(auditStartDateInput && auditEndDateInput){
-  createReservationRangePicker(
-    auditStartDateInput,
-    auditEndDateInput,
-    document.getElementById('auditRangePickerTrigger'),
-    document.getElementById('auditRangeCalendar'),
-    () => new Set(),
-    {
-      allowPast:true,
-      maxAdvanceDays:null,
-      maxRangeDays:null,
-      startTitle:'Escolha a data inicial',
-      endTitle:'Escolha a data final',
-      startSubtitle:'Início do período da auditoria',
-      endSubtitle:'Fim do período da auditoria',
-      emptyHint:'Selecione a data inicial e depois a data final (opcional).'
-    }
-  );
-}
 
 function getAdminUnavailableDates(){
   const adminDeparture = document.getElementById('aPartida');

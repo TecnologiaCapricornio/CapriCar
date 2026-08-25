@@ -524,18 +524,15 @@
     margin-bottom:0;
   }
 
-  /* ---- Seletor de carro no Calendário ---- */
-  .calendar-mobile-branch-filter{
-    display:none;
+  /* ---- Seletor de filial/veículo no Calendário ---- */
+  .calendar-filters-row{
+    margin-bottom:18px;
   }
 
+  /* Mantido no DOM (js/calendar.js ainda popula #carSelector), mas a
+     interface usa os combobox acima em .calendar-filters-row. */
   .car-selector{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-bottom:20px;
-    padding-bottom:18px;
-    border-bottom:1px dashed rgba(111,168,216,0.25);
+    display:none;
   }
 
   .car-tab-btn{
@@ -578,18 +575,6 @@
   .car-tab-btn:disabled{
     opacity:.4;
     cursor:not-allowed;
-  }
-
-  .calendar-vehicle-filter{
-    margin:-8px 0 18px;
-  }
-
-  .calendar-vehicle-filter label{
-    display:block;
-    margin-bottom:7px;
-    color:var(--texto-muted);
-    font-size:.76rem;
-    font-weight:700;
   }
 
   .calendar-day.partially-reserved{
@@ -776,16 +761,8 @@
 }
 
 @media (max-width:720px){
-  .calendar-mobile-branch-filter{
-    display:grid;
-    grid-template-columns:auto minmax(0,1fr);
-    align-items:center;
-    gap:9px;
+  .calendar-filters-row{
     margin-bottom:9px;
-    padding:6px 8px;
-    border:1px solid rgba(111,168,216,.2);
-    border-radius:12px;
-    background:rgba(255,255,255,.035);
   }
 
   .date-popup-actions{
@@ -816,25 +793,6 @@
     cursor:default;
   }
 
-  .calendar-mobile-branch-filter label{
-    color:#91abc0;
-    font-size:var(--fs-2xs);
-    font-weight:800;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-  }
-
-  .calendar-mobile-branch-filter select{
-    min-height:36px;
-    padding:6px 34px 6px 11px;
-    border-radius:9px;
-    font-size:16px;
-    font-weight:700;
-  }
-
-  .car-selector{
-    display:none;
-  }
 
   .app-screen.calendar-mobile-view{
     width:100%;
@@ -874,7 +832,7 @@
     font-size:1rem;
   }
 
-  .app-screen.calendar-mobile-view .calendar-vehicle-filter{
+  .app-screen.calendar-mobile-view .calendar-filters-row{
     margin:0 0 9px;
   }
 
@@ -1405,15 +1363,28 @@
   box-shadow:0 0 0 3px rgba(239,91,106,.15);
 }
 
+.range-picker-field{
+  position:relative;
+}
+
 .reservation-range-calendar{
-  width:min(100%, 360px);
-  margin:8px auto 2px;
+  position:absolute;
+  top:calc(100% + 6px);
+  left:0;
+  z-index:60;
+  width:min(320px, calc(100vw - 32px));
+  margin:0;
   padding:14px;
   border:1px solid rgba(111,168,216,.28);
   border-radius:18px;
   background:linear-gradient(145deg,rgba(26,47,72,.98),rgba(15,31,50,.98));
   box-shadow:0 18px 42px rgba(4,12,22,.45);
-  animation:slideUp .2s ease;
+  animation:fadeIn .2s ease;
+}
+
+.row .field.range-picker-field:last-child .reservation-range-calendar{
+  right:0;
+  left:auto;
 }
 
 .range-calendar-topline{
@@ -1582,8 +1553,8 @@
 
 .range-calendar-day.in-range{
   border-radius:8px;
-  background:rgba(58,106,149,.22);
-  color:#cfe6f8;
+  background:rgba(74,132,181,.32);
+  color:#e3f0fa;
 }
 
 .range-calendar-day.range-start span,
@@ -1674,7 +1645,7 @@
     font-size:.78rem;
   }
   .reservation-range-calendar{
-    width:min(100%,350px);
+    width:min(calc(100vw - 32px),350px);
     padding:12px 8px;
   }
   .range-calendar-grid{

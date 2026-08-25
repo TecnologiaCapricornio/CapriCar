@@ -156,6 +156,7 @@ Contas criadas pelo painel recebem o papel técnico `user` e podem ganhar
 permissões individuais:
 
 - `reservations`;
+- `branches`;
 - `fleet`;
 - `blocks`;
 - `reports`.
@@ -224,7 +225,7 @@ Scripts:
 - `js/management-operations.js`: retirada, devolução e fotos de operação;
 - `js/management-config.js`: navegação do painel e regras de reserva;
 - `js/management-users.js`: usuários e permissões;
-- `js/management-fleet.js`: filiais e veículos;
+- `js/management-fleet.js`: filiais (`renderBranchManagement`) e veículos (`renderFleetManagement`), com permissões `branches`/`fleet` independentes;
 - `js/management-blocks.js`: bloqueios da frota;
 - `js/management-reports.js`: auditoria e relatórios;
 - `js/xlsx-export.js`: Excel;
@@ -468,10 +469,11 @@ dessa mudança.
 |---|---|---|
 | GET | `/api/state/bootstrap` | Autenticado |
 | PUT | `/api/state/reservations` | Herdado, não usado pela interface (ver seção 6.3) |
-| PUT | `/api/state/branches` | Permissão `fleet` |
+| PUT | `/api/state/branches` | Permissão `branches` |
 | PUT | `/api/state/vehicles` | Permissão `fleet` |
 | PUT | `/api/state/blocks` | Permissão `blocks` |
 | PUT | `/api/state/rules` | Administrador |
+| DELETE | `/api/state/branches/:id` | Permissão `branches` |
 | DELETE | `/api/state/vehicles/:id` | Permissão `fleet` |
 | POST | `/api/state/audit/event` | Autenticado |
 | POST | `/api/state/audit/import` | Administrador |

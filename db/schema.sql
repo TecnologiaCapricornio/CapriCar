@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     CHECK (role IN ('admin', 'facilities', 'user')),
   active BOOLEAN NOT NULL DEFAULT TRUE,
   can_manage_reservations BOOLEAN NOT NULL DEFAULT FALSE,
+  can_manage_branches BOOLEAN NOT NULL DEFAULT FALSE,
   can_manage_fleet BOOLEAN NOT NULL DEFAULT FALSE,
   can_manage_blocks BOOLEAN NOT NULL DEFAULT FALSE,
   can_view_reports BOOLEAN NOT NULL DEFAULT FALSE,

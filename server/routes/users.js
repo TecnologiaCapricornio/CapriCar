@@ -8,7 +8,7 @@ router.use(requirePermission('users'));
 
 const USER_SELECT = `
   SELECT id, username, display_name, role, active,
-         can_manage_reservations, can_manage_fleet,
+         can_manage_reservations, can_manage_branches, can_manage_fleet,
          can_manage_blocks, can_view_reports, can_view_audit,
          can_manage_rules, can_manage_users,
          created_at, updated_at
@@ -19,6 +19,7 @@ function normalizePermissions(value){
   const permissions = value || {};
   return {
     reservations:permissions.reservations === true,
+    branches:permissions.branches === true,
     fleet:permissions.fleet === true,
     blocks:permissions.blocks === true,
     reports:permissions.reports === true,
@@ -59,13 +60,13 @@ router.post('/', async (req, res) => {
     const inserted = await client.query(
       `INSERT INTO users (
          username, display_name, password_hash, role, active,
-         can_manage_reservations, can_manage_fleet, can_manage_blocks, can_view_reports,
+         can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_blocks, can_view_reports,
          can_view_audit, can_manage_rules, can_manage_users
-       ) VALUES ($1, $2, $3, 'user', TRUE, $4, $5, $6, $7, $8, $9, $10)
+       ) VALUES ($1, $2, $3, 'user', TRUE, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         username, displayName, passwordHash,
-        permissions.reservations, permissions.fleet, permissions.blocks, permissions.reports,
+        permissions.reservations, permissions.branches, permissions.fleet, permissions.blocks, permissions.reports,
         permissions.audit, permissions.rules, permissions.users
       ]
     );
@@ -106,6 +107,7 @@ router.patch('/:id', async (req, res) => {
     const isAdminAccount = current.role === 'admin';
     const permissions = permissionsWereSent ? requestedPermissions : {
       reservations:current.can_manage_reservations,
+      branches:current.can_manage_branches,
       fleet:current.can_manage_fleet,
       blocks:current.can_manage_blocks,
       reports:current.can_view_reports,
@@ -119,17 +121,19 @@ router.patch('/:id', async (req, res) => {
               password_hash = COALESCE($3, password_hash),
               active = CASE WHEN role = 'admin' THEN TRUE ELSE COALESCE($4, active) END,
               can_manage_reservations = CASE WHEN role = 'admin' THEN TRUE ELSE $5 END,
-              can_manage_fleet = CASE WHEN role = 'admin' THEN TRUE ELSE $6 END,
-              can_manage_blocks = CASE WHEN role = 'admin' THEN TRUE ELSE $7 END,
-              can_view_reports = CASE WHEN role = 'admin' THEN TRUE ELSE $8 END,
-              can_view_audit = CASE WHEN role = 'admin' THEN TRUE ELSE $9 END,
-              can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $10 END,
-              can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $11 END
+              can_manage_branches = CASE WHEN role = 'admin' THEN TRUE ELSE $6 END,
+              can_manage_fleet = CASE WHEN role = 'admin' THEN TRUE ELSE $7 END,
+              can_manage_blocks = CASE WHEN role = 'admin' THEN TRUE ELSE $8 END,
+              can_view_reports = CASE WHEN role = 'admin' THEN TRUE ELSE $9 END,
+              can_view_audit = CASE WHEN role = 'admin' THEN TRUE ELSE $10 END,
+              can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $11 END,
+              can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $12 END
         WHERE id = $1
         RETURNING *`,
       [
         current.id, displayName, passwordHash, active,
         isAdminAccount || permissions.reservations,
+        isAdminAccount || permissions.branches,
         isAdminAccount || permissions.fleet,
         isAdminAccount || permissions.blocks,
         isAdminAccount || permissions.reports,
@@ -209,6 +213,7 @@ router.delete('/:id', async (req, res) => {
               password_hash = $3,
               active = FALSE,
               can_manage_reservations = FALSE,
+              can_manage_branches = FALSE,
               can_manage_fleet = FALSE,
               can_manage_blocks = FALSE,
               can_view_reports = FALSE,

@@ -21,6 +21,7 @@ const userDeleteError = document.getElementById('userDeleteError');
 const userDeleteSubmitBtn = document.getElementById('userDeleteSubmitBtn');
 const userPermissionInputs = {
   reservations:document.getElementById('permissionReservations'),
+  branches:document.getElementById('permissionBranches'),
   fleet:document.getElementById('permissionFleet'),
   blocks:document.getElementById('permissionBlocks'),
   reports:document.getElementById('permissionReports'),
@@ -33,7 +34,8 @@ let userDeleteId = null;
 
 const USER_PERMISSION_LABELS = {
   reservations:'Reservas',
-  fleet:'Filiais e veículos',
+  branches: 'Filiais',
+  fleet:'Veículos',
   blocks:'Bloqueios',
   reports:'Relatórios',
   audit:'Auditoria',

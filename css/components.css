@@ -212,11 +212,12 @@
     gap:10px;
   }
 
-  #reservaForm .field{
+  #reservaForm .field,
+  #adminReservaForm .field{
     gap:4px;
   }
 
-  #reservaForm .error-msg:empty{
+  .error-msg:empty{
     min-height:0;
   }
 
@@ -1537,8 +1538,9 @@
   }
 
   /* ---- Modal de reserva rápida pelo calendário ---- */
-  .quick-reserve-card{
-    max-width:420px;
+  .modal-card.quick-reserve-card{
+    max-width:560px;
+    padding-top:24px;
     text-align:left;
   }
 
@@ -1559,6 +1561,7 @@
   }
 
   .quick-reserve-card form{
+    gap:12px;
     text-align:left;
   }
 

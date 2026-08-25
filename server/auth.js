@@ -18,6 +18,7 @@ function parseCookies(header){
 function permissionsFromRow(row){
   return {
     reservations:row.can_manage_reservations === true,
+    branches:row.can_manage_branches === true,
     fleet:row.can_manage_fleet === true,
     blocks:row.can_manage_blocks === true,
     reports:row.can_view_reports === true,

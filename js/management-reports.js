@@ -290,27 +290,6 @@ function encodeUtf16LE(text){
   return bytes;
 }
 
-document.getElementById('exportCsvBtn').addEventListener('click', function(){
-  if(!canViewReports()) return;
-  const data = getReportExportData();
-  const excelCsvCell = value => {
-    const text = String(value == null ? '' : value);
-    if(/^(\d{1,2}\/\d{1,2}|\d{2}\/\d{2}\/\d{4})/.test(text)){
-      return csvCell('="' + text + '"');
-    }
-    if(/^[=+\-@]/.test(text)){
-      return csvCell("'" + text);
-    }
-    return csvCell(text);
-  };
-  const csv = 'sep=;\r\n' +
-    [data.headers].concat(data.rows)
-      .map(row => row.map(excelCsvCell).join(';'))
-      .join('\r\n');
-  downloadReportFile(encodeUtf16LE(csv), 'text/csv;charset=utf-16le;', '.csv');
-  logAudit('exportou', 'relatório CSV', todayISO(), data.rows.length + ' reservas exportadas');
-});
-
 document.getElementById('exportExcelBtn').addEventListener('click', function(){
   if(!canViewReports()) return;
   const data = getReportExportData();

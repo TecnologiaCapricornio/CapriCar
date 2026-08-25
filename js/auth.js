@@ -21,6 +21,7 @@ function normalizeUserPermissions(permissions){
   const source = permissions || {};
   return {
     reservations:source.reservations === true,
+    branches:source.branches === true,
     fleet:source.fleet === true,
     blocks:source.blocks === true,
     reports:source.reports === true,
@@ -94,11 +95,15 @@ function hasManagementPermission(permission){
 }
 
 function canAccessManagement(){
-  return isAdmin() || ['reservations','fleet','blocks','reports','audit','rules','users'].some(hasManagementPermission);
+  return isAdmin() || ['reservations', 'branches', 'fleet', 'blocks', 'reports', 'audit', 'rules', 'users'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
   return hasManagementPermission('reservations');
+}
+
+function canManageBranches(){
+  return hasManagementPermission('branches');
 }
 
 function canManageFleet(){
@@ -129,7 +134,7 @@ function canAccessAdminSection(section){
   if(isAdmin()) return true;
   const permissionBySection = {
     reservas:'reservations',
-    frota:'fleet',
+    filiais:'branches',
     veiculos:'fleet',
     bloqueios:'blocks',
     relatorios:'reports',
@@ -160,7 +165,7 @@ const profileRole = document.getElementById('profileRole');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','frota','veiculos','bloqueios','relatorios','auditoria','regras','usuarios'];
+  const orderedSections = ['reservas','filiais','veiculos','bloqueios','relatorios','auditoria','regras','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');

@@ -52,7 +52,7 @@ function closeFleetEditModal(){
 }
 
 function openBranchEditModal(branchId){
-  if(!canManageFleet()) return;
+  if(!canManageBranches()) return;
   const branch = getBranches().find(item => String(item.id) === String(branchId));
   if(!branch) return;
   fleetEditType = 'branch';
@@ -76,7 +76,6 @@ function openVehicleEditModal(vehicleId){
   fleetEditId = vehicle.id;
   fleetEditForm.reset();
   fleetEditTitle.textContent = 'Editar veículo';
-  fleetEditSubtitle.textContent = 'Atualize a filial, a placa, a marca, o modelo e a capacidade do veículo.';
   fleetEditBranchFields.classList.add('hidden');
   fleetEditVehicleFields.classList.remove('hidden');
   fleetEditVehicleBranchSelect.innerHTML = getBranches().map(branch =>
@@ -127,7 +126,7 @@ function closeBranchDeleteModal(){
 }
 
 function openBranchDeleteModal(branchId){
-  if(!canManageFleet()) return;
+  if(!canManageBranches()) return;
   const branch = getBranches().find(item => String(item.id) === String(branchId));
   if(!branch) return;
   branchDeleteId = branch.id;
@@ -164,7 +163,7 @@ document.addEventListener('keydown', function(e){
 
 branchDeleteForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  if(!canManageFleet() || !branchDeleteId) return;
+  if(!canManageBranches() || !branchDeleteId) return;
   const justification = branchDeleteJustification.value.trim();
   branchDeleteError.textContent = '';
   if(justification.length < 5){
@@ -178,7 +177,7 @@ branchDeleteForm.addEventListener('submit', async function(e){
     await deleteBranchPermanently(branchDeleteId, justification);
     await hydrateDatabaseState();
     closeBranchDeleteModal();
-    renderFleetManagement();
+    renderBranchManagement();
     renderCarSelector();
     renderMainCalendar();
     renderMyReservations();
@@ -239,7 +238,8 @@ vehicleDeleteForm.addEventListener('submit', async function(e){
 
 fleetEditForm.addEventListener('submit', function(e){
   e.preventDefault();
-  if(!canManageFleet() || !fleetEditType || !fleetEditId) return;
+  if(!fleetEditType || !fleetEditId) return;
+  if(fleetEditType === 'branch' ? !canManageBranches() : !canManageFleet()) return;
   fleetEditError.textContent = '';
 
   if(fleetEditType === 'branch'){
@@ -320,8 +320,10 @@ fleetEditForm.addEventListener('submit', function(e){
       oldFilial + ' → ' + filial + ' · ' + marca + ' ' + modelo + ' · ' + placa);
   }
 
+  const editedType = fleetEditType;
   closeFleetEditModal();
-  renderFleetManagement();
+  if(editedType === 'branch') renderBranchManagement();
+  else renderFleetManagement();
   renderCarSelector();
   renderMainCalendar();
   renderMyReservations();
@@ -381,8 +383,8 @@ function populateManagementVehicleSelectors(){
   }
 }
 
-function renderFleetManagement(){
-  if(!canManageFleet()) return;
+function renderBranchManagement(){
+  if(!canManageBranches()) return;
   refreshBranchSelectors();
   const branches = getBranches();
   branchesList.innerHTML = branches.length ? branches.map(branch =>
@@ -394,28 +396,16 @@ function renderFleetManagement(){
     '</div>'
   ).join('') : '<div class="empty-state">Nenhuma filial cadastrada.</div>';
 
-  const vehicles = getVehicles();
-  vehiclesList.innerHTML = vehicles.length ? vehicles.map(vehicle =>
-    '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
-      '<div><strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
-        (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</strong>' +
-      '<small>' + escapeHTML(vehicle.filial) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
-      '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
-      '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
-      '<button type="button" class="delete-btn vehicle-delete-btn" data-id="' + escapeHTML(vehicle.id) + '">Excluir</button></div>' +
-    '</div>'
-  ).join('') : '<div class="empty-state">Nenhum veículo cadastrado.</div>';
-
   branchesList.querySelectorAll('.branch-toggle-btn').forEach(btn => {
     btn.addEventListener('click', function(){
-      if(!canManageFleet()) return;
+      if(!canManageBranches()) return;
       const list = getBranches();
       const branch = list.find(f => String(f.id) === String(this.getAttribute('data-id')));
       if(!branch) return;
       branch.ativo = branch.ativo === false;
       saveBranches(list);
       logAudit(branch.ativo ? 'ativou' : 'desativou', 'filial', branch.id, branch.nome);
-      renderFleetManagement();
+      renderBranchManagement();
     });
   });
 
@@ -430,6 +420,22 @@ function renderFleetManagement(){
       openBranchDeleteModal(this.getAttribute('data-id'));
     });
   });
+}
+
+function renderFleetManagement(){
+  if(!canManageFleet()) return;
+  refreshBranchSelectors();
+  const vehicles = getVehicles();
+  vehiclesList.innerHTML = vehicles.length ? vehicles.map(vehicle =>
+    '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
+      '<div><strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
+        (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</strong>' +
+      '<small>' + escapeHTML(vehicle.filial) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
+      '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
+      '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
+      '<button type="button" class="delete-btn vehicle-delete-btn" data-id="' + escapeHTML(vehicle.id) + '">Excluir</button></div>' +
+    '</div>'
+  ).join('') : '<div class="empty-state">Nenhum veículo cadastrado.</div>';
 
   vehiclesList.querySelectorAll('.vehicle-toggle-btn').forEach(btn => {
     btn.addEventListener('click', function(){
@@ -464,7 +470,7 @@ function renderFleetManagement(){
 if(branchForm){
   branchForm.addEventListener('submit', async function(e){
     e.preventDefault();
-    if(!canManageFleet()) return;
+    if(!canManageBranches()) return;
     const nome = branchNameInput.value.trim();
     if(!nome) return;
     const list = getBranches();
@@ -485,12 +491,12 @@ if(branchForm){
         title:'Não foi possível cadastrar a filial',
         type:'danger'
       });
-      renderFleetManagement();
+      renderBranchManagement();
       return;
     }
     logAudit('cadastrou', 'filial', branch.id, nome);
     branchForm.reset();
-    renderFleetManagement();
+    renderBranchManagement();
   });
 }
 

@@ -19,11 +19,6 @@
   margin-top:6px;
 }
 
-.admin-edit-btn{
-  width:auto;
-  padding:8px 16px;
-}
-
 .admin-section-tabs{
   display:flex;
   gap:8px;
@@ -229,6 +224,14 @@
 .user-form-actions .submit-btn,
 .user-form-actions .secondary-btn{
   width:auto;
+  height:46px;
+  margin:0;
+  padding:0 20px;
+  border-radius:var(--radius-sm);
+  font-size:0.92rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .user-permissions{
@@ -322,6 +325,17 @@
   margin-bottom:18px;
 }
 
+#fleetEditForm{
+  gap:12px;
+}
+
+#fleetEditBranchFields,
+#fleetEditVehicleFields{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
 .fleet-edit-actions{
   display:flex;
   justify-content:flex-end;
@@ -330,8 +344,17 @@
 }
 
 .fleet-edit-actions .submit-btn,
-.fleet-edit-actions .secondary-btn{
+.fleet-edit-actions .secondary-btn,
+.fleet-edit-actions .danger-btn{
   width:auto;
+  height:46px;
+  margin:0;
+  padding:0 20px;
+  border-radius:var(--radius-sm);
+  font-size:0.92rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .fleet-edit-error:empty{
@@ -513,11 +536,6 @@
   color:#fff;
 }
 
-.edit-btn,
-.operation-btn{
-  width:100%;
-}
-
 .operation-btn{
   background:rgba(51,212,136,.13);
   border-color:rgba(51,212,136,.3);
@@ -540,6 +558,27 @@
   }
   .management-item{
     align-items:flex-start;
+    flex-direction:column;
+  }
+}
+
+.datetime-field-inputs{
+  display:flex;
+  gap:8px;
+}
+
+.datetime-field-inputs input[type="date"]{
+  flex:1.4;
+  min-width:0;
+}
+
+.datetime-field-inputs input[type="time"]{
+  flex:1;
+  min-width:0;
+}
+
+@media (max-width:520px){
+  .datetime-field-inputs{
     flex-direction:column;
   }
 }
