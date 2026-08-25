@@ -1,5 +1,7 @@
 const crypto = require('node:crypto');
 const { query, withTransaction } = require('./db');
+const { decodeImageDataUrl } = require('./validation');
+const { savePhotoFile } = require('./photo-storage');
 
 function normalizeName(value){
   return String(value || '').trim().toLocaleLowerCase('pt-BR');
@@ -215,21 +217,6 @@ async function nextReservationNumber(client, preferred){
   return Number(result.rows[0].last_number);
 }
 
-function photoPayload(photo){
-  const dataUrl = String(photo && (photo.dados || photo.dataUrl) || '');
-  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/s);
-  let size = null;
-  if(match){
-    try{ size = Buffer.from(match[2], 'base64').length; }catch{ size = null; }
-  }
-  return {
-    dataUrl,
-    name:String(photo && (photo.nome || photo.name) || 'foto').slice(0, 255),
-    type:String(photo && (photo.tipo || photo.type) || (match && match[1]) || 'application/octet-stream').slice(0, 100),
-    size
-  };
-}
-
 async function replacePassengers(client, reservationId, passengers){
   await client.query('DELETE FROM reservation_passengers WHERE reservation_id = $1', [reservationId]);
   let order = 0;
@@ -275,14 +262,20 @@ async function upsertOperation(client, reservationId, phase, record, actor){
   let count = Number(currentPhotos.rows[0].total);
   for(const photo of (Array.isArray(record.fotos) ? record.fotos : [])){
     if(!photo || (!photo.dados && !photo.dataUrl) || count >= 3) continue;
-    const payload = photoPayload(photo);
-    if(!payload.dataUrl.startsWith('data:image/') || payload.dataUrl.length > 1400000) continue;
+    let decoded;
+    try{
+      decoded = decodeImageDataUrl(photo.dados || photo.dataUrl);
+    }catch{
+      continue;
+    }
+    const storageKey = savePhotoFile(decoded.buffer, decoded.subtype);
     const id = crypto.randomUUID();
+    const name = String(photo.nome || photo.name || 'foto').slice(0, 255);
     await client.query(
       `INSERT INTO operation_photos
-         (id, operation_id, storage_key, original_name, content_type, file_size_bytes, data_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, operationId, `database:${id}`, payload.name, payload.type, payload.size, payload.dataUrl]
+         (id, operation_id, storage_key, original_name, content_type, file_size_bytes)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, operationId, storageKey, name, `image/${decoded.subtype}`, decoded.buffer.length]
     );
     count++;
   }
@@ -520,7 +513,7 @@ async function cancelReservation(client, legacyId, actor){
 
 async function getPhotoForUser(user, legacyId, photoId){
   const result = await query(
-    `SELECT p.data_url, p.original_name, p.content_type,
+    `SELECT p.storage_key, p.data_url, p.original_name, p.content_type,
             r.requester_id,
             EXISTS(
               SELECT 1 FROM reservation_passengers rp

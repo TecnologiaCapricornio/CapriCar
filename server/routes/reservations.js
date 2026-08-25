@@ -10,6 +10,7 @@ const {
   getPhotoForUser,
   normalizeName
 } = require('../reservations-store');
+const { readPhotoFile } = require('../photo-storage');
 const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions
@@ -195,14 +196,25 @@ router.post('/sync', async (req, res) => {
 router.get('/:reservationId/photos/:photoId', async (req, res) => {
   const photo = await getPhotoForUser(req.user, req.params.reservationId, req.params.photoId);
   if(!photo) return res.status(404).json({ error:'Foto não encontrada.' });
-  const match = String(photo.data_url || '').match(/^data:([^;,]+);base64,(.+)$/s);
-  if(!match) return res.status(422).json({ error:'Arquivo de foto inválido.' });
+
+  // Fotos novas ficam em server/uploads/operacoes (ver server/photo-storage.js).
+  // Fotos gravadas antes dessa mudança continuam em operation_photos.data_url.
+  const fromDisk = readPhotoFile(photo.storage_key);
+  let bytes = fromDisk;
+  let contentType = photo.content_type || 'application/octet-stream';
+  if(!bytes){
+    const match = String(photo.data_url || '').match(/^data:([^;,]+);base64,(.+)$/s);
+    if(!match) return res.status(422).json({ error:'Arquivo de foto inválido.' });
+    contentType = photo.content_type || match[1] || contentType;
+    bytes = Buffer.from(match[2], 'base64');
+  }
+
   const filename = String(photo.original_name || 'foto')
     .replace(/[\r\n"\\/]/g, '_').slice(0, 180);
   res.setHeader('Cache-Control', 'private, no-store');
-  res.setHeader('Content-Type', String(photo.content_type || match[1] || 'application/octet-stream'));
+  res.setHeader('Content-Type', contentType);
   res.setHeader('Content-Disposition', `${req.query.download === '1' ? 'attachment' : 'inline'}; filename="${filename}"`);
-  res.send(Buffer.from(match[2], 'base64'));
+  res.send(bytes);
 });
 
 module.exports = router;

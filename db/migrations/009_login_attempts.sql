@@ -1,0 +1,9 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  attempt_key VARCHAR(300) PRIMARY KEY,
+  failures INTEGER NOT NULL DEFAULT 0 CHECK (failures >= 0),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMIT;

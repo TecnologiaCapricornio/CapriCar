@@ -482,7 +482,6 @@ adminReservaForm.addEventListener('submit', async function(e){
       return;
     }
     Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
-    logAudit('criou', 'reserva', reserva.id, getReservationNumberLabel(reserva) + ' · ' + reserva.partida + ' → ' + reserva.destino + ' · criada pela gestão');
   } else {
     const idx = list.findIndex(r => String(r.id) === String(adminEditingId));
     if(idx === -1){ setAdminError('Reserva não encontrada.'); return; }
@@ -518,7 +517,6 @@ adminReservaForm.addEventListener('submit', async function(e){
       setAdminError(error.message);
       return;
     }
-    logAudit('editou', 'reserva', reserva.id, reserva.partida + ' → ' + reserva.destino);
   }
 
   closeAdminReservaModal();
@@ -577,7 +575,7 @@ function renderAdminReservationItem(res){
       renderOperationDetails(res) +
     '</div>' +
     '<div class="reservation-actions">' +
-      (!completed && !operacao.retirada ? '<button type="button" class="submit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
+      (!completed && !operacao.retirada ? '<button type="button" class="edit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
       (!completed && operacao.retirada && !operacao.devolucao ? '<button type="button" class="delete-btn admin-force-close-btn" data-id="' + escapeHTML(res.id) + '">Encerrar administrativamente</button>' : '') +
       (!completed && !operacao.retirada ? '<button class="delete-btn admin-delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '') +
     '</div>';
@@ -643,7 +641,6 @@ adminReservationsList.querySelectorAll('.admin-edit-btn').forEach(btn => {
         type:'danger'
       })) return;
       const id = this.getAttribute('data-id');
-      const old = getReservations().find(r => String(r.id) === String(id));
       const updated = getReservations().filter(r => String(r.id) !== String(id));
       try{
         await saveReservations(updated);
@@ -656,7 +653,6 @@ adminReservationsList.querySelectorAll('.admin-edit-btn').forEach(btn => {
         renderAdminTab();
         return;
       }
-      logAudit('cancelou', 'reserva', id, old ? old.partida + ' → ' + old.destino + ' · cancelada pela gestão' : 'Reserva cancelada');
       renderAdminTab();
       renderMyReservations();
       renderMainCalendar();
@@ -713,8 +709,6 @@ adminReservationsList.querySelectorAll('.admin-edit-btn').forEach(btn => {
         renderAdminTab();
         return;
       }
-      logAudit('encerrou administrativamente', 'reserva', id,
-        'Reserva encerrada sem devolução · Justificativa: ' + justification.trim());
       adminReservationsView = 'completed';
       renderAdminTab();
       renderMyReservations();

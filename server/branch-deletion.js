@@ -1,10 +1,4 @@
-function normalizedStatus(value){
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase();
-}
+const { normalizedStatus } = require('./services/reservation-lifecycle');
 
 function getBranchDeletionBlockers(branch, vehicles, reservations){
   const branchName = String(branch && branch.nome || '');

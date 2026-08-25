@@ -21,6 +21,7 @@ function normalizeUserPermissions(permissions){
   const source = permissions || {};
   return {
     reservations:source.reservations === true,
+    branches:source.branches === true,
     fleet:source.fleet === true,
     blocks:source.blocks === true,
     reports:source.reports === true,
@@ -94,11 +95,15 @@ function hasManagementPermission(permission){
 }
 
 function canAccessManagement(){
-  return isAdmin() || ['reservations','fleet','blocks','reports','audit','rules','users'].some(hasManagementPermission);
+  return isAdmin() || ['reservations', 'branches', 'fleet', 'blocks', 'reports', 'audit', 'rules', 'users'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
   return hasManagementPermission('reservations');
+}
+
+function canManageBranches(){
+  return hasManagementPermission('branches');
 }
 
 function canManageFleet(){
@@ -129,7 +134,8 @@ function canAccessAdminSection(section){
   if(isAdmin()) return true;
   const permissionBySection = {
     reservas:'reservations',
-    frota:'fleet',
+    filiais:'branches',
+    veiculos:'fleet',
     bloqueios:'blocks',
     relatorios:'reports',
     auditoria:'audit',
@@ -159,7 +165,7 @@ const profileRole = document.getElementById('profileRole');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','frota','bloqueios','relatorios','auditoria','regras','usuarios'];
+  const orderedSections = ['reservas','filiais','veiculos','bloqueios','relatorios','auditoria','regras','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');
@@ -247,19 +253,29 @@ loginForm.addEventListener('submit', async function(e){
 
   if(!valid) return;
 
+  let user;
   try{
     const authentication = await apiRequest('/api/auth/login', {
       method:'POST',
       body:{ username:nome, password:senha }
     });
-    const user = accountToSession(authentication.user);
+    user = accountToSession(authentication.user);
     setCurrentUser(user);
-    await hydrateDatabaseState();
-    showApp(user);
   }catch(error){
     clearCurrentUser();
     setLoginError('loginEmail', error.message || 'Usuário ou senha incorretos.');
+    return;
   }
+
+  // A autenticação já foi aceita pelo servidor neste ponto - uma falha ao
+  // sincronizar os dados não deve derrubar a sessão nem aparecer como se
+  // fosse usuário ou senha incorretos.
+  try{
+    await hydrateDatabaseState();
+  }catch(error){
+    console.error('Falha ao sincronizar dados após o login:', error);
+  }
+  showApp(user);
 });
 
 profileBtn.addEventListener('click', function(){

@@ -22,7 +22,7 @@
   border-radius:12px;
   background:rgba(255,255,255,.025);
   color:var(--texto-muted);
-  font-size:.72rem;
+  font-size:var(--fs-2xs);
   font-weight:600;
   line-height:1.2;
   text-align:center;
@@ -61,7 +61,7 @@
 
 #reservaForm .mobile-wizard-actions{
   display:grid;
-  grid-template-columns:minmax(110px,.8fr) auto minmax(120px,1fr);
+  grid-template-columns:1fr auto 1fr;
   align-items:center;
   gap:12px;
   margin-top:10px;
@@ -71,11 +71,12 @@
   width:100%;
   min-height:45px;
   padding:10px 14px;
+  border-radius:var(--radius-sm);
 }
 
 #mobileReservationStepLabel{
   color:var(--texto-muted);
-  font-size:.74rem;
+  font-size:var(--fs-2xs);
   white-space:nowrap;
 }
 
@@ -156,7 +157,7 @@
     min-height:42px;
     padding:7px 2px;
     border-radius:11px;
-    font-size:.68rem;
+    font-size:var(--fs-2xs);
     line-height:1.2;
     white-space:nowrap;
   }
@@ -387,7 +388,7 @@
   .my-new-reservation-btn{
     width:auto;
     padding:7px 11px;
-    font-size:.72rem;
+    font-size:var(--fs-2xs);
   }
 
   .reservation-view-tabs{
@@ -531,7 +532,7 @@
     align-items:center;
     gap:5px;
     color:var(--texto-muted);
-    font-size:.67rem;
+    font-size:var(--fs-2xs);
     line-height:1.2;
     text-align:center;
   }
@@ -573,7 +574,7 @@
 
   .mobile-wizard-actions{
     display:grid;
-    grid-template-columns:minmax(82px,.8fr) auto minmax(96px,1fr);
+    grid-template-columns:1fr auto 1fr;
     align-items:center;
     gap:8px;
     margin-top:8px;
@@ -583,12 +584,13 @@
     width:100%;
     min-height:45px;
     padding:10px 12px;
+    border-radius:var(--radius-sm);
   }
 
   #mobileReservationStepLabel,
   #adminReservationStepLabel{
     color:var(--texto-muted);
-    font-size:.7rem;
+    font-size:var(--fs-2xs);
     white-space:nowrap;
   }
 
@@ -614,7 +616,7 @@
 
 @media (max-width:350px){
   .tab-btn{
-    font-size:.67rem;
+    font-size:var(--fs-2xs);
   }
 
   .admin-section-tabs{

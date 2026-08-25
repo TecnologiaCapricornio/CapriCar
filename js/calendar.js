@@ -4,7 +4,6 @@
    clicando ou arrastando na grade, como em agendas modernas.
    ========================================================= */
 
-const CALENDAR_BRANCHES = ['São Paulo', 'São Carlos', 'Bragança Paulista'];
 const WEEK_START_MINUTE = 0;
 const WEEK_END_MINUTE = 24 * 60;
 const WEEK_SLOT_MINUTES = 30;
@@ -79,7 +78,7 @@ function formatWeekLabel(startISO){
 
 function syncCalendarCars(){
   TODOS_CARROS = [];
-  CALENDAR_BRANCHES.forEach(cidade => {
+  CIDADES.forEach(cidade => {
     (CARROS_POR_FILIAL[cidade] || []).forEach(carro => {
       TODOS_CARROS.push({ filial:cidade, carro:carro, key:carKey(cidade, carro) });
     });
@@ -110,13 +109,13 @@ function getCarReservationsForDate(iso){
 function renderCarSelector(){
   syncCalendarCars();
   const selected = getSelectedCarInfo();
-  calendarBranchSelect.innerHTML = CALENDAR_BRANCHES.map(branch => {
+  calendarBranchSelect.innerHTML = CIDADES.map(branch => {
     const hasCars = TODOS_CARROS.some(car => car.filial === branch);
     return '<option value="' + escapeHTML(branch) + '"' +
       (selected && selected.filial === branch ? ' selected' : '') +
       (hasCars ? '' : ' disabled') + '>' + escapeHTML(branch) + '</option>';
   }).join('');
-  carSelector.innerHTML = CALENDAR_BRANCHES.map(branch => {
+  carSelector.innerHTML = CIDADES.map(branch => {
     const branchCars = TODOS_CARROS.filter(car => car.filial === branch);
     const active = selected && selected.filial === branch ? ' active' : '';
     return '<button type="button" class="car-tab-btn' + active + '" data-calendar-branch="' +
@@ -268,7 +267,11 @@ function buildReservationEvent(reservation, iso){
   if(!layout) return '';
   const clippedClass = (layout.clippedStart ? ' clipped-start' : '') +
     (layout.clippedEnd ? ' clipped-end' : '');
-  const densityClass = layout.height < 48 ? ' is-short' : (layout.height < 96 ? ' is-medium' : ' is-detailed');
+  // Limiares calibrados para o piso legivel de 12px (ver css/variables.css
+  // --fs-2xs): id + horario cabem confortavelmente ate ~90px; as 5 linhas
+  // (id, horario, rota, veiculo, solicitante) truncadas em uma linha cada
+  // exigem por volta de 90px; abaixo disso o texto sobrepoe.
+  const densityClass = layout.height < 90 ? ' is-short' : (layout.height < 150 ? ' is-medium' : ' is-detailed');
   const vehicleName = getVehicleDisplayName(reservation);
   const occupancy = getOcupantes(reservation) + '/' + getVehicleCapacity(reservation) + ' ocupantes';
   const reason = reservation.motivo || 'Motivo não informado';

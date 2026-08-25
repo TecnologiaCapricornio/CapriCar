@@ -216,7 +216,7 @@ async function main(){
         username,
         nome:displayName,
         password:'1234567',
-        permissions:{ reservations:false, fleet:false, blocks:false, reports:false }
+        permissions:{ reservations:false, branches:false, fleet:false, blocks:false, reports:false }
       }
     });
     assert.equal(weakPassword.response.status, 400);
@@ -228,7 +228,7 @@ async function main(){
         username,
         nome:displayName,
         password:temporaryUserPassword,
-        permissions:{ reservations:false, fleet:false, blocks:false, reports:false }
+        permissions:{ reservations:false, branches:false, fleet:false, blocks:false, reports:false }
       }
     });
     assert.equal(created.response.status, 201, created.body && created.body.error);
@@ -249,12 +249,12 @@ async function main(){
     const testUser = await login(username, temporaryUserPassword);
     const deniedUsers = await request('/api/users', { headers:auth(testUser.cookie) });
     assert.equal(deniedUsers.response.status, 403);
-    const deniedFleet = await request('/api/state/branches', {
+    const deniedBranches = await request('/api/state/branches', {
       method:'PUT',
       headers:auth(testUser.cookie),
       body:{ value:state.branches, revision:revisions.branches }
     });
-    assert.equal(deniedFleet.response.status, 403);
+    assert.equal(deniedBranches.response.status, 403);
     const deniedRules = await request('/api/state/rules', {
       method:'PUT',
       headers:auth(testUser.cookie),
@@ -519,7 +519,7 @@ async function main(){
       body:{
         nome:displayName,
         active:false,
-        permissions:{ reservations:false, fleet:false, blocks:false, reports:false }
+        permissions:{ reservations:false, branches:false, fleet:false, blocks:false, reports:false }
       }
     });
     assert.equal(deactivate.response.status, 200);

@@ -1,3 +1,5 @@
+const { DEFAULT_RESERVATION_RULES } = require('../js/reservation-defaults');
+
 class ValidationError extends Error {
   constructor(message, status = 400){
     super(message);
@@ -33,20 +35,26 @@ function bufferLooksLikeImage(buffer, subtype){
 
 // Confere o conteúdo real da imagem (assinatura de bytes), não apenas o
 // rótulo "data:image/..." informado pelo cliente, e recusa formatos como
-// SVG que podem conter script.
-function validatePhotoDataUrl(value){
+// SVG que podem conter script. Usado tanto na validação de entrada quanto
+// por server/reservations-store.js ao gravar a foto em disco.
+function decodeImageDataUrl(value){
   const match = /^data:image\/(png|jpe?g|gif|webp);base64,([A-Za-z0-9+/]+={0,2})$/
     .exec(String(value || ''));
   assert(match, 'A foto deve ser uma imagem em formato PNG, JPEG, GIF ou WEBP.');
   const [, subtype, base64] = match;
-  let decoded;
+  let buffer;
   try{
-    decoded = Buffer.from(base64, 'base64');
+    buffer = Buffer.from(base64, 'base64');
   }catch{
     throw new ValidationError('A foto enviada está corrompida.');
   }
-  assert(decoded.length > 0 && decoded.length <= MAX_PHOTO_BYTES, 'A foto deve ter no máximo 1 MB.');
-  assert(bufferLooksLikeImage(decoded, subtype), 'O conteúdo da foto não corresponde a uma imagem válida.');
+  assert(buffer.length > 0 && buffer.length <= MAX_PHOTO_BYTES, 'A foto deve ter no máximo 1 MB.');
+  assert(bufferLooksLikeImage(buffer, subtype), 'O conteúdo da foto não corresponde a uma imagem válida.');
+  return { subtype:subtype === 'jpg' ? 'jpeg' : subtype, buffer };
+}
+
+function validatePhotoDataUrl(value){
+  decodeImageDataUrl(value);
 }
 
 function text(value, label, max, required = true){
@@ -223,11 +231,7 @@ function validateReservations(value, context){
   assert(Array.isArray(value) && value.length <= 20000, 'Lista de reservas inválida.');
   ensureUniqueIds(value, 'reservas');
   const rules = {
-    maxConsecutiveDays:10,
-    maxAdvanceDays:30,
-    maxReservationsInWindow:2,
-    reservationBufferMinutes:60,
-    pickupAdvanceMinutes:15,
+    ...DEFAULT_RESERVATION_RULES,
     ...(context.rules || {})
   };
   validateRules(rules);
@@ -373,5 +377,6 @@ module.exports = {
   validateBranches,
   validateVehicles,
   validateBlocks,
-  validateReservations
+  validateReservations,
+  decodeImageDataUrl
 };

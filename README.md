@@ -1,6 +1,6 @@
 # CapriCar
 
-Sistema interno de reservas e gestão de veículos corporativos.
+Sistema interno de reservas e gestão da frota corporativa.
 
 ## Início rápido
 

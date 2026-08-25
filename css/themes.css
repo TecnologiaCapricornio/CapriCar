@@ -623,6 +623,11 @@ html[data-theme="light"] .range-calendar-day.other-month{
   color:#9aa2aa;
 }
 
+html[data-theme="light"] .range-calendar-day.in-range{
+  background:rgba(42,100,140,.16);
+  color:#173f5c;
+}
+
 html[data-theme="light"] footer{
   color:#68717c;
 }

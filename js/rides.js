@@ -354,8 +354,6 @@ async function addPassengerToReservation(id, user){
     });
     return null;
   }
-  logAudit('entrou', 'reserva', reserva.id, user.nome + ' entrou na carona de ' + reserva.partida + ' para ' + reserva.destino);
-
   return { reserva: reserva };
 }
 
@@ -390,8 +388,6 @@ async function removePassengerFromReservation(id, user){
     });
     return null;
   }
-  logAudit('saiu', 'reserva', reserva.id, user.nome + ' saiu da carona');
-
   return { reserva: reserva };
 }
 

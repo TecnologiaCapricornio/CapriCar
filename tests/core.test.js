@@ -43,7 +43,7 @@ function loadCore(){
     setTimeout(){},
     clearTimeout(){}
   });
-  ['config.js', 'utils.js', 'storage.js', 'rides.js'].forEach(file => {
+  ['reservation-defaults.js', 'config.js', 'utils.js', 'storage.js', 'rides.js'].forEach(file => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'js', file), 'utf8');
     vm.runInContext(source, context, { filename: file });
   });

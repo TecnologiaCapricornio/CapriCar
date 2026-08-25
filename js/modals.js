@@ -398,7 +398,6 @@ quickReserveForm.addEventListener('submit', async function(e){
     return;
   }
   Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
-  logAudit('criou', 'reserva', reserva.id, getReservationNumberLabel(reserva) + ' · ' + reserva.partida + ' → ' + reserva.destino + ' · reserva rápida');
 
   closeQuickReserveModal();
 
@@ -553,7 +552,8 @@ function createReservationRangePicker(startInput, endInput, triggerEl, calendarE
       const disabled = otherMonth || isPast || isUnavailable || isBeyondAdvance || isAfterMaxEnd || crossesUnavailable;
       const isStart = iso === startInput.value;
       const isEnd = iso === endInput.value;
-      const inRange = startInput.value && endInput.value && iso > startInput.value && iso < endInput.value;
+      const hasFullRange = startInput.value && endInput.value && startInput.value !== endInput.value;
+      const inRange = hasFullRange && iso >= startInput.value && iso <= endInput.value;
 
       let classes = 'range-calendar-day';
       if(otherMonth) classes += ' other-month';
