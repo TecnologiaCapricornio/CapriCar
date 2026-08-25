@@ -2,12 +2,14 @@ const express = require('express');
 const { query, withTransaction } = require('../db');
 const { hashPassword, createSessionToken } = require('../security');
 const { publicUser, requirePermission } = require('../auth');
+const { ssoConfig } = require('../config');
+const { importSsoUsers } = require('../sso');
 
 const router = express.Router();
 router.use(requirePermission('users'));
 
 const USER_SELECT = `
-  SELECT id, username, display_name, role, active,
+  SELECT id, username, display_name, role, active, auth_provider,
          can_manage_reservations, can_manage_branches, can_manage_fleet,
          can_manage_blocks, can_view_reports, can_view_audit,
          can_manage_rules, can_manage_users,
@@ -40,6 +42,19 @@ async function audit(client, actorId, action, entityId, details){
 router.get('/', async (req, res) => {
   const result = await query(USER_SELECT + " ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name");
   res.json({ users:result.rows.map(publicUser) });
+});
+
+router.post('/sso-import', async (req, res) => {
+  if(!ssoConfig().enabled){
+    return res.status(503).json({ error:'Login via Microsoft não está configurado.' });
+  }
+  const summary = await importSsoUsers();
+  await query(
+    `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
+     VALUES ($1, 'sso-import', 'user', 'entra', $2::jsonb)`,
+    [req.user.id, JSON.stringify(summary)]
+  );
+  res.status(201).json(summary);
 });
 
 router.post('/', async (req, res) => {

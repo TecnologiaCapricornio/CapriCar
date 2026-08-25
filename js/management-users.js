@@ -107,7 +107,9 @@ function renderUserManagement(){
     '<div class="management-item' + (account.active ? '' : ' is-inactive') + '">' +
       '<div><strong>' + escapeHTML(account.nome) + '</strong>' +
         '<small>@' + escapeHTML(account.username) + ' · ' +
-          '<span class="' + (account.active ? '' : 'user-status-inactive') + '">' + (account.active ? 'Ativo' : 'Inativo') + '</span></small>' +
+          '<span class="' + (account.active ? '' : 'user-status-inactive') + '">' + (account.active ? 'Ativo' : 'Inativo') + '</span>' +
+          (account.authProvider === 'entra' ? ' · <span class="user-auth-badge">Microsoft</span>' : '') +
+        '</small>' +
         '<div class="user-permissions">' + permissionBadges(account) + '</div>' +
       '</div>' +
       '<div class="management-actions">' +
@@ -296,4 +298,46 @@ userAccountForm.addEventListener('submit', async function(e){
     userAccountError.textContent = error.message;
   }
 });
+
+const ssoImportBtn = document.getElementById('ssoImportBtn');
+
+if(ssoImportBtn){
+  apiRequest('/api/auth/sso/status').then(status => {
+    if(status.graphImportEnabled) ssoImportBtn.classList.remove('hidden');
+  }).catch(error => {
+    console.error('Falha ao consultar status do login via Microsoft:', error);
+  });
+
+  ssoImportBtn.addEventListener('click', async function(){
+    if(!canManageUsers()) return;
+    ssoImportBtn.disabled = true;
+    const originalHTML = ssoImportBtn.innerHTML;
+    ssoImportBtn.textContent = 'Importando...';
+    try{
+      const summary = await apiRequest('/api/users/sso-import', { method:'POST' });
+      await hydrateDatabaseState();
+      renderUserManagement();
+      const parts = [
+        summary.created + ' criado(s)',
+        summary.updated + ' atualizado(s)',
+        summary.skipped + ' ignorado(s)'
+      ];
+      if(summary.errors && summary.errors.length){
+        parts.push(summary.errors.length + ' com erro');
+      }
+      await showSiteAlert('Importação concluída: ' + parts.join(', ') + '.', {
+        title:'Usuários do Entra ID',
+        type:summary.errors && summary.errors.length ? 'warning' : 'success'
+      });
+    }catch(error){
+      await showSiteAlert(error.message || 'Falha ao importar usuários do Entra ID.', {
+        title:'Não foi possível importar',
+        type:'danger'
+      });
+    }finally{
+      ssoImportBtn.disabled = false;
+      ssoImportBtn.innerHTML = originalHTML;
+    }
+  });
+}
 

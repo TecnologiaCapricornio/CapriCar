@@ -33,5 +33,19 @@ function appConfig(){
   };
 }
 
-module.exports = { databaseConfig, appConfig };
+function ssoConfig(){
+  const tenantId = String(process.env.ENTRA_TENANT_ID || '').trim();
+  const clientId = String(process.env.ENTRA_CLIENT_ID || '').trim();
+  const clientSecret = String(process.env.ENTRA_CLIENT_SECRET || '').trim();
+  const redirectUri = String(process.env.ENTRA_REDIRECT_URI || 'http://localhost:3000/api/auth/sso/callback').trim();
+  return {
+    tenantId,
+    clientId,
+    clientSecret,
+    redirectUri,
+    enabled:!!(tenantId && clientId && clientSecret)
+  };
+}
+
+module.exports = { databaseConfig, appConfig, ssoConfig };
 

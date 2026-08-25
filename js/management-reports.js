@@ -8,8 +8,6 @@ const auditUserFilter = document.getElementById('auditUserFilter');
 const auditActionFilter = document.getElementById('auditActionFilter');
 const auditStartDate = document.getElementById('auditStart');
 const auditEndDate = document.getElementById('auditEnd');
-const auditStartTime = document.getElementById('auditStartTime');
-const auditEndTime = document.getElementById('auditEndTime');
 
 function formatDateTime(iso){
   if(!iso) return '';
@@ -23,23 +21,12 @@ function formatDateTime(iso){
 function auditEntryWithinPeriod(entry){
   const startDate = auditStartDate.value;
   const endDate = auditEndDate.value;
-  const startTime = auditStartTime.value;
-  const endTime = auditEndTime.value;
-  if(!startDate && !endDate && !startTime && !endTime) return true;
+  if(!startDate && !endDate) return true;
   const entryDate = new Date(entry.timestamp);
   if(Number.isNaN(entryDate.getTime())) return true;
   const entryISO = isoFromParts(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
   if(startDate && entryISO < startDate) return false;
   if(endDate && entryISO > endDate) return false;
-  const entryMinutes = entryDate.getHours() * 60 + entryDate.getMinutes();
-  if(startTime){
-    const [h, m] = startTime.split(':').map(Number);
-    if(entryMinutes < h * 60 + m) return false;
-  }
-  if(endTime){
-    const [h, m] = endTime.split(':').map(Number);
-    if(entryMinutes > h * 60 + m) return false;
-  }
   return true;
 }
 
@@ -52,9 +39,6 @@ function auditFilterText(){
   if(auditStartDate.value || auditEndDate.value){
     parts.push('período: ' + (auditStartDate.value ? formatDate(auditStartDate.value) : 'início') +
       ' até ' + (auditEndDate.value ? formatDate(auditEndDate.value) : 'hoje'));
-  }
-  if(auditStartTime.value || auditEndTime.value){
-    parts.push('horário: ' + (auditStartTime.value || '00:00') + ' às ' + (auditEndTime.value || '23:59'));
   }
   return parts.length ? parts.join(' · ') : 'nenhum filtro aplicado';
 }
@@ -82,7 +66,7 @@ function renderAuditLog(){
   ).join('') : '<div class="empty-state">Nenhum evento encontrado.</div>';
 }
 
-[auditUserFilter, auditActionFilter, auditStartTime, auditEndTime].forEach(el => {
+[auditUserFilter, auditActionFilter].forEach(el => {
   el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', renderAuditLog);
 });
 [auditStartDate, auditEndDate].forEach(el => {
@@ -156,6 +140,32 @@ document.getElementById('exportAuditPdfBtn').addEventListener('click', async fun
     auditWindow.focus();
     auditWindow.print();
   }, 350);
+});
+
+function getAuditExportData(){
+  const headers = ['Data e hora', 'Usuário', 'Ação', 'Entidade', 'Detalhes'];
+  const rows = getFilteredAuditEntries().map(entry => [
+    formatDateTime(entry.timestamp),
+    entry.user,
+    entry.action,
+    entry.entity,
+    entry.details || ''
+  ]);
+  return { headers, rows };
+}
+
+document.getElementById('exportAuditExcelBtn').addEventListener('click', function(){
+  if(!canViewAudit()) return;
+  const data = getAuditExportData();
+  const widths = [22, 22, 14, 22, 40];
+  const workbook = buildXlsxWorkbook(data.headers, data.rows, widths);
+  downloadReportFile(
+    workbook,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.xlsx',
+    'capricar-auditoria'
+  );
+  logAudit('exportou', 'auditoria Excel', todayISO(), data.rows.length + ' eventos exportados');
 });
 
 /* =========================================================
@@ -266,12 +276,12 @@ function getReportExportData(){
   return { headers, rows };
 }
 
-function downloadReportFile(content, type, extension){
+function downloadReportFile(content, type, extension, namePrefix){
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'capricar-relatorio-' + todayISO() + extension;
+  link.download = (namePrefix || 'capricar-relatorio') + '-' + todayISO() + extension;
   document.body.appendChild(link);
   link.click();
   link.remove();
