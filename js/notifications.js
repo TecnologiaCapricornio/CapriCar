@@ -25,6 +25,7 @@ function notificationIcon(type){
   if(type === 'pickup_overdue') return 'key';
   if(type === 'reservation_upcoming') return 'clock';
   if(type === 'passenger_added') return 'ride';
+  if(type === 'operation_report') return 'report';
   return 'cancel';
 }
 
@@ -55,7 +56,8 @@ function renderNotifications(){
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = item.type === 'pickup_overdue' ? '🔑' :
       (item.type === 'reservation_upcoming' ? '◷' :
-        (item.type === 'passenger_added' ? '👥' : '×'));
+        (item.type === 'passenger_added' ? '👥' :
+          (item.type === 'operation_report' ? '⚠' : '×')));
     const copy = document.createElement('span');
     copy.className = 'notification-item-copy';
     const title = document.createElement('strong');
@@ -121,10 +123,38 @@ notificationBell.addEventListener('click', function(event){
   if(opening) refreshNotifications();
 });
 
+const NOTIFICATION_TAB_BY_TYPE = {
+  reservation_upcoming:'minhas',
+  pickup_overdue:'minhas',
+  passenger_added:'minhas',
+  passenger_cancelled:'minhas',
+  admin_cancelled:'minhas',
+  passenger_joined:'minhas',
+  ride_watch_match:'caronas',
+  operation_report:'admin'
+};
+
+function navigateToNotificationTarget(type){
+  const tab = NOTIFICATION_TAB_BY_TYPE[type];
+  if(!tab || typeof switchTab !== 'function') return;
+  switchTab(tab);
+  if(type === 'operation_report'){
+    const reservasBtn = document.querySelector('[data-admin-section="reservas"]');
+    if(reservasBtn) reservasBtn.click();
+  }
+}
+
 notificationPanel.addEventListener('click', function(event){
   event.stopPropagation();
   const item = event.target.closest('.notification-item');
-  if(item) markNotificationRead(item.dataset.notificationId);
+  if(!item) return;
+  const notificationId = item.dataset.notificationId;
+  markNotificationRead(notificationId);
+  const notification = notificationItems.find(entry => String(entry.id) === String(notificationId));
+  if(notification){
+    navigateToNotificationTarget(notification.type);
+    closeNotificationPanel();
+  }
 });
 
 notificationReadAllBtn.addEventListener('click', async function(){

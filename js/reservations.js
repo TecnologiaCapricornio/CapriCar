@@ -143,7 +143,7 @@ function validateMobileReservationStep(step){
       valid = false;
     }
     if(partida && !carroSelect.value){
-      setError('carro', 'Selecione o carro da filial de partida.');
+      setError('carro', 'Selecione o veículo do local de partida.');
       valid = false;
     }
     return valid;
@@ -298,21 +298,9 @@ function getCarReservedDates(partida, carro, excludeId){
 // Datas que possuem ao menos uma faixa de horário ocupada. Diferentemente de
 // getCarReservedDates, estes dias continuam selecionáveis: o usuário escolhe
 // depois um dos horários ainda livres.
-function getCarOccupiedDates(partida, carro, excludeId){
-  const set = new Set();
-  if(!partida || !carro) return set;
-  getReservations().forEach(reservation => {
-    if(isReservationCompleted(reservation)) return;
-    if(excludeId != null && String(reservation.id) === String(excludeId)) return;
-    if(reservation.partida !== partida || String(reservation.carro) !== String(carro)) return;
-    eachDateISOInRange(reservation.dataIda, reservation.dataVolta, iso => set.add(iso));
-  });
-  return set;
-}
-
 function populateCarroOptions(preserveSelection){
   const partida = partidaSelect.value;
-  const carros = getVehicles().filter(v => v.ativo !== false && v.filial === partida);
+  const carros = getVehicles().filter(v => v.ativo !== false && v.local === partida);
   const currentCarro = carroSelect.value;
   carroSelect.innerHTML = '<option value="">Selecione...</option>' +
     carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(getVehicleFullModel(v)) + (v.placa ? ' · ' + escapeHTML(v.placa) : '') + '</option>').join('');
@@ -392,6 +380,7 @@ function renderReservationItem(res, opts){
         '<div class="reservation-more-content">' +
           '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(res.nome) + '</div>' +
           '<div class="reservation-business"><strong>Motivo:</strong> ' + escapeHTML(res.motivo || 'Não informado') + '</div>' +
+          renderOcupantesHTML(res, { allowRemove:isCreator }) +
         '</div>' +
       '</details>' +
       renderOperationDetails(res) +
@@ -452,7 +441,25 @@ function renderMyReservations(){
   });
   bindDeleteButtons(myReservationsList);
   bindLeaveButtons(myReservationsList);
+  bindOccupantRemoveButtons(myReservationsList);
   bindReservationFeatureButtons(myReservationsList);
+}
+
+function bindOccupantRemoveButtons(container){
+  container.querySelectorAll('.occupant-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async function(event){
+      event.preventDefault();
+      const reservationId = this.getAttribute('data-reservation-id');
+      const userId = this.getAttribute('data-user-id');
+      const passengerName = (this.getAttribute('aria-label') || '').replace(/^Remover /, '');
+      if(!await showSiteConfirm(
+        'Remover ' + passengerName + ' desta carona? A pessoa será removida da lista de passageiros.',
+        { title:'Remover passageiro', confirmText:'Sim, remover', type:'warning' }
+      )) return;
+      await removePassengerAsDriver(reservationId, userId);
+      renderMyReservations();
+    });
+  });
 }
 
 reservationViewButtons.forEach(button => {
@@ -571,7 +578,7 @@ function validateForm(){
   }
 
   if(partida && !carro){
-    setError('carro', 'Selecione o carro da filial de partida.');
+    setError('carro', 'Selecione o carro do local de partida.');
     valid = false;
   }
 

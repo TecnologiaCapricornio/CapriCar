@@ -8,7 +8,7 @@ const adminSectionTabs = document.getElementById('adminSectionTabs');
 function renderAdminSection(section){
   if(!canAccessAdminSection(section)) return;
   if(section === 'reservas') renderAdminTab();
-  if(section === 'filiais') renderBranchManagement();
+  if(section === 'locais') renderBranchManagement();
   if(section === 'veiculos') renderFleetManagement();
   if(section === 'bloqueios') renderBlocksManagement();
   if(section === 'auditoria') renderAuditLog();

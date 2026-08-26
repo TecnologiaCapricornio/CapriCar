@@ -180,7 +180,7 @@ router.get('/email-reminders', async (req, res) => {
 
 router.put('/email-reminders', async (req, res) => {
   const body = req.body || {};
-  const types = ['reservationUpcoming', 'pickupOverdue', 'returnOverdue'];
+  const types = ['reservationUpcoming', 'pickupOverdue', 'returnOverdue', 'passengerJoined', 'rideWatchMatch'];
   const next = {};
   for(const type of types){
     const item = body[type] || {};

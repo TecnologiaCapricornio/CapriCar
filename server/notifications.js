@@ -117,6 +117,15 @@ async function resolveReservationUsers(client, reservation, includeCreator){
   return [...new Set(result.rows.map(row => String(row.id)))];
 }
 
+async function resolveReservationManagers(client){
+  const result = await client.query(
+    `SELECT id FROM users
+      WHERE active = TRUE AND deleted_at IS NULL
+        AND (role = 'admin' OR can_manage_reservations = TRUE)`
+  );
+  return result.rows.map(row => String(row.id));
+}
+
 async function insertNotification(client, notification){
   await client.query(
     `INSERT INTO notifications
@@ -167,7 +176,7 @@ async function notifyReservationPassengerAdditions(client, previousReservation, 
     if(String(userId) === String(reservation.criadorUsuarioId || '')) return false;
     return normalizeName(passenger.nome) !== normalizeName(reservation.nome);
   });
-  if(!addedPassengers.length) return;
+  if(!addedPassengers.length) return addedPassengers;
 
   await ensureNotificationsTable(client);
   const validRecipients = new Set(await resolveReservationUsers(client, {
@@ -185,6 +194,55 @@ async function notifyReservationPassengerAdditions(client, previousReservation, 
       reservationId:String(reservation.id || ''),
       dedupeKey:`passenger-added:${reservation.id}:${userId}`,
       metadata:{ route:summary.route, scheduledAt:summary.when, addedBy:actor.nome }
+    });
+  }
+
+  const driverId = String(reservation.criadorUsuarioId || '');
+  if(driverId && driverId !== String(actor.id)){
+    const names = addedPassengers.map(passenger => passenger.nome).join(', ');
+    const plural = addedPassengers.length > 1;
+    await insertNotification(client, {
+      userId:driverId,
+      type:'passenger_joined',
+      title:plural ? 'Novos passageiros na sua carona!' : 'Alguém entrou na sua carona!',
+      message:`${names} ${plural ? 'entraram' : 'entrou'} em ${summary.route}, com saída prevista para ` +
+        `${summary.when || 'a data informada'}. Combine os detalhes com quem está indo junto e lembre-se de ` +
+        `respeitar os horários combinados na reserva — seus passageiros estão contando com isso!`,
+      reservationId:String(reservation.id || ''),
+      dedupeKey:`passenger-joined:${reservation.id}:${driverId}:${addedPassengers.map(passenger => passenger.usuarioId).join(',')}`,
+      metadata:{ route:summary.route, scheduledAt:summary.when, passengers:names }
+    });
+  }
+
+  return addedPassengers;
+}
+
+async function notifyOperationReport(client, reservation, phase, actor){
+  const record = reservation && reservation.operacao && reservation.operacao[phase];
+  if(!record) return;
+  const hasAvarias = String(record.avarias || '').trim().length > 0;
+  const photoCount = Array.isArray(record.fotos) ? record.fotos.length : 0;
+  if(!hasAvarias && !photoCount) return;
+
+  await ensureNotificationsTable(client);
+  const recipients = await resolveReservationManagers(client);
+  const summary = reservationSummary(reservation);
+  const phaseLabel = phase === 'retirada' ? 'retirada' : 'devolução';
+  const parts = [];
+  if(hasAvarias) parts.push('uma observação');
+  if(photoCount) parts.push(photoCount + (photoCount === 1 ? ' foto' : ' fotos'));
+  const message = `${actor.nome} registrou ${parts.join(' e ')} na ${phaseLabel} de ${summary.route}.`;
+
+  for(const userId of recipients){
+    if(String(userId) === String(actor.id)) continue;
+    await insertNotification(client, {
+      userId,
+      type:'operation_report',
+      title:'Avaria ou foto registrada',
+      message,
+      reservationId:String(reservation.id || ''),
+      dedupeKey:`operation-report:${reservation.id}:${phase}`,
+      metadata:{ route:summary.route, phase, hasAvarias, photoCount }
     });
   }
 }
@@ -244,7 +302,7 @@ async function generateUserReminders(user){
       await insertNotification({ query }, {
         userId:user.id,
         type:'pickup_overdue',
-        title:'Retirada do carro pendente',
+        title:'Retirada do veículo pendente',
         message:`A retirada de ${summary.route} estava prevista para ${summary.when}. Registre a retirada.`,
         reservationId:String(reservation.id || ''),
         dedupeKey:`pickup-overdue:${reservation.id}`,
@@ -259,6 +317,8 @@ module.exports = {
   generateUserReminders,
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
+  notifyOperationReport,
+  resolveReservationManagers,
   reminderTypesForReservation,
   reservationStart,
   reservationEnd,

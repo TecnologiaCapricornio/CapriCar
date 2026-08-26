@@ -176,21 +176,24 @@ const reportInputs = [
   document.getElementById('reportVehicle'),
   document.getElementById('reportUser'),
   document.getElementById('reportStart'),
-  document.getElementById('reportEnd')
+  document.getElementById('reportEnd'),
+  document.getElementById('reportComRegistro')
 ];
 
 function getFilteredReportReservations(){
-  const filial = document.getElementById('reportBranch').value;
+  const local = document.getElementById('reportBranch').value;
   const vehicleKey = document.getElementById('reportVehicle').value;
   const user = document.getElementById('reportUser').value.trim().toLowerCase();
   const start = document.getElementById('reportStart').value;
   const end = document.getElementById('reportEnd').value;
+  const comRegistro = document.getElementById('reportComRegistro').checked;
   return getReservations().filter(r => {
-    if(filial && r.partida !== filial) return false;
+    if(local && r.partida !== local) return false;
     if(vehicleKey && carKey(r.partida, r.carro) !== vehicleKey) return false;
     if(user && !String(r.nome).toLowerCase().includes(user)) return false;
     if(start && r.dataVolta < start) return false;
     if(end && r.dataIda > end) return false;
+    if(comRegistro && !reservationHasOperationReport(r)) return false;
     return true;
   });
 }
@@ -230,10 +233,6 @@ function renderReports(){
 
 reportInputs.forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', renderReports));
 
-function csvCell(value){
-  return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
-}
-
 function exportDateTime(dateISO, time){
   if(!dateISO) return '';
   return formatDate(dateISO) + (time ? ' ' + time : '');
@@ -252,7 +251,7 @@ function getReportExportData(){
     'ID da reserva',
     'Retirada prevista','Devolução prevista',
     'Retirada realizada','Devolução realizada',
-    'Filial','Carro','Usuário','Motivo','Ocupantes',
+    'Local','Veículo','Usuário','Motivo','Ocupantes',
     'Km inicial','Km final','Km rodados',
     'Combustível retirada','Combustível devolução',
     'Avarias retirada','Avarias devolução','Status'
@@ -288,18 +287,6 @@ function downloadReportFile(content, type, extension, namePrefix){
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-function encodeUtf16LE(text){
-  const bytes = new Uint8Array(2 + text.length * 2);
-  bytes[0] = 0xFF;
-  bytes[1] = 0xFE;
-  for(let i = 0; i < text.length; i++){
-    const code = text.charCodeAt(i);
-    bytes[2 + i * 2] = code & 0xFF;
-    bytes[3 + i * 2] = code >> 8;
-  }
-  return bytes;
-}
-
 document.getElementById('exportExcelBtn').addEventListener('click', function(){
   if(!canViewReports()) return;
   const data = getReportExportData();
@@ -320,12 +307,13 @@ function reportFilterText(){
   const start = document.getElementById('reportStart').value;
   const end = document.getElementById('reportEnd').value;
   const parts = [];
-  if(branch.value) parts.push('Filial: ' + branch.options[branch.selectedIndex].text);
+  if(branch.value) parts.push('Local: ' + branch.options[branch.selectedIndex].text);
   if(vehicle.value) parts.push('Veículo: ' + vehicle.options[vehicle.selectedIndex].text);
   if(user) parts.push('Usuário: ' + user);
   if(start) parts.push('Desde: ' + formatDate(start));
   if(end) parts.push('Até: ' + formatDate(end));
-  return parts.length ? parts.join(' | ') : 'Todas as filiais, veículos, períodos e usuários';
+  if(document.getElementById('reportComRegistro').checked) parts.push('Somente com observações/avarias ou fotos registradas');
+  return parts.length ? parts.join(' | ') : 'Todos os locais, veículos, períodos e usuários';
 }
 
 function printableCell(value){

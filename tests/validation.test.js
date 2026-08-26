@@ -17,7 +17,7 @@ function isoIn(days){
 const branches = [{ id:'b1', nome:'São Paulo', ativo:true }];
 const vehicles = [{
   id:'v1',
-  filial:'São Paulo',
+  local:'São Paulo',
   codigo:'89',
   placa:'ABC1D23',
   marca:'Volkswagen',
@@ -97,6 +97,40 @@ test('exige uma hora livre entre reservas', () => {
   ], context({ rules:{ ...rules, reservationBufferMinutes:0 } })));
 });
 
+test('recusa reservas do mesmo usuário com horários sobrepostos em veículos diferentes', () => {
+  const secondVehicle = { ...vehicles[0], id:'v2', codigo:'45' };
+  const ctx = context({ vehicles:[vehicles[0], secondVehicle] });
+  const first = reservation({
+    id:'r1',
+    carro:'89',
+    dataIda:isoIn(2),
+    dataVolta:isoIn(6),
+    horarioRetirada:'08:00',
+    horarioDevolucao:'18:00'
+  });
+  const overlapping = reservation({
+    id:'r2',
+    carro:'45',
+    dataIda:isoIn(4),
+    dataVolta:isoIn(8),
+    horarioRetirada:'08:00',
+    horarioDevolucao:'18:00'
+  });
+  assert.throws(
+    () => validateReservations([first, overlapping], ctx),
+    /sobrepõe a este horário/
+  );
+
+  const sequential = { ...overlapping, dataIda:isoIn(7), dataVolta:isoIn(9) };
+  assert.doesNotThrow(() => validateReservations([first, sequential], ctx));
+
+  const sameDayNoOverlap = [
+    reservation({ id:'r3', carro:'89', dataIda:isoIn(5), dataVolta:isoIn(5), horarioRetirada:'07:00', horarioDevolucao:'08:00' }),
+    reservation({ id:'r4', carro:'45', dataIda:isoIn(5), dataVolta:isoIn(5), horarioRetirada:'18:00', horarioDevolucao:'19:00' })
+  ];
+  assert.doesNotThrow(() => validateReservations(sameDayNoOverlap, ctx));
+});
+
 test('exige placa no cadastro do veículo', () => {
   assert.throws(
     () => validateVehicles([{ ...vehicles[0], placa:'' }], branches),
@@ -148,7 +182,7 @@ test('recusa período acima do limite e antecedência excessiva', () => {
 test('recusa veículo bloqueado e excesso de ocupantes', () => {
   const blocked = [{
     id:'block1',
-    filial:'São Paulo',
+    local:'São Paulo',
     carro:'89',
     tipo:'Manutenção',
     dataInicio:isoIn(1),

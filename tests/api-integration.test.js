@@ -62,12 +62,12 @@ function findSlot(state){
         const endMs = new Date(`${date}T${end}:00Z`).getTime();
         const bufferMs = Number(state.rules.reservationBufferMinutes == null ? 60 : state.rules.reservationBufferMinutes) * 60 * 1000;
         const blocked = (state.blocks || []).some(block =>
-          block.filial === vehicle.filial &&
+          block.local === vehicle.local &&
           String(block.carro) === String(vehicle.codigo) &&
           date >= block.dataInicio && date <= block.dataFim
         );
         const conflict = (state.reservations || []).some(reservation =>
-          reservation.partida === vehicle.filial &&
+          reservation.partida === vehicle.local &&
           String(reservation.carro) === String(vehicle.codigo) &&
           startMs < new Date(`${reservation.dataVolta}T${reservation.horarioDevolucao}:00Z`).getTime() + bufferMs &&
           endMs > new Date(`${reservation.dataIda}T${reservation.horarioRetirada}:00Z`).getTime() - bufferMs
@@ -265,7 +265,7 @@ async function main(){
 
     const testBranch = {
       id:branchId,
-      nome:`Filial temporária ${testSuffix}`,
+      nome:`Local temporário ${testSuffix}`,
       ativo:true
     };
     const createTestBranch = await request('/api/state/branches', {
@@ -301,7 +301,7 @@ async function main(){
       method:'DELETE',
       headers:auth(admin.cookie),
       body:{
-        justification:'Filial criada somente para testar a exclusão definitiva.',
+        justification:'Local criado somente para testar a exclusão definitiva.',
         revision:revisions.branches
       }
     });
@@ -321,7 +321,7 @@ async function main(){
 
     const testVehicle = {
       id:vehicleId,
-      filial:state.branches[0].nome,
+      local:state.branches[0].nome,
       codigo:`QA-${testSuffix.slice(-6)}`,
       placa:`QA${testSuffix.slice(-5).toUpperCase()}`,
       marca:'Marca teste',
@@ -405,7 +405,7 @@ async function main(){
     const ownReservation = {
       id:reservationId,
       nome:displayName,
-      partida:slot.vehicle.filial,
+      partida:slot.vehicle.local,
       destino:'Teste de integração',
       carro:String(slot.vehicle.codigo),
       motivo:'Auditoria automatizada',
@@ -496,7 +496,7 @@ async function main(){
     assert.ok(protectedVehicle);
     assert.ok(protectedReservation);
     assert.equal(String(protectedReservation.carro), String(protectedVehicle.codigo));
-    assert.equal(String(protectedReservation.partida), String(protectedVehicle.filial));
+    assert.equal(String(protectedReservation.partida), String(protectedVehicle.local));
 
     const deleteVehicleWithReservation = await request(
       `/api/state/vehicles/${reservationVehicleId}`,

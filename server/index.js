@@ -11,6 +11,7 @@ const stateRoutes = require('./routes/state');
 const notificationRoutes = require('./routes/notifications');
 const reservationRoutes = require('./routes/reservations');
 const settingsRoutes = require('./routes/settings');
+const rideWatchRoutes = require('./routes/ride-watches');
 const { sweepEmailReminders } = require('./reminders');
 
 const app = express();
@@ -61,6 +62,7 @@ app.use('/api/state', requireAuth, stateRoutes);
 app.use('/api/notifications', requireAuth, notificationRoutes);
 app.use('/api/reservations', requireAuth, reservationRoutes);
 app.use('/api/settings', requireAuth, settingsRoutes);
+app.use('/api/ride-watches', requireAuth, rideWatchRoutes);
 
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));

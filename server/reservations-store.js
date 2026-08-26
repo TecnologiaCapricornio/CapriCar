@@ -104,7 +104,7 @@ async function resolvePassengerUser(client, preferredId, preferredName){
 
 async function ensureBranch(client, legacyId, name){
   const branchName = String(name || '').trim();
-  if(!branchName) throw Object.assign(new Error('Filial da reserva não informada.'), { status:400 });
+  if(!branchName) throw Object.assign(new Error('Local da reserva não informado.'), { status:400 });
   const existing = await client.query(
     `SELECT id FROM branches
       WHERE ($1 <> '' AND legacy_id = $1) OR LOWER(name) = LOWER($2)
@@ -196,8 +196,8 @@ async function ensureFleetFromState(client, fleet){
     branchIds.set(String(branch.nome).toLocaleLowerCase('pt-BR'), await ensureBranch(client, branch.id, branch.nome));
   }
   for(const vehicle of fleet.vehicles){
-    let branchId = branchIds.get(String(vehicle.filial).toLocaleLowerCase('pt-BR'));
-    if(!branchId) branchId = await ensureBranch(client, '', vehicle.filial);
+    let branchId = branchIds.get(String(vehicle.local).toLocaleLowerCase('pt-BR'));
+    if(!branchId) branchId = await ensureBranch(client, '', vehicle.local);
     await ensureVehicle(client, branchId, vehicle);
   }
 }
@@ -283,10 +283,10 @@ async function upsertOperation(client, reservationId, phase, record, actor){
 
 async function findVehicleFromState(client, reservation, fleet){
   const vehicle = fleet.vehicles.find(item =>
-    String(item.filial).toLocaleLowerCase('pt-BR') === String(reservation.partida).toLocaleLowerCase('pt-BR') &&
+    String(item.local).toLocaleLowerCase('pt-BR') === String(reservation.partida).toLocaleLowerCase('pt-BR') &&
     String(item.codigo).toLocaleLowerCase('pt-BR') === String(reservation.carro).toLocaleLowerCase('pt-BR')
   ) || {
-    id:'', filial:reservation.partida, codigo:reservation.carro,
+    id:'', local:reservation.partida, codigo:reservation.carro,
     marca:reservation.marca || '', modelo:reservation.modelo || 'Não informado', capacidade:5, ativo:true
   };
   const branch = fleet.branches.find(item => normalizeName(item.nome) === normalizeName(reservation.partida));
@@ -500,21 +500,18 @@ async function listAllReservations(executor){
   return data.rows.map(row => fullDto(row, data));
 }
 
-// Usados só pela sincronização com o calendário do Outlook (server/calendar-sync.js) -
+// Usado só pela sincronização com o calendário do Outlook (server/calendar-sync.js) -
 // o id do evento no Graph é um detalhe interno, nunca exposto em fullDto/publicDto.
-async function getReservationGraphEventId(client, legacyId){
+// Busca todos de uma vez (em vez de uma query por reserva) porque é chamada
+// dentro do laço de mudanças do POST /api/reservations/sync.
+async function getReservationGraphEventIds(client, legacyIds){
+  const ids = [...new Set((legacyIds || []).map(String))];
+  if(!ids.length) return new Map();
   const result = await client.query(
-    'SELECT graph_event_id FROM reservations WHERE legacy_id = $1',
-    [String(legacyId)]
+    'SELECT legacy_id, graph_event_id FROM reservations WHERE legacy_id = ANY($1::text[])',
+    [ids]
   );
-  return result.rows[0] ? result.rows[0].graph_event_id : null;
-}
-
-async function setReservationGraphEventId(client, legacyId, graphEventId){
-  await client.query(
-    'UPDATE reservations SET graph_event_id = $2 WHERE legacy_id = $1',
-    [String(legacyId), graphEventId]
-  );
+  return new Map(result.rows.map(row => [row.legacy_id, row.graph_event_id]));
 }
 
 async function cancelReservation(client, legacyId, actor){
@@ -571,7 +568,6 @@ async function migrateLegacyReservations(){
     }
     await client.query(`ALTER TABLE reservations ALTER COLUMN legacy_id SET NOT NULL`);
     await client.query(`ALTER TABLE reservations ALTER COLUMN requester_name SET NOT NULL`);
-    await client.query(`ALTER TABLE operation_photos ALTER COLUMN data_url SET NOT NULL`);
     return migrated;
   });
 }
@@ -582,8 +578,7 @@ module.exports = {
   listAllReservations,
   persistReservation,
   cancelReservation,
-  getReservationGraphEventId,
-  setReservationGraphEventId,
+  getReservationGraphEventIds,
   getPhotoForUser,
   migrateLegacyReservations,
   normalizeName,

@@ -4,7 +4,10 @@
   display:none;
 }
 
-/* A Nova Reserva usa o mesmo assistente por etapas em qualquer tamanho de tela. */
+/* A Nova Reserva usa o mesmo assistente por etapas em qualquer tamanho de tela.
+   O modal de reserva do admin só usa o assistente em telas pequenas (ver media
+   query abaixo) - no desktop ele mostra todos os campos de uma vez, então seu
+   .mobile-wizard-actions fica sem grid aqui (ver override mais abaixo). */
 #reservaForm .mobile-reservation-progress{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -70,26 +73,48 @@
 #reservaForm .mobile-wizard-actions button{
   width:100%;
   min-height:45px;
+  margin:0;
   padding:10px 14px;
   border-radius:var(--radius-sm);
+  font-size:var(--fs-sm);
+  font-weight:700;
+  line-height:1.2;
+  white-space:nowrap;
 }
 
-#mobileReservationStepLabel{
+/* Só em telas largas (fora da media query de telas pequenas logo abaixo) o
+   modal de reserva do admin foge do assistente por etapas (mostra todos os
+   campos de uma vez) - por isso aqui, e só aqui, seu .mobile-wizard-actions
+   vira "invisível" como caixa (display:contents) e só o botão de salvar
+   aparece, como um botão comum no fim do formulário. Em telas pequenas a
+   media query abaixo assume o assistente por etapas normalmente. */
+@media (min-width:721px){
+  #adminReservaForm .mobile-wizard-actions{
+    display:contents;
+  }
+
+  #adminReservaForm #adminReservationBackBtn,
+  #adminReservaForm #adminReservationStepLabel,
+  #adminReservaForm #adminReservationNextBtn{
+    display:none;
+  }
+}
+
+#mobileReservationStepLabel,
+#adminReservationStepLabel{
   color:var(--texto-muted);
   font-size:var(--fs-2xs);
   white-space:nowrap;
 }
 
-#mobileReservationBackBtn:disabled{
+#mobileReservationBackBtn:disabled,
+#adminReservationBackBtn:disabled{
   visibility:hidden;
 }
 
-#reservaForm[data-mobile-step="3"] #mobileReservationNextBtn{
+#reservaForm[data-mobile-step="3"] #mobileReservationNextBtn,
+#adminReservaForm[data-mobile-step="3"] #adminReservationNextBtn{
   display:none;
-}
-
-#reservaForm[data-mobile-step="3"] .mobile-wizard-actions{
-  grid-template-columns:minmax(120px,1fr) auto;
 }
 
 .mobile-nav-toggle{
@@ -186,18 +211,21 @@
   }
 
   .admin-section-tabs{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
     gap:7px;
-    overflow:visible;
-    padding-bottom:14px;
+    padding-bottom:10px;
+    scrollbar-width:thin;
   }
 
   .admin-section-btn{
+    flex:0 0 auto;
     min-width:0;
-    min-height:42px;
-    padding:8px 7px;
-    white-space:normal;
+    min-height:38px;
+    padding:8px 14px;
+    white-space:nowrap;
     line-height:1.2;
   }
 
@@ -583,8 +611,13 @@
   .mobile-wizard-actions button{
     width:100%;
     min-height:45px;
+    margin:0;
     padding:10px 12px;
     border-radius:var(--radius-sm);
+    font-size:var(--fs-sm);
+    font-weight:700;
+    line-height:1.2;
+    white-space:nowrap;
   }
 
   #mobileReservationStepLabel,
@@ -602,11 +635,6 @@
   #reservaForm[data-mobile-step="3"] #mobileReservationNextBtn,
   #adminReservaForm[data-mobile-step="3"] #adminReservationNextBtn{
     display:none;
-  }
-
-  #reservaForm[data-mobile-step="3"] .mobile-wizard-actions,
-  #adminReservaForm[data-mobile-step="3"] .mobile-wizard-actions{
-    grid-template-columns:minmax(100px,1fr) auto;
   }
 
   .admin-reserve-card{

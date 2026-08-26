@@ -3,19 +3,19 @@ const STORAGE_KEY = 'capricar_reservas';
 const USER_KEY = 'capricar_user';
 const USERS_KEY = 'capricar_usuarios';
 const USER_DIRECTORY_KEY = 'capricar_diretorio_usuarios';
-const BRANCHES_KEY = 'capricar_filiais';
+const BRANCHES_KEY = 'capricar_locais';
 const VEHICLES_KEY = 'capricar_veiculos';
 const BLOCKS_KEY = 'capricar_bloqueios';
 const AUDIT_KEY = 'capricar_auditoria';
 const RULES_KEY = 'capricar_regras_reserva';
 
-const CARROS_POR_FILIAL = {
+const CARROS_POR_LOCAL = {
   'São Paulo': ['89','45'],
   'São Carlos': ['78','32'],
   'Bragança Paulista': ['67','54']
 };
 
-let CIDADES = Object.keys(CARROS_POR_FILIAL);
+let CIDADES = Object.keys(CARROS_POR_LOCAL);
 
 const CAPACIDADE_MAXIMA = 5; // vagas totais por carro, incluindo quem reservou
 

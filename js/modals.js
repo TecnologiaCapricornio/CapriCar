@@ -81,11 +81,11 @@ const qMotivoInput = document.getElementById('qMotivo');
 const qRodizioWarning = document.getElementById('qRodizioWarning');
 const qPassageirosWidget = createPassengerListWidget('qPassageirosListContainer');
 
-let quickReserveContext = null; // { filial, carro, dataIda }
+let quickReserveContext = null; // { local, carro, dataIda }
 
 function refreshQuickRodizioWarning(){
   updateRodizioWarning(qRodizioWarning, {
-    partida:quickReserveContext && quickReserveContext.filial,
+    partida:quickReserveContext && quickReserveContext.local,
     destino:getQDestinoValue(),
     carro:quickReserveContext && quickReserveContext.carro,
     dataIda:quickReserveContext && quickReserveContext.dataIda,
@@ -113,7 +113,7 @@ function refreshQuickAvailableTimeOptions(){
   const selectedPickup = qHorarioRetiradaSelect.value;
   const selectedReturn = qHorarioDevolucaoSelect.value;
   const availability = getAvailableReservationTimeOptions(
-    quickReserveContext.filial,
+    quickReserveContext.local,
     quickReserveContext.carro,
     quickReserveContext.dataIda,
     qDataVoltaInput.value,
@@ -126,7 +126,7 @@ function refreshQuickAvailableTimeOptions(){
   }
 
   const returnAvailability = getAvailableReservationTimeOptions(
-    quickReserveContext.filial,
+    quickReserveContext.local,
     quickReserveContext.carro,
     quickReserveContext.dataIda,
     qDataVoltaInput.value,
@@ -186,10 +186,10 @@ qDestinoOutroInput.addEventListener('input', function(){
   setQError('destino', '');
 });
 
-function populateQDestinoOptions(filial){
+function populateQDestinoOptions(local){
   let html = '<option value="">Selecione...</option>';
   CIDADES.forEach(cidade => {
-    if(cidade === filial) return;
+    if(cidade === local) return;
     html += '<option value="' + cidade + '">' + cidade + '</option>';
   });
   html += '<option value="Outro">Outro</option>';
@@ -208,12 +208,12 @@ function openQuickReserveModal(dataIda, selectedRange){
   const info = getSelectedCarInfo();
   if(!info) return;
 
-  quickReserveContext = { filial: info.filial, carro: info.carro, dataIda: dataIda };
+  quickReserveContext = { local: info.local, carro: info.carro, dataIda: dataIda };
 
-  quickReserveSummary.innerHTML = getVehicleDisplayHTML({ partida:info.filial, carro:info.carro }) +
-    ' · Filial: ' + escapeHTML(info.filial) + ' — Data de ida: ' + escapeHTML(formatDate(dataIda));
+  quickReserveSummary.innerHTML = 'Origem: ' + escapeHTML(info.local) +
+    '<br>' + getVehicleDisplayHTML({ partida:info.local, carro:info.carro });
 
-  populateQDestinoOptions(info.filial);
+  populateQDestinoOptions(info.local);
   qDataVoltaInput.value = dataIda;
   qHorarioRetiradaSelect.value = '';
   qHorarioDevolucaoSelect.value = '';
@@ -295,7 +295,7 @@ quickReserveForm.addEventListener('submit', async function(e){
   const horarioRetirada = qHorarioRetiradaSelect.value;
   const horarioDevolucao = qHorarioDevolucaoSelect.value;
   const motivo = qMotivoInput.value.trim();
-  const vehicle = getVehicle(quickReserveContext.filial, quickReserveContext.carro);
+  const vehicle = getVehicle(quickReserveContext.local, quickReserveContext.carro);
   const validacaoPassageiros = validarListaPassageiros(currentUser.nome, qPassageirosWidget.getPassengers(), Math.max(0, Number(vehicle && vehicle.capacidade ? vehicle.capacidade : CAPACIDADE_MAXIMA) - 1));
   const dataIda = quickReserveContext.dataIda;
 
@@ -307,7 +307,7 @@ quickReserveForm.addEventListener('submit', async function(e){
     valid = false;
   }
 
-  if(destino && destino === quickReserveContext.filial){
+  if(destino && destino === quickReserveContext.local){
     setQError('destino', 'Destino deve ser diferente da partida.');
     valid = false;
   }
@@ -354,13 +354,13 @@ quickReserveForm.addEventListener('submit', async function(e){
   }
 
   if(valid && horarioRetirada && horarioDevolucao){
-    const conflitos = findConflictingReservations(quickReserveContext.filial, quickReserveContext.carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, null);
+    const conflitos = findConflictingReservations(quickReserveContext.local, quickReserveContext.carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, null);
     if(conflitos.length > 0){
       setQError('horarioRetirada', reservationConflictPrefix() + buildConflictMessage(conflitos));
       setQError('horarioDevolucao', 'Verifique o calendário: horários ocupados para este carro.');
       valid = false;
     }
-    const bloqueios = findVehicleBlocks(quickReserveContext.filial, quickReserveContext.carro, dataIda, dataVolta, null);
+    const bloqueios = findVehicleBlocks(quickReserveContext.local, quickReserveContext.carro, dataIda, dataVolta, null);
     if(bloqueios.length > 0){
       setQError('dataVolta', 'Veículo indisponível no período: ' + bloqueios.map(b => b.tipo).join(', ') + '.');
       valid = false;
@@ -374,7 +374,7 @@ quickReserveForm.addEventListener('submit', async function(e){
     criadorUsuarioId: currentUser.id,
     nome: currentUser.nome,
     email: '',
-    partida: quickReserveContext.filial,
+    partida: quickReserveContext.local,
     destino: destino,
     carro: quickReserveContext.carro,
     dataIda: dataIda,
@@ -884,29 +884,68 @@ document.addEventListener('keydown', function(e){
   }
 });
 
-createReservationRangePicker(
-  dataIdaInput,
-  dataVoltaInput,
-  document.getElementById('rangePickerTrigger'),
-  document.getElementById('reservationRangeCalendar'),
-  () => {
-    const unavailable = getCarReservedDates(partidaSelect.value, carroSelect.value);
-    const occupied = getCarOccupiedDates(partidaSelect.value, carroSelect.value);
-    if(!partidaSelect.value || !carroSelect.value) return { unavailable, occupied };
-    const rules = getReservationRules();
-    const endLimit = addDaysISO(todayISO(), rules.maxAdvanceDays + rules.maxConsecutiveDays);
-    findVehicleBlocks(partidaSelect.value, carroSelect.value, todayISO(), endLimit, null).forEach(block => {
-      eachDateISOInRange(block.dataInicio, block.dataFim, iso => {
-        unavailable.add(iso);
-        occupied.add(iso);
-      });
-    });
-    return { unavailable, occupied };
+// Datas indisponíveis para o carro selecionado (bloqueios + reservas já
+// existentes) - usado tanto para a ida quanto como base para a volta.
+function getReservaFormUnavailableDates(){
+  const unavailable = getCarReservedDates(partidaSelect.value, carroSelect.value);
+  if(!partidaSelect.value || !carroSelect.value) return unavailable;
+  const rules = getReservationRules();
+  const endLimit = addDaysISO(todayISO(), rules.maxAdvanceDays + rules.maxConsecutiveDays);
+  findVehicleBlocks(partidaSelect.value, carroSelect.value, todayISO(), endLimit, null).forEach(block => {
+    eachDateISOInRange(block.dataInicio, block.dataFim, iso => unavailable.add(iso));
+  });
+  return unavailable;
+}
+
+// Além dos dias já indisponíveis, qualquer data de volta cujo intervalo
+// [ida, volta] atravesse um dia indisponível também fica bloqueada - mesma
+// proteção que o antigo seletor de período dava ao desabilitar esses dias.
+function getReservaFormBlockedForVolta(){
+  if(!dataIdaInput.value) return new Set();
+  const unavailable = getReservaFormUnavailableDates();
+  const rules = getReservationRules();
+  const maxEnd = addDaysISO(dataIdaInput.value, rules.maxConsecutiveDays - 1);
+  const blocked = new Set();
+  let crossed = false;
+  let cursor = dataIdaInput.value;
+  while(cursor <= maxEnd){
+    if(unavailable.has(cursor)) crossed = true;
+    if(crossed) blocked.add(cursor);
+    cursor = addDaysISO(cursor, 1);
   }
-);
+  return blocked;
+}
+
+createDatePicker(dataIdaInput, document.getElementById('wrap-dataIda'), getReservaFormUnavailableDates, {
+  title:'Escolha a ida',
+  subtitle:() => 'Até ' + getReservationRules().maxAdvanceDays + ' dias de antecedência',
+  getMaxDate:() => addDaysISO(todayISO(), getReservationRules().maxAdvanceDays),
+  blockedLegend:'Indisponível para este carro'
+});
+
+createDatePicker(dataVoltaInput, document.getElementById('wrap-dataVolta'), getReservaFormBlockedForVolta, {
+  title:'Escolha a volta',
+  subtitle:() => dataIdaInput.value
+    ? 'Até ' + getReservationRules().maxConsecutiveDays + ' dias consecutivos'
+    : 'Escolha a data de ida primeiro',
+  getMinDate:() => dataIdaInput.value || todayISO(),
+  getMaxDate:() => dataIdaInput.value
+    ? addDaysISO(dataIdaInput.value, getReservationRules().maxConsecutiveDays - 1)
+    : null,
+  blockedLegend:'Indisponível para este carro'
+});
+
+dataIdaInput.addEventListener('change', function(){
+  if(dataVoltaInput.value && (dataVoltaInput.value < this.value || getReservaFormBlockedForVolta().has(dataVoltaInput.value))){
+    dataVoltaInput.value = '';
+    dataVoltaInput.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+  refreshDatePickers();
+});
+
 createDatePicker(qDataVoltaInput, document.getElementById('wrap-qDataVolta'), () => {
   if(!quickReserveContext) return new Set();
-  return getCarReservedDates(quickReserveContext.filial, quickReserveContext.carro);
+  return getCarReservedDates(quickReserveContext.local, quickReserveContext.carro);
 }, {
   title:'Escolha a volta',
   subtitle:() => 'Até ' + getReservationRules().maxConsecutiveDays + ' dias consecutivos',
@@ -982,18 +1021,41 @@ function getAdminUnavailableDates(){
 
 const adminStartDatePickerInput = document.getElementById('aDataIda');
 const adminEndDatePickerInput = document.getElementById('aDataVolta');
-createReservationRangePicker(
-  adminStartDatePickerInput,
-  adminEndDatePickerInput,
-  document.getElementById('adminRangePickerTrigger'),
-  document.getElementById('adminReservationRangeCalendar'),
-  getAdminUnavailableDates,
-  {
-    startTitle:'Escolha a ida',
-    endTitle:'Escolha a volta',
-    emptyHint:'Selecione a ida e depois a volta.'
+
+function getAdminBlockedForVolta(){
+  if(!adminStartDatePickerInput.value) return new Set();
+  const unavailable = getAdminUnavailableDates();
+  const rules = getReservationRules();
+  const maxEnd = addDaysISO(adminStartDatePickerInput.value, rules.maxConsecutiveDays - 1);
+  const blocked = new Set();
+  let crossed = false;
+  let cursor = adminStartDatePickerInput.value;
+  while(cursor <= maxEnd){
+    if(unavailable.has(cursor)) crossed = true;
+    if(crossed) blocked.add(cursor);
+    cursor = addDaysISO(cursor, 1);
   }
-);
+  return blocked;
+}
+
+createDatePicker(adminStartDatePickerInput, document.getElementById('wrap-aDataIda'), getAdminUnavailableDates, {
+  title:'Escolha a ida',
+  subtitle:() => 'Até ' + getReservationRules().maxAdvanceDays + ' dias de antecedência',
+  getMaxDate:() => addDaysISO(todayISO(), getReservationRules().maxAdvanceDays),
+  blockedLegend:'Indisponível para este carro'
+});
+
+createDatePicker(adminEndDatePickerInput, document.getElementById('wrap-aDataVolta'), getAdminBlockedForVolta, {
+  title:'Escolha a volta',
+  subtitle:() => adminStartDatePickerInput.value
+    ? 'Até ' + getReservationRules().maxConsecutiveDays + ' dias consecutivos'
+    : 'Escolha a data de ida primeiro',
+  getMinDate:() => adminStartDatePickerInput.value || todayISO(),
+  getMaxDate:() => adminStartDatePickerInput.value
+    ? addDaysISO(adminStartDatePickerInput.value, getReservationRules().maxConsecutiveDays - 1)
+    : null,
+  blockedLegend:'Indisponível para este carro'
+});
 
 blockStartDateInput.addEventListener('change', function(){
   if(blockEndDateInput.value && blockEndDateInput.value < this.value){
@@ -1004,7 +1066,7 @@ blockStartDateInput.addEventListener('change', function(){
 });
 
 adminStartDatePickerInput.addEventListener('change', function(){
-  if(adminEndDatePickerInput.value && adminEndDatePickerInput.value < this.value){
+  if(adminEndDatePickerInput.value && (adminEndDatePickerInput.value < this.value || getAdminBlockedForVolta().has(adminEndDatePickerInput.value))){
     adminEndDatePickerInput.value = '';
     adminEndDatePickerInput.dispatchEvent(new Event('change', { bubbles:true }));
   }

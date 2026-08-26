@@ -9,9 +9,9 @@ Versão documentada: 1.0.0
 O CapriCar é um sistema interno para gestão e reserva de veículos corporativos.
 Ele centraliza:
 
-- reservas de veículos por filial, data e horário;
+- reservas de veículos por local, data e horário;
 - participação de passageiros em caronas;
-- cadastro de filiais e veículos;
+- cadastro de locais e veículos;
 - bloqueios por manutenção, revisão, documentação ou indisponibilidade;
 - retirada e devolução com quilometragem, combustível, fotos e avarias;
 - usuários, perfis e permissões;
@@ -49,7 +49,7 @@ Versão recomendada para uma nova instalação:
 - criação pelo formulário principal ou pelo calendário;
 - edição pelo criador antes da retirada;
 - cancelamento antes da retirada;
-- filial, destino, veículo, período, horários, motivo e responsável;
+- local, destino, veículo, período, horários, motivo e responsável;
 - passageiros confirmados;
 - somente horários compatíveis com reservas existentes;
 - prevenção de conflito de veículo e horário;
@@ -75,7 +75,7 @@ auditoria e relatórios.
 - controle de capacidade por veículo;
 - passageiro não pode cancelar ou editar a reserva do motorista.
 
-### 3.4 Filiais e veículos
+### 3.4 Locais e veículos
 
 - cadastro, edição, ativação e desativação;
 - identificação, placa, modelo e capacidade;
@@ -114,7 +114,7 @@ ser registrada. A quilometragem final não pode ser menor que a inicial.
 
 Filtros:
 
-- filial;
+- local;
 - veículo;
 - período;
 - usuário ou responsável.
@@ -145,7 +145,7 @@ administrador.
 | Criar e consultar as próprias reservas | Sim | Sim | Sim |
 | Entrar em caronas | Sim | Sim | Sim |
 | Gerenciar reservas | Opcional | Sim | Sim |
-| Gerenciar filiais e veículos | Opcional | Sim | Sim |
+| Gerenciar locais e veículos | Opcional | Sim | Sim |
 | Gerenciar bloqueios | Opcional | Sim | Sim |
 | Consultar relatórios | Opcional | Sim | Sim |
 | Alterar regras globais | Não | Não | Sim |
@@ -177,7 +177,7 @@ Outras regras:
 
 - devolução igual ou posterior à retirada;
 - no mesmo dia, devolução posterior à retirada;
-- veículo e filial ativos;
+- veículo e local ativos;
 - ocupantes dentro da capacidade;
 - reservas concluídas ou canceladas não geram conflito;
 - intervalos adjacentes são permitidos;
@@ -225,7 +225,7 @@ Scripts:
 - `js/management-operations.js`: retirada, devolução e fotos de operação;
 - `js/management-config.js`: navegação do painel e regras de reserva;
 - `js/management-users.js`: usuários e permissões;
-- `js/management-fleet.js`: filiais (`renderBranchManagement`) e veículos (`renderFleetManagement`), com permissões `branches`/`fleet` independentes;
+- `js/management-fleet.js`: locais (`renderBranchManagement`) e veículos (`renderFleetManagement`), com permissões `branches`/`fleet` independentes;
 - `js/management-blocks.js`: bloqueios da frota;
 - `js/management-reports.js`: auditoria e relatórios;
 - `js/xlsx-export.js`: Excel;

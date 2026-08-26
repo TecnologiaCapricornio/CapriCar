@@ -12,8 +12,8 @@ function renderBlocksManagement(){
   const blocks = getVehicleBlocks().slice().sort((a,b) => a.dataInicio.localeCompare(b.dataInicio));
   blocksList.innerHTML = blocks.length ? blocks.map(block =>
     '<div class="management-item block-item">' +
-      '<div><strong>' + escapeHTML(block.tipo) + ' · ' + escapeHTML(block.filial) + ' · ' +
-        getVehicleDisplayHTML({ partida:block.filial, carro:block.carro }) + '</strong>' +
+      '<div><strong>' + escapeHTML(block.tipo) + ' · ' + escapeHTML(block.local) + ' · ' +
+        getVehicleDisplayHTML({ partida:block.local, carro:block.carro }) + '</strong>' +
       '<small>' + formatDate(block.dataInicio) + ' até ' + formatDate(block.dataFim) + (block.observacoes ? ' · ' + escapeHTML(block.observacoes) : '') + '</small></div>' +
       '<button type="button" class="delete-btn block-delete-btn" data-id="' + escapeHTML(block.id) + '">Remover</button>' +
     '</div>'
@@ -25,7 +25,7 @@ function renderBlocksManagement(){
       const id = this.getAttribute('data-id');
       const old = getVehicleBlocks().find(b => String(b.id) === String(id));
       saveVehicleBlocks(getVehicleBlocks().filter(b => String(b.id) !== String(id)));
-      logAudit('removeu', 'bloqueio', id, old ? old.tipo + ' · ' + old.filial + ' · ' + old.carro : '');
+      logAudit('removeu', 'bloqueio', id, old ? old.tipo + ' · ' + old.local + ' · ' + old.carro : '');
       renderBlocksManagement();
       refreshDatePickers();
     });
@@ -49,7 +49,7 @@ if(blockForm){
     const splitAt = key.lastIndexOf('|');
     const block = {
       id: 'bloqueio-' + Date.now(),
-      filial: key.slice(0, splitAt),
+      local: key.slice(0, splitAt),
       carro: key.slice(splitAt + 1),
       tipo: document.getElementById('blockType').value,
       dataInicio: dataInicio,
@@ -59,7 +59,7 @@ if(blockForm){
     };
     const reservations = getReservations().filter(r =>
       !isReservationCompleted(r) &&
-      r.partida === block.filial && String(r.carro) === String(block.carro) &&
+      r.partida === block.local && String(r.carro) === String(block.carro) &&
       !(r.dataVolta < dataInicio || r.dataIda > dataFim)
     );
     if(reservations.length && !await showSiteConfirm(
@@ -86,7 +86,7 @@ if(blockForm){
       renderBlocksManagement();
       return;
     }
-    logAudit('bloqueou', 'veículo', block.id, block.tipo + ' · ' + block.filial + ' · ' + block.carro);
+    logAudit('bloqueou', 'veículo', block.id, block.tipo + ' · ' + block.local + ' · ' + block.carro);
     blockForm.reset();
     renderBlocksManagement();
     refreshDatePickers();

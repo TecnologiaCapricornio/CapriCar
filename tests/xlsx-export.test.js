@@ -22,7 +22,7 @@ function readStoredZip(bytes){
 
 test('gera um arquivo XLSX válido com acentos e valores preservados', () => {
   const bytes = buildXlsxWorkbook(
-    ['Filial', 'Combustível', 'Km rodados'],
+    ['Local', 'Combustível', 'Km rodados'],
     [['São Paulo', '1/2', 1250]],
     [18, 16, 14]
   );

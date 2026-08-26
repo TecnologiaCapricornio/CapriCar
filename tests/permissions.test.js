@@ -44,7 +44,7 @@ function loadPermissions() {
 test('administrador mantém acesso a todas as seções', () => {
   const app = loadPermissions();
   app.setCurrentUser({ nome: 'admin', role: 'admin', isAdmin: true });
-  ['reservas', 'filiais', 'veiculos', 'bloqueios', 'auditoria', 'relatorios', 'regras', 'usuarios'].forEach(section => {
+  ['reservas', 'locais', 'veiculos', 'bloqueios', 'auditoria', 'relatorios', 'regras', 'usuarios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
 });
@@ -58,7 +58,7 @@ test('Facilities acessa somente as quatro áreas permitidas', () => {
     role: 'facilities',
     permissions: { reservations: true, branches: true, fleet: true, blocks: true, reports: true }
   });
-  ['reservas', 'filiais', 'veiculos', 'bloqueios', 'relatorios'].forEach(section => {
+  ['reservas', 'locais', 'veiculos', 'bloqueios', 'relatorios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
   ['auditoria', 'regras', 'usuarios'].forEach(section => {

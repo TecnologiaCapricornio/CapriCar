@@ -226,7 +226,7 @@
 
 .permission-grid{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
   gap:9px;
 }
 
@@ -398,11 +398,6 @@
   cursor:not-allowed;
 }
 
-@media (max-width:520px){
-  .permission-grid{
-    grid-template-columns:1fr;
-  }
-}
 
 .table-wrap{
   overflow-x:auto;
@@ -610,6 +605,26 @@
   font-size:var(--fs-xs);
   font-weight:700;
   margin-top:4px;
+}
+
+.reservation-card-badges{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+  flex-shrink:0;
+}
+
+.operation-report-badge{
+  width:fit-content;
+  padding:4px 9px;
+  border-radius:999px;
+  border:1px solid rgba(235,178,72,.42);
+  background:rgba(235,178,72,.15);
+  color:#f2c263;
+  font-size:var(--fs-xs);
+  font-weight:700;
+  white-space:nowrap;
 }
 
 .operation-details{
