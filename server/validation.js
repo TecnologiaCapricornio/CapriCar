@@ -67,6 +67,12 @@ function text(value, label, max, required = true){
   return normalized;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(value){
+  return EMAIL_PATTERN.test(String(value || '').trim());
+}
+
 function validDate(value){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
   const date = new Date(`${value}T00:00:00Z`);
@@ -139,7 +145,7 @@ function validateVehicles(value, branches, currentVehicles){
     const legacyWithoutBrand = previous && !String(previous.marca || '').trim();
     text(vehicle.marca, 'a marca do veículo', 120, !legacyWithoutBrand);
     text(vehicle.modelo, 'o modelo do veículo', 120);
-    const plate = text(vehicle.placa, 'a placa do veículo', 10).toUpperCase();
+    const plate = text(vehicle.placa, 'a placa do veículo', 7).toUpperCase();
     assert(branchNames.has(branch.toLowerCase()), 'O veículo referencia uma filial inexistente.');
     assert(Number.isInteger(Number(vehicle.capacidade)) && Number(vehicle.capacidade) >= 1 && Number(vehicle.capacidade) <= 20,
       'A capacidade do veículo deve estar entre 1 e 20.');
@@ -378,5 +384,6 @@ module.exports = {
   validateVehicles,
   validateBlocks,
   validateReservations,
-  decodeImageDataUrl
+  decodeImageDataUrl,
+  isValidEmail
 };

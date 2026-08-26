@@ -110,7 +110,7 @@ function openVehicleDeleteModal(vehicleId){
   vehicleDeleteError.textContent = '';
   vehicleDeleteSummary.innerHTML =
     '<strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
-      (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</strong>' +
+      (vehicle.placa ? '<br>' + plateBadgeHTML(vehicle.placa) : '') + '</strong>' +
     '<small>' + escapeHTML(vehicle.filial) + '</small>';
   vehicleDeleteModal.classList.remove('hidden');
   vehicleDeleteJustification.focus();
@@ -429,7 +429,7 @@ function renderFleetManagement(){
   vehiclesList.innerHTML = vehicles.length ? vehicles.map(vehicle =>
     '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
       '<div><strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
-        (vehicle.placa ? ' · ' + escapeHTML(vehicle.placa) : '') + '</strong>' +
+        (vehicle.placa ? '<br>' + plateBadgeHTML(vehicle.placa) : '') + '</strong>' +
       '<small>' + escapeHTML(vehicle.filial) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
       '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
       '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +

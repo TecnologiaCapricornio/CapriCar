@@ -14,6 +14,7 @@ function renderAdminSection(section){
   if(section === 'auditoria') renderAuditLog();
   if(section === 'relatorios') renderReports();
   if(section === 'regras') renderReservationRules();
+  if(section === 'integracoes') renderIntegrationsManagement();
   if(section === 'usuarios') renderUserManagement();
 }
 

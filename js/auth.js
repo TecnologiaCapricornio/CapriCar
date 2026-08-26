@@ -27,7 +27,8 @@ function normalizeUserPermissions(permissions){
     reports:source.reports === true,
     audit:source.audit === true,
     rules:source.rules === true,
-    users:source.users === true
+    users:source.users === true,
+    integrations:source.integrations === true
   };
 }
 
@@ -36,6 +37,7 @@ function normalizeSystemUser(account){
     id:String(account.id || ('user-' + Date.now())),
     username:String(account.username || '').trim().toLowerCase(),
     nome:String(account.nome || account.username || '').trim(),
+    email:String(account.email || '').trim(),
     role:account.role === 'admin' ? 'admin' : (account.role === 'facilities' ? 'facilities' : 'user'),
     active:account.active !== false,
     authProvider:account.authProvider === 'entra' ? 'entra' : 'local',
@@ -72,7 +74,7 @@ function accountToSession(account){
     id:account.id,
     username:account.username,
     nome:account.nome,
-    email:'',
+    email:account.email || '',
     isAdmin:account.role === 'admin',
     role:account.role,
     permissions:normalizeUserPermissions(account.permissions)
@@ -96,7 +98,7 @@ function hasManagementPermission(permission){
 }
 
 function canAccessManagement(){
-  return isAdmin() || ['reservations', 'branches', 'fleet', 'blocks', 'reports', 'audit', 'rules', 'users'].some(hasManagementPermission);
+  return isAdmin() || ['reservations', 'branches', 'fleet', 'blocks', 'reports', 'audit', 'rules', 'users', 'integrations'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
@@ -131,6 +133,10 @@ function canManageUsers(){
   return hasManagementPermission('users');
 }
 
+function canManageIntegrations(){
+  return hasManagementPermission('integrations');
+}
+
 function canAccessAdminSection(section){
   if(isAdmin()) return true;
   const permissionBySection = {
@@ -141,7 +147,8 @@ function canAccessAdminSection(section){
     relatorios:'reports',
     auditoria:'audit',
     regras:'rules',
-    usuarios:'users'
+    usuarios:'users',
+    integracoes:'integrations'
   };
   return !!permissionBySection[section] && hasManagementPermission(permissionBySection[section]);
 }
@@ -168,7 +175,7 @@ const profileRole = document.getElementById('profileRole');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','filiais','veiculos','bloqueios','relatorios','auditoria','regras','usuarios'];
+  const orderedSections = ['reservas','filiais','veiculos','bloqueios','relatorios','auditoria','regras','integracoes','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');
@@ -313,6 +320,7 @@ if(typeof window !== 'undefined' && typeof URLSearchParams !== 'undefined'){
       sso_denied:'Login via Microsoft cancelado.',
       sso_state:'Sessão de login via Microsoft expirada. Tente novamente.',
       sso_conflict:'Já existe uma conta local com esse usuário. Fale com um administrador.',
+      sso_domain_denied:'Este domínio não tem acesso ao CapriCar.',
       sso_failed:'Não foi possível concluir o login via Microsoft.',
       sso_disabled:'Login via Microsoft não está configurado.'
     };

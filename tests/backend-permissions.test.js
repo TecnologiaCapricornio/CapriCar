@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { permissionsFromRow, requirePermission } = require('../server/auth');
 
-test('backend expõe as oito permissões do usuário', () => {
+test('backend expõe as nove permissões do usuário', () => {
   assert.deepEqual(permissionsFromRow({
     can_manage_reservations: true,
     can_manage_branches: false,
@@ -11,7 +11,8 @@ test('backend expõe as oito permissões do usuário', () => {
     can_view_reports: false,
     can_view_audit: true,
     can_manage_rules: true,
-    can_manage_users: false
+    can_manage_users: false,
+    can_manage_integrations: true
   }), {
     reservations: true,
     branches: false,
@@ -20,7 +21,8 @@ test('backend expõe as oito permissões do usuário', () => {
     reports: false,
     audit: true,
     rules: true,
-    users: false
+    users: false,
+    integrations: true
   });
 });
 

@@ -32,7 +32,7 @@
   .logo-img{
     height:56px;
     width:auto;
-    filter:drop-shadow(0 4px 10px rgba(111,168,216,0.35));
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   }
 
   .header-title{
@@ -93,7 +93,7 @@
   .tab-btn.active{
     background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
     color:#fff;
-    box-shadow:0 6px 16px rgba(58,106,149,0.4);
+    box-shadow:0 3px 8px rgba(58,106,149,0.22);
   }
 
   .header-right{
@@ -399,7 +399,7 @@
     border-color:#82bce7;
     background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
     color:#fff;
-    box-shadow:0 5px 14px rgba(58,106,149,.35);
+    box-shadow:0 2px 6px rgba(58,106,149,.2);
   }
 
   .time-picker-empty{
@@ -434,7 +434,7 @@
     background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
     border-color:transparent;
     color:#fff;
-    box-shadow:0 6px 16px rgba(58,106,149,0.4);
+    box-shadow:0 3px 8px rgba(58,106,149,0.22);
   }
 
   .reservation-view-tabs{
@@ -1052,6 +1052,52 @@
 
   .ride-card .reservation-vehicle{
     margin-top:-7px;
+  }
+
+  /* Badge visual da placa (formato/cores do padrão Mercosul, sem os
+     detalhes de "BRASIL"/bandeira/estrelas) - ver js/utils.js:plateBadgeHTML. */
+  .plate-badge{
+    display:inline-flex;
+    flex-direction:column;
+    width:68px;
+    flex-shrink:0;
+    margin-top:3px;
+    border:1.5px solid #000;
+    border-radius:5px;
+    overflow:hidden;
+    vertical-align:middle;
+    background:#fff;
+    line-height:1;
+  }
+
+  .plate-badge-top{
+    height:5px;
+    background:#003699;
+  }
+
+  .plate-badge-text{
+    display:block;
+    padding:2px 0 3px;
+    text-align:center;
+    font-family:'Arial Narrow', Arial, Helvetica, sans-serif;
+    font-weight:800;
+    font-size:11px;
+    letter-spacing:1px;
+    color:#000;
+  }
+
+  .plate-badge-sm{
+    width:52px;
+  }
+
+  .plate-badge-sm .plate-badge-top{
+    height:4px;
+  }
+
+  .plate-badge-sm .plate-badge-text{
+    font-size:9px;
+    letter-spacing:.5px;
+    padding:1px 0 2px;
   }
 
   .ride-meta{

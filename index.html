@@ -14,12 +14,12 @@
     href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="css/variables.css?v=20260729-2">
-  <link rel="stylesheet" href="css/base.css?v=20260825-1">
-  <link rel="stylesheet" href="css/components.css?v=20260825-2">
-  <link rel="stylesheet" href="css/calendar.css?v=20260825-1">
-  <link rel="stylesheet" href="css/admin.css?v=20260825-4">
+  <link rel="stylesheet" href="css/base.css?v=20260825-2">
+  <link rel="stylesheet" href="css/components.css?v=20260826-2">
+  <link rel="stylesheet" href="css/calendar.css?v=20260826-1">
+  <link rel="stylesheet" href="css/admin.css?v=20260826-2">
   <link rel="stylesheet" href="css/responsive.css?v=20260825-1">
-  <link rel="stylesheet" href="css/themes.css?v=20260825-1">
+  <link rel="stylesheet" href="css/themes.css?v=20260825-2">
 </head>
 
 <body>
@@ -198,18 +198,37 @@
 
             <div class="field range-picker-field mobile-reservation-step" id="field-dataIda" data-reservation-step="2">
               <label for="rangePickerTrigger">Período da reserva</label>
-              <button type="button" class="range-picker-trigger" id="rangePickerTrigger" aria-expanded="false">
-                <span class="range-picker-value">
-                  <span class="range-picker-caption">Ida</span>
-                  <strong id="rangeStartLabel">Selecionar data</strong>
-                </span>
-                <span class="range-picker-arrow">→</span>
-                <span class="range-picker-value">
-                  <span class="range-picker-caption">Volta</span>
-                  <strong id="rangeEndLabel">Selecionar data</strong>
-                </span>
-                <span class="range-picker-icon" aria-hidden="true">▦</span>
-              </button>
+              <div class="datetime-merged-grid">
+                <button type="button" class="range-picker-trigger" id="rangePickerTrigger" aria-expanded="false">
+                  <span class="range-picker-icon" aria-hidden="true">▦</span>
+                  <span class="range-picker-rows">
+                    <span class="range-picker-value">
+                      <span class="range-picker-caption">Ida</span>
+                      <strong id="rangeStartLabel">Selecionar data</strong>
+                    </span>
+                    <span class="range-picker-value">
+                      <span class="range-picker-caption">Volta</span>
+                      <strong id="rangeEndLabel">Selecionar data</strong>
+                    </span>
+                  </span>
+                </button>
+                <div class="datetime-merged-times">
+                  <div class="field" id="field-horarioRetirada">
+                    <label for="horarioRetirada">Horário de Retirada</label>
+                    <select id="horarioRetirada" name="horarioRetirada">
+                      <option value="">Selecione...</option>
+                    </select>
+                    <div class="error-msg" id="error-horarioRetirada"></div>
+                  </div>
+                  <div class="field" id="field-horarioDevolucao">
+                    <label for="horarioDevolucao">Horário de Devolução</label>
+                    <select id="horarioDevolucao" name="horarioDevolucao">
+                      <option value="">Selecione...</option>
+                    </select>
+                    <div class="error-msg" id="error-horarioDevolucao"></div>
+                  </div>
+                </div>
+              </div>
               <input type="hidden" id="dataIda" name="dataIda">
               <input type="hidden" id="dataVolta" name="dataVolta">
               <div class="reservation-range-calendar hidden" id="reservationRangeCalendar"></div>
@@ -217,23 +236,6 @@
               </div>
               <div class="error-msg" id="error-dataIda"></div>
               <div class="error-msg" id="error-dataVolta"></div>
-            </div>
-
-            <div class="row mobile-reservation-step" data-reservation-step="2">
-              <div class="field" id="field-horarioRetirada">
-                <label for="horarioRetirada">Horário de Retirada</label>
-                <select id="horarioRetirada" name="horarioRetirada">
-                  <option value="">Selecione...</option>
-                </select>
-                <div class="error-msg" id="error-horarioRetirada"></div>
-              </div>
-              <div class="field" id="field-horarioDevolucao">
-                <label for="horarioDevolucao">Horário de Devolução</label>
-                <select id="horarioDevolucao" name="horarioDevolucao">
-                  <option value="">Selecione...</option>
-                </select>
-                <div class="error-msg" id="error-horarioDevolucao"></div>
-              </div>
             </div>
 
             <div class="rodizio-warning hidden mobile-reservation-step" id="rodizioWarning" data-reservation-step="2"
@@ -434,6 +436,7 @@
             <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
             <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
             <button type="button" class="admin-section-btn" data-admin-section="regras">Regras</button>
+            <button type="button" class="admin-section-btn" data-admin-section="integracoes">Integrações</button>
             <button type="button" class="admin-section-btn" data-admin-section="usuarios">Usuários</button>
           </div>
 
@@ -503,7 +506,7 @@
                   </div>
                   <div class="field">
                     <label for="vehiclePlate">Placa</label>
-                    <input type="text" id="vehiclePlate" placeholder="ABC1D23" maxlength="10" autocomplete="off">
+                    <input type="text" id="vehiclePlate" placeholder="ABC1D23" maxlength="7" autocomplete="off">
                   </div>
                 </div>
                 <div class="row">
@@ -743,66 +746,237 @@
             </div>
           </div>
 
-          <div class="admin-section-panel hidden" id="admin-section-usuarios">
-            <div class="admin-grid user-management-grid">
-              <div class="admin-subcard">
-                <h3 id="userAccountFormTitle">Novo usuário</h3>
-                <form id="userAccountForm" class="compact-form" novalidate>
-                  <div class="field">
-                    <label for="userAccountName">Nome</label>
-                    <input type="text" id="userAccountName" placeholder="Nome do usuário" autocomplete="off">
-                  </div>
-                  <div class="field">
-                    <label for="userAccountUsername">Usuário de acesso</label>
-                    <input type="text" id="userAccountUsername" placeholder="Ex.: joao.silva" autocomplete="off">
-                  </div>
-                  <div class="field">
-                    <label for="userAccountPassword">Senha</label>
-                    <input type="password" id="userAccountPassword" placeholder="Mínimo de 8 caracteres"
-                      autocomplete="new-password">
-                    <div class="form-hint" id="userAccountPasswordHint">A senha é obrigatória no primeiro cadastro.
-                    </div>
-                  </div>
-                  <div class="field">
-                    <label>Permissões adicionais</label>
-                    <div class="permission-grid">
-                      <label class="permission-option"><input type="checkbox" id="permissionReservations">
-                        Reservas</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionBranches"> Filiais</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionFleet"> Veículos</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionAudit"> Auditoria</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionRules"> Regras</label>
-                      <label class="permission-option"><input type="checkbox" id="permissionUsers"> Usuários</label>
-                    </div>
-                    <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar
-                      carros.</div>
-                  </div>
-                  <div class="error-msg" id="userAccountError"></div>
-                  <div class="user-form-actions">
-                    <button type="button" class="secondary-btn hidden" id="userAccountCancelBtn">Cancelar
-                      edição</button>
-                    <button type="submit" class="submit-btn" id="userAccountSubmitBtn">Criar usuário</button>
-                  </div>
-                </form>
-              </div>
-              <div class="admin-subcard">
-                <div class="admin-subcard-header">
-                  <h3>Usuários cadastrados</h3>
-                  <button type="button" class="submit-btn sso-import-btn hidden" id="ssoImportBtn">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <rect x="1" y="1" width="9.5" height="9.5" fill="#f25022"></rect>
-                      <rect x="12.5" y="1" width="9.5" height="9.5" fill="#7fba00"></rect>
-                      <rect x="1" y="12.5" width="9.5" height="9.5" fill="#00a4ef"></rect>
-                      <rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#ffb900"></rect>
-                    </svg>
-                    Importar usuários do Entra ID
-                  </button>
+          <div class="admin-section-panel hidden" id="admin-section-integracoes">
+            <div class="admin-subcard">
+              <h3>Login via Microsoft (Entra ID)</h3>
+              <p class="rules-explanation">Substitui as variáveis ENTRA_* do .env — quando configurado aqui, estes
+                valores têm prioridade.</p>
+              <div class="form-hint" id="entraSsoSummary"></div>
+              <form id="entraSsoForm" class="compact-form">
+                <div class="field">
+                  <label for="entraTenantId">Tenant ID</label>
+                  <input type="text" id="entraTenantId" autocomplete="off" required>
                 </div>
-                <div id="userAccountsList" class="management-list"></div>
+                <div class="field">
+                  <label for="entraClientId">Client ID</label>
+                  <input type="text" id="entraClientId" autocomplete="off" required>
+                </div>
+                <div class="field">
+                  <label for="entraClientSecret">Client Secret</label>
+                  <input type="password" id="entraClientSecret" autocomplete="new-password"
+                    placeholder="Deixe em branco para manter o segredo atual">
+                </div>
+                <div class="field">
+                  <label for="entraRedirectUri">URI de redirecionamento</label>
+                  <input type="text" id="entraRedirectUri" autocomplete="off" required>
+                </div>
+                <div class="field">
+                  <label for="entraAllowedDomains">Domínios permitidos</label>
+                  <input type="text" id="entraAllowedDomains" autocomplete="off"
+                    placeholder="Ex.: capricornio.com.br">
+                  <div class="form-hint">Separe por vírgula para mais de um domínio. Deixe em branco para permitir
+                    qualquer domínio do tenant. Contas de e-mail fora desta lista não conseguem entrar nem ser
+                    importadas do Entra ID.</div>
+                </div>
+                <div class="error-msg" id="entraSsoError"></div>
+                <button type="submit" class="submit-btn">Salvar configuração do Entra ID</button>
+              </form>
+            </div>
+            &nbsp;
+            <div class="admin-subcard">
+              <h3>E-mail para envio (SMTP)</h3>
+              <div class="form-hint" id="smtpSummary"></div>
+              <form id="smtpForm" class="compact-form">
+                <div class="row">
+                  <div class="field">
+                    <label for="smtpHost">Host</label>
+                    <input type="text" id="smtpHost" autocomplete="off" required>
+                  </div>
+                  <div class="field">
+                    <label for="smtpPort">Porta</label>
+                    <input type="number" id="smtpPort" min="1" max="65535" required>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="smtpSecurity">Segurança</label>
+                  <select id="smtpSecurity">
+                    <option value="starttls">STARTTLS</option>
+                    <option value="ssl">SSL/TLS</option>
+                    <option value="none">Nenhuma</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="smtpUsername">Usuário</label>
+                  <input type="text" id="smtpUsername" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="smtpPassword">Senha</label>
+                  <input type="password" id="smtpPassword" autocomplete="new-password"
+                    placeholder="Deixe em branco para manter a senha atual">
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="smtpFromName">Nome do remetente</label>
+                    <input type="text" id="smtpFromName" autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label for="smtpFromAddress">E-mail do remetente</label>
+                    <input type="email" id="smtpFromAddress" autocomplete="off" required>
+                  </div>
+                </div>
+                <div class="error-msg" id="smtpError"></div>
+                <button type="submit" class="submit-btn">Salvar configuração de e-mail</button>
+              </form>
+              <div class="row">
+                <div class="field">
+                  <label for="smtpTestRecipient">Destinatário do teste</label>
+                  <input type="email" id="smtpTestRecipient" autocomplete="off" placeholder="seu.email@empresa.com">
+                </div>
+              </div>
+              <div class="user-form-actions">
+                <button type="button" class="secondary-btn" id="smtpTestBtn">Testar conexão</button>
+              </div>
+              <div class="error-msg" id="smtpTestError"></div>
+            </div>
+            &nbsp;
+            <div class="admin-subcard">
+              <h3>Lembretes automáticos por e-mail</h3>
+              <p class="rules-explanation">Tokens disponíveis nos campos abaixo: <code>{{nome}}</code>,
+                <code>{{numeroReserva}}</code>, <code>{{origem}}</code>, <code>{{destino}}</code>,
+                <code>{{dataIda}}</code>, <code>{{horarioRetirada}}</code>, <code>{{dataVolta}}</code>,
+                <code>{{horarioDevolucao}}</code>.
+              </p>
+              <form id="emailRemindersForm" class="compact-form">
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderUpcomingEnabled"> Lembrete de
+                    reserva próxima</label>
+                  <input type="text" id="reminderUpcomingSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderUpcomingBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderPickupEnabled"> Lembrete de
+                    retirada pendente</label>
+                  <input type="text" id="reminderPickupSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderPickupBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderReturnEnabled"> Lembrete de
+                    devolução pendente</label>
+                  <input type="text" id="reminderReturnSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderReturnBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                </div>
+                <div class="error-msg" id="emailRemindersError"></div>
+                <div class="user-form-actions">
+                  <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
+                    agora</button>
+                  <button type="submit" class="submit-btn">Salvar lembretes</button>
+                </div>
+              </form>
+            </div>
+            &nbsp;
+            <div class="admin-subcard">
+              <h3>Sincronização com o Calendário do Outlook</h3>
+              <p class="rules-explanation">Ao ligar esta opção, toda reserva criada ou editada por um usuário do
+                Entra ID ganha automaticamente um evento no calendário do Outlook dele (e some do calendário ao ser
+                cancelada). Exige a permissão de aplicativo <code>Calendars.ReadWrite</code> concedida com
+                consentimento de administrador no mesmo App Registration usado para o login via Microsoft.</p>
+              <form id="calendarSyncForm" class="compact-form">
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="calendarSyncEnabled"> Criar evento no
+                    calendário do Outlook ao confirmar uma reserva</label>
+                </div>
+                <div class="error-msg" id="calendarSyncError"></div>
+                <div class="user-form-actions">
+                  <button type="button" class="secondary-btn" id="calendarSyncTestBtn">Testar sincronização</button>
+                  <button type="submit" class="submit-btn">Salvar</button>
+                </div>
+              </form>
+              <div class="error-msg" id="calendarSyncTestError"></div>
+            </div>
+          </div>
+
+          <div class="admin-section-panel hidden" id="admin-section-usuarios">
+            <div class="admin-subcard">
+              <h3 id="userAccountFormTitle">Novo usuário</h3>
+              <form id="userAccountForm" class="compact-form" novalidate>
+                <div class="field">
+                  <label for="userAccountName">Nome</label>
+                  <input type="text" id="userAccountName" placeholder="Nome do usuário" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="userAccountUsername">Usuário de acesso</label>
+                  <input type="text" id="userAccountUsername" placeholder="Ex.: joao.silva" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="userAccountEmail">E-mail</label>
+                  <input type="email" id="userAccountEmail" placeholder="nome@empresa.com" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="userAccountPassword">Senha</label>
+                  <input type="password" id="userAccountPassword" placeholder="Mínimo de 8 caracteres"
+                    autocomplete="new-password">
+                  <div class="form-hint" id="userAccountPasswordHint">A senha é obrigatória no primeiro cadastro.
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Permissões adicionais</label>
+                  <div class="permission-grid">
+                    <label class="permission-option"><input type="checkbox" id="permissionReservations">
+                      Reservas</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionBranches"> Filiais</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionFleet"> Veículos</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionAudit"> Auditoria</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionRules"> Regras</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionUsers"> Usuários</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionIntegrations">
+                      Integrações</label>
+                  </div>
+                  <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar
+                    carros.</div>
+                </div>
+                <div class="error-msg" id="userAccountError"></div>
+                <div class="user-form-actions">
+                  <button type="button" class="secondary-btn hidden" id="userAccountCancelBtn">Cancelar
+                    edição</button>
+                  <button type="submit" class="submit-btn" id="userAccountSubmitBtn">Criar usuário</button>
+                </div>
+              </form>
+            </div>
+            &nbsp;
+            <div class="admin-subcard-header user-list-header">
+              <h3>Usuários cadastrados</h3>
+              <button type="button" class="submit-btn sso-import-btn hidden" id="ssoImportBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="1" y="1" width="9.5" height="9.5" fill="#f25022"></rect>
+                  <rect x="12.5" y="1" width="9.5" height="9.5" fill="#7fba00"></rect>
+                  <rect x="1" y="12.5" width="9.5" height="9.5" fill="#00a4ef"></rect>
+                  <rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#ffb900"></rect>
+                </svg>
+                Importar usuários do Entra ID
+              </button>
+            </div>
+            <div class="row admin-filter-row">
+              <div class="field">
+                <label for="userAccountsSearch">Buscar</label>
+                <input type="text" id="userAccountsSearch" placeholder="Filtrar por nome ou usuário"
+                  autocomplete="off">
               </div>
             </div>
+            <div class="user-bulk-toolbar" id="userBulkToolbar">
+              <label class="user-select-all-label">
+                <input type="checkbox" id="userSelectAllCheckbox">
+                <span id="userBulkCount">0 selecionado(s)</span>
+              </label>
+              <div class="user-bulk-actions">
+                <button type="button" class="secondary-btn" id="userBulkPermissionsBtn" disabled>Ajustar permissões</button>
+                <button type="button" class="secondary-btn" id="userBulkDeactivateBtn" disabled>Desativar</button>
+                <button type="button" class="delete-btn" id="userBulkDeleteBtn" disabled>Excluir</button>
+              </div>
+            </div>
+            <div id="userAccountsList" class="management-list"></div>
+            <div class="user-pagination" id="userPagination"></div>
           </div>
         </div>
   </div>
@@ -959,37 +1133,39 @@
         <div class="field range-picker-field mobile-admin-reservation-step" id="afield-dataIda"
           data-admin-reservation-step="2">
           <label for="adminRangePickerTrigger">Período da reserva</label>
-          <button type="button" class="range-picker-trigger" id="adminRangePickerTrigger" aria-expanded="false">
-            <span class="range-picker-value"><span class="range-picker-caption">Ida</span><strong
-                data-range-start-label>Selecionar data</strong></span>
-            <span class="range-picker-arrow">→</span>
-            <span class="range-picker-value"><span class="range-picker-caption">Volta</span><strong
-                data-range-end-label>Selecionar data</strong></span>
-            <span class="range-picker-icon" aria-hidden="true">▦</span>
-          </button>
+          <div class="datetime-merged-grid">
+            <button type="button" class="range-picker-trigger" id="adminRangePickerTrigger" aria-expanded="false">
+              <span class="range-picker-icon" aria-hidden="true">▦</span>
+              <span class="range-picker-rows">
+                <span class="range-picker-value"><span class="range-picker-caption">Ida</span><strong
+                    data-range-start-label>Selecionar data</strong></span>
+                <span class="range-picker-value"><span class="range-picker-caption">Volta</span><strong
+                    data-range-end-label>Selecionar data</strong></span>
+              </span>
+            </button>
+            <div class="datetime-merged-times">
+              <div class="field" id="afield-horarioRetirada">
+                <label for="aHorarioRetirada">Horário de Retirada</label>
+                <select id="aHorarioRetirada">
+                  <option value="">Selecione...</option>
+                </select>
+                <div class="error-msg" id="error-aHorarioRetirada"></div>
+              </div>
+              <div class="field" id="afield-horarioDevolucao">
+                <label for="aHorarioDevolucao">Horário de Devolução</label>
+                <select id="aHorarioDevolucao">
+                  <option value="">Selecione...</option>
+                </select>
+                <div class="error-msg" id="error-aHorarioDevolucao"></div>
+              </div>
+            </div>
+          </div>
           <input type="hidden" id="aDataIda">
           <input type="hidden" id="aDataVolta">
           <div class="reservation-range-calendar hidden" id="adminReservationRangeCalendar"></div>
           <div class="range-picker-hint" data-range-hint>Selecione a ida e depois a volta.</div>
           <div class="error-msg" id="error-aDataIda"></div>
           <div class="error-msg" id="error-aDataVolta"></div>
-        </div>
-
-        <div class="row mobile-admin-reservation-step" data-admin-reservation-step="2">
-          <div class="field" id="afield-horarioRetirada">
-            <label for="aHorarioRetirada">Horário de Retirada</label>
-            <select id="aHorarioRetirada">
-              <option value="">Selecione...</option>
-            </select>
-            <div class="error-msg" id="error-aHorarioRetirada"></div>
-          </div>
-          <div class="field" id="afield-horarioDevolucao">
-            <label for="aHorarioDevolucao">Horário de Devolução</label>
-            <select id="aHorarioDevolucao">
-              <option value="">Selecione...</option>
-            </select>
-            <div class="error-msg" id="error-aHorarioDevolucao"></div>
-          </div>
         </div>
 
         <div class="rodizio-warning hidden mobile-admin-reservation-step" id="aRodizioWarning"
@@ -1041,7 +1217,7 @@
           </div>
           <div class="field">
             <label for="fleetEditVehiclePlate">Placa</label>
-            <input type="text" id="fleetEditVehiclePlate" placeholder="ABC1D23" maxlength="10" autocomplete="off">
+            <input type="text" id="fleetEditVehiclePlate" placeholder="ABC1D23" maxlength="7" autocomplete="off">
           </div>
           <div class="row">
             <div class="field">
@@ -1091,6 +1267,40 @@
         <div class="fleet-edit-actions">
           <button type="button" class="secondary-btn" id="userDeleteCancelBtn">Cancelar</button>
           <button type="submit" class="danger-btn" id="userDeleteSubmitBtn">Excluir definitivamente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="userBulkPermissionsModal">
+    <div class="modal-card user-delete-card" role="dialog" aria-modal="true" aria-labelledby="userBulkPermissionsTitle">
+      <button type="button" class="modal-close" id="userBulkPermissionsCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="userBulkPermissionsTitle">Ajustar permissões em massa</h3>
+      <p>
+        As permissões marcadas abaixo substituirão as permissões atuais de todos os usuários selecionados.
+      </p>
+      <div class="quick-reserve-summary user-delete-summary" id="userBulkPermissionsSummary"></div>
+      <form id="userBulkPermissionsForm" novalidate>
+        <div class="field">
+          <label>Permissões</label>
+          <div class="permission-grid">
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionReservations">
+              Reservas</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionBranches"> Filiais</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionBlocks"> Bloqueios</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionAudit"> Auditoria</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionRules"> Regras</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionIntegrations">
+              Integrações</label>
+          </div>
+        </div>
+        <div class="error-msg" id="userBulkPermissionsError"></div>
+        <div class="fleet-edit-actions">
+          <button type="button" class="secondary-btn" id="userBulkPermissionsCancelBtn">Cancelar</button>
+          <button type="submit" class="submit-btn" id="userBulkPermissionsSubmitBtn">Aplicar a todos</button>
         </div>
       </form>
     </div>
@@ -1224,24 +1434,25 @@
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
   <script src="js/config.js?v=20260805-7"></script>
   <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260805-10"></script>
+  <script src="js/utils.js?v=20260826-1"></script>
   <script src="js/dialogs.js?v=20260804-1"></script>
   <script src="js/api.js?v=20260810-1"></script>
-  <script src="js/storage.js?v=20260810-1"></script>
+  <script src="js/storage.js?v=20260826-2"></script>
   <script src="js/notifications.js?v=20260805-2"></script>
-  <script src="js/rides.js?v=20260805-12"></script>
-  <script src="js/reservations.js?v=20260810-1"></script>
-  <script src="js/calendar.js?v=20260805-1"></script>
-  <script src="js/modals.js?v=20260825-1"></script>
-  <script src="js/admin.js?v=20260825-1"></script>
+  <script src="js/rides.js?v=20260826-1"></script>
+  <script src="js/reservations.js?v=20260826-1"></script>
+  <script src="js/calendar.js?v=20260826-1"></script>
+  <script src="js/modals.js?v=20260826-1"></script>
+  <script src="js/admin.js?v=20260826-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260824-1"></script>
-  <script src="js/management-config.js?v=20260825-1"></script>
-  <script src="js/management-users.js?v=20260825-2"></script>
-  <script src="js/management-fleet.js?v=20260825-1"></script>
-  <script src="js/management-blocks.js?v=20260824-1"></script>
-  <script src="js/management-reports.js?v=20260825-2"></script>
-  <script src="js/auth.js?v=20260825-2"></script>
+  <script src="js/management-config.js?v=20260826-1"></script>
+  <script src="js/management-users.js?v=20260826-2"></script>
+  <script src="js/management-integrations.js?v=20260826-3"></script>
+  <script src="js/management-fleet.js?v=20260826-2"></script>
+  <script src="js/management-blocks.js?v=20260826-1"></script>
+  <script src="js/management-reports.js?v=20260826-1"></script>
+  <script src="js/auth.js?v=20260826-2"></script>
   <script src="js/app.js?v=20260805-4"></script>
 
 </body>

@@ -65,10 +65,10 @@ router.get('/bootstrap', async (req, res) => {
 
   const usersResult = userCanManage(req.user, 'users')
     ? await query(
-      `SELECT id, username, display_name AS nome, role, active,
+      `SELECT id, username, display_name AS nome, email, role, active, auth_provider,
               can_manage_reservations, can_manage_branches, can_manage_fleet,
               can_manage_blocks, can_view_reports, can_view_audit,
-              can_manage_rules, can_manage_users
+              can_manage_rules, can_manage_users, can_manage_integrations
          FROM users
         WHERE deleted_at IS NULL
         ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`
@@ -86,8 +86,10 @@ router.get('/bootstrap', async (req, res) => {
     id:row.id,
     username:row.username,
     nome:row.nome,
+    email:row.email || '',
     role:row.role,
     active:row.active,
+    authProvider:row.auth_provider || 'local',
     permissions:{
       reservations:row.can_manage_reservations,
       branches:row.can_manage_branches,
@@ -96,7 +98,8 @@ router.get('/bootstrap', async (req, res) => {
       reports:row.can_view_reports,
       audit:row.can_view_audit,
       rules:row.can_manage_rules,
-      users:row.can_manage_users
+      users:row.can_manage_users,
+      integrations:row.can_manage_integrations
     }
   }));
 

@@ -64,6 +64,13 @@ function reservationStart(reservation){
   return Number.isFinite(value) ? value : null;
 }
 
+function reservationEnd(reservation){
+  const date = String(reservation && reservation.dataVolta || '');
+  const time = String(reservation && reservation.horarioDevolucao || '');
+  const value = Date.parse(`${date}T${time}:00-03:00`);
+  return Number.isFinite(value) ? value : null;
+}
+
 function reservationIsCompleted(reservation){
   const status = normalizeName(reservation && reservation.status)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -252,5 +259,13 @@ module.exports = {
   generateUserReminders,
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
-  reminderTypesForReservation
+  reminderTypesForReservation,
+  reservationStart,
+  reservationEnd,
+  reservationIsCompleted,
+  reservationSummary,
+  resolveReservationUsers,
+  userParticipates,
+  userOwnsReservation,
+  normalizeName
 };

@@ -10,6 +10,8 @@ const catalogRoutes = require('./routes/catalog');
 const stateRoutes = require('./routes/state');
 const notificationRoutes = require('./routes/notifications');
 const reservationRoutes = require('./routes/reservations');
+const settingsRoutes = require('./routes/settings');
+const { sweepEmailReminders } = require('./reminders');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -58,6 +60,7 @@ app.use('/api/catalog', requireAuth, catalogRoutes);
 app.use('/api/state', requireAuth, stateRoutes);
 app.use('/api/notifications', requireAuth, notificationRoutes);
 app.use('/api/reservations', requireAuth, reservationRoutes);
+app.use('/api/settings', requireAuth, settingsRoutes);
 
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));
@@ -93,11 +96,33 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error:'Erro interno do servidor.' });
 });
 
+const REMINDER_SWEEP_INTERVAL_MS = 15 * 60 * 1000;
+let sweepRunning = false;
+
+async function runReminderSweep(){
+  if(sweepRunning) return;
+  sweepRunning = true;
+  try{
+    const summary = await sweepEmailReminders();
+    if(summary.sent || summary.failed){
+      console.log('Lembretes por e-mail:', summary);
+    }
+  }catch(error){
+    console.error('Falha na varredura de lembretes por e-mail:', error);
+  }finally{
+    sweepRunning = false;
+  }
+}
+
 const server = app.listen(config.port, '127.0.0.1', () => {
   console.log('CapriCar disponível em http://localhost:' + config.port);
+  runReminderSweep();
 });
 
+const reminderSweepTimer = setInterval(runReminderSweep, REMINDER_SWEEP_INTERVAL_MS);
+
 async function shutdown(){
+  clearInterval(reminderSweepTimer);
   server.close(async () => {
     await closePool();
     process.exit(0);

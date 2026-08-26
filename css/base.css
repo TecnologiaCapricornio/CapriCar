@@ -64,7 +64,7 @@
     height:75px;
     width:auto;
     margin-bottom:14px;
-    filter:drop-shadow(0 0 14px rgba(59,130,246,0.65)) drop-shadow(0 0 30px rgba(59,130,246,0.4));
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));
   }
 
   .login-card h1{
@@ -266,13 +266,13 @@
     justify-content:center;
     gap:8px;
     transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
-    box-shadow:0 10px 25px rgba(58,106,149,0.4);
+    box-shadow:0 4px 10px rgba(58,106,149,0.22);
   }
 
   button.submit-btn:hover{
     filter:brightness(1.12);
     transform:translateY(-1px) scale(1.01);
-    box-shadow:0 14px 32px rgba(58,106,149,0.5);
+    box-shadow:0 6px 14px rgba(58,106,149,0.3);
   }
 
   button.submit-btn:active{

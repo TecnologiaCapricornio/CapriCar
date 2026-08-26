@@ -500,6 +500,23 @@ async function listAllReservations(executor){
   return data.rows.map(row => fullDto(row, data));
 }
 
+// Usados só pela sincronização com o calendário do Outlook (server/calendar-sync.js) -
+// o id do evento no Graph é um detalhe interno, nunca exposto em fullDto/publicDto.
+async function getReservationGraphEventId(client, legacyId){
+  const result = await client.query(
+    'SELECT graph_event_id FROM reservations WHERE legacy_id = $1',
+    [String(legacyId)]
+  );
+  return result.rows[0] ? result.rows[0].graph_event_id : null;
+}
+
+async function setReservationGraphEventId(client, legacyId, graphEventId){
+  await client.query(
+    'UPDATE reservations SET graph_event_id = $2 WHERE legacy_id = $1',
+    [String(legacyId), graphEventId]
+  );
+}
+
 async function cancelReservation(client, legacyId, actor){
   const result = await client.query(
     `UPDATE reservations
@@ -565,6 +582,8 @@ module.exports = {
   listAllReservations,
   persistReservation,
   cancelReservation,
+  getReservationGraphEventId,
+  setReservationGraphEventId,
   getPhotoForUser,
   migrateLegacyReservations,
   normalizeName,

@@ -11,7 +11,10 @@ const nodeGlobals = {
   fetch:'readonly',
   TextDecoder:'readonly',
   setTimeout:'readonly',
-  clearTimeout:'readonly'
+  clearTimeout:'readonly',
+  setInterval:'readonly',
+  clearInterval:'readonly',
+  URL:'readonly'
 };
 
 module.exports = [

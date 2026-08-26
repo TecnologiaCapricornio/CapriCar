@@ -273,6 +273,7 @@ function buildReservationEvent(reservation, iso){
   // exigem por volta de 90px; abaixo disso o texto sobrepoe.
   const densityClass = layout.height < 90 ? ' is-short' : (layout.height < 150 ? ' is-medium' : ' is-detailed');
   const vehicleName = getVehicleDisplayName(reservation);
+  const vehicleHTML = getVehicleDisplayHTML(reservation, true);
   const occupancy = getOcupantes(reservation) + '/' + getVehicleCapacity(reservation) + ' ocupantes';
   const reason = reservation.motivo || 'Motivo não informado';
   const accessibleSummary = (getReservationNumberLabel(reservation) ? getReservationNumberLabel(reservation) + '. ' : '') +
@@ -286,7 +287,7 @@ function buildReservationEvent(reservation, iso){
       (getReservationNumberLabel(reservation) ? '<span class="calendar-event-id">' + escapeHTML(getReservationNumberLabel(reservation)) + '</span>' : '') +
       '<span class="calendar-event-time">' + RESERVATION_CLOCK_ICON + '<strong>' + escapeHTML(layout.label) + '</strong></span>' +
       '<span class="calendar-event-route">' + escapeHTML(reservation.partida) + ' → ' + escapeHTML(reservation.destino || 'Reserva') + '</span>' +
-      '<small class="calendar-event-vehicle">' + escapeHTML(vehicleName) + '</small>' +
+      '<small class="calendar-event-vehicle">' + vehicleHTML + '</small>' +
       '<small class="calendar-event-requester">Reservado por: ' + escapeHTML(reservation.nome || 'Não informado') + '</small>' +
     '</button>';
 }
@@ -841,7 +842,7 @@ function showDayDetails(iso, focusReservationId){
             '<div>' +
               '<div class="reservation-route">' + renderReservationNumber(reservation) + escapeHTML(reservation.partida) + ' &rarr; ' +
                 escapeHTML(reservation.destino) + '</div>' +
-              '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(reservation)) + '</div>' +
+              '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reservation) + '</div>' +
             '</div>' +
             '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
           '</div>' +
