@@ -63,7 +63,8 @@ function permissionsFromRow(row){
     reports:row.can_view_reports === true,
     audit:row.can_view_audit === true,
     rules:row.can_manage_rules === true,
-    users:row.can_manage_users === true
+    users:row.can_manage_users === true,
+    integrations:row.can_manage_integrations === true
   };
 }
 
@@ -72,6 +73,7 @@ function publicUser(row){
     id:row.id,
     username:row.username,
     nome:row.display_name,
+    email:row.email || '',
     role:row.role,
     active:row.active,
     authProvider:row.auth_provider || 'local',

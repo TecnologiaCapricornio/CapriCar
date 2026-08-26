@@ -1,8 +1,8 @@
 const express = require('express');
-const { ssoConfig, appConfig } = require('../config');
+const { appConfig } = require('../config');
 const { createSessionToken } = require('../security');
 const { parseCookies, issueSession } = require('../auth');
-const { getAuthCodeUrl, acquireTokenFromCode, resolveOrCreateSsoUser } = require('../sso');
+const { getAuthCodeUrl, acquireTokenFromCode, resolveOrCreateSsoUser, resolveSsoConfig } = require('../sso');
 
 const router = express.Router();
 const STATE_COOKIE = 'capricar_sso_state';
@@ -17,13 +17,13 @@ function stateCookieOptions(){
   };
 }
 
-router.get('/status', (req, res) => {
-  const config = ssoConfig();
+router.get('/status', async (req, res) => {
+  const config = await resolveSsoConfig();
   res.json({ enabled:config.enabled, graphImportEnabled:config.enabled });
 });
 
 router.get('/login', async (req, res) => {
-  if(!ssoConfig().enabled){
+  if(!(await resolveSsoConfig()).enabled){
     return res.status(503).json({ error:'Login via Microsoft não está configurado.' });
   }
   try{
@@ -40,7 +40,7 @@ router.get('/login', async (req, res) => {
 router.get('/callback', async (req, res) => {
   const clearStateCookie = () => res.clearCookie(STATE_COOKIE, { ...stateCookieOptions(), maxAge:undefined });
 
-  if(!ssoConfig().enabled){
+  if(!(await resolveSsoConfig()).enabled){
     clearStateCookie();
     return res.redirect('/?error=sso_disabled');
   }
@@ -72,6 +72,9 @@ router.get('/callback', async (req, res) => {
     await issueSession(res, user.id);
     res.redirect('/');
   }catch(error){
+    if(error.code === 'DOMAIN_DENIED'){
+      return res.redirect('/?error=sso_domain_denied');
+    }
     console.error('Falha no callback SSO:', error);
     res.redirect('/?error=sso_failed');
   }

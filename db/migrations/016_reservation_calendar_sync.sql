@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS graph_event_id VARCHAR(200);
+
+COMMIT;

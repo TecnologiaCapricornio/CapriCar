@@ -376,7 +376,7 @@ function renderReservationItem(res, opts){
       '<div class="reservation-card-top">' +
         '<div>' +
           '<div class="reservation-route">' + renderReservationNumber(res) + escapeHTML(res.partida) + ' &rarr; ' + escapeHTML(res.destino) + '</div>' +
-          '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(res)) + '</div>' +
+          '<div class="reservation-vehicle">' + getVehicleDisplayHTML(res) + '</div>' +
         '</div>' +
         '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
       '</div>' +

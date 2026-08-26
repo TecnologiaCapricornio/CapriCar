@@ -13,7 +13,7 @@ function renderBlocksManagement(){
   blocksList.innerHTML = blocks.length ? blocks.map(block =>
     '<div class="management-item block-item">' +
       '<div><strong>' + escapeHTML(block.tipo) + ' · ' + escapeHTML(block.filial) + ' · ' +
-        escapeHTML(getVehicleDisplayName({ partida:block.filial, carro:block.carro })) + '</strong>' +
+        getVehicleDisplayHTML({ partida:block.filial, carro:block.carro }) + '</strong>' +
       '<small>' + formatDate(block.dataInicio) + ' até ' + formatDate(block.dataFim) + (block.observacoes ? ' · ' + escapeHTML(block.observacoes) : '') + '</small></div>' +
       '<button type="button" class="delete-btn block-delete-btn" data-id="' + escapeHTML(block.id) + '">Remover</button>' +
     '</div>'

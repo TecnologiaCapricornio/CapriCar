@@ -314,7 +314,7 @@ function renderRideCard(reserva){
   card.innerHTML =
       '<div class="ride-info">' +
       '<div class="ride-route">' + renderReservationNumber(reserva) + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
-      '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(reserva)) + '</div>' +
+      '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
       '<div class="ride-driver">Reservado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
       '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + ' (' + ocupantes + '/' + capacidade + ')</span></div>' +
@@ -518,7 +518,7 @@ function renderAvailableRideCard(reserva){
   card.innerHTML =
       '<div class="ride-info">' +
       '<div class="ride-route">' + renderReservationNumber(reserva) + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
-      '<div class="reservation-vehicle">' + escapeHTML(getVehicleDisplayName(reserva)) + '</div>' +
+      '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
       '<div class="ride-driver">Criado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
       '<div class="ride-occupants-badge">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +

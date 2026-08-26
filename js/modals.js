@@ -25,8 +25,8 @@ function openJoinConfirmModal(id, origin){
 
   joinConfirmContext = { id: id, origin: origin };
 
-  joinConfirmRoute.textContent = reserva.partida + ' → ' + reserva.destino + ' · ' +
-    getVehicleDisplayName(reserva) + ' · ' + formatDate(reserva.dataIda) + ' a ' + formatDate(reserva.dataVolta);
+  joinConfirmRoute.innerHTML = escapeHTML(reserva.partida) + ' → ' + escapeHTML(reserva.destino) + ' · ' +
+    getVehicleDisplayHTML(reserva) + ' · ' + escapeHTML(formatDate(reserva.dataIda)) + ' a ' + escapeHTML(formatDate(reserva.dataVolta));
   joinConfirmOccupants.innerHTML = renderOcupantesHTML(reserva);
 
   joinConfirmModal.classList.remove('hidden');
@@ -210,8 +210,8 @@ function openQuickReserveModal(dataIda, selectedRange){
 
   quickReserveContext = { filial: info.filial, carro: info.carro, dataIda: dataIda };
 
-  quickReserveSummary.textContent = getVehicleDisplayName({ partida:info.filial, carro:info.carro }) +
-    ' · Filial: ' + info.filial + ' — Data de ida: ' + formatDate(dataIda);
+  quickReserveSummary.innerHTML = getVehicleDisplayHTML({ partida:info.filial, carro:info.carro }) +
+    ' · Filial: ' + escapeHTML(info.filial) + ' — Data de ida: ' + escapeHTML(formatDate(dataIda));
 
   populateQDestinoOptions(info.filial);
   qDataVoltaInput.value = dataIda;

@@ -219,7 +219,7 @@ function renderReports(){
       '<td><strong>' + escapeHTML(getReservationNumberLabel(r)) + '</strong></td>' +
       '<td>' + formatDate(r.dataIda) + ' – ' + formatDate(r.dataVolta) + '</td>' +
       '<td>' + escapeHTML(r.partida) + '</td>' +
-      '<td>' + escapeHTML(getVehicleDisplayName(r)) + '</td>' +
+      '<td>' + getVehicleDisplayHTML(r) + '</td>' +
       '<td>' + escapeHTML(r.nome) + '</td>' +
       '<td>' + escapeHTML(r.motivo || '') + '</td>' +
       '<td>' + reservationKm(r).toLocaleString('pt-BR') + '</td>' +

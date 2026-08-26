@@ -1,5 +1,5 @@
 const express = require('express');
-const { withTransaction } = require('../db');
+const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
 const {
   canViewAllReservations,
@@ -7,6 +7,7 @@ const {
   listAllReservations,
   persistReservation,
   cancelReservation,
+  getReservationGraphEventId,
   getPhotoForUser,
   normalizeName
 } = require('../reservations-store');
@@ -15,6 +16,7 @@ const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions
 } = require('../notifications');
+const { createOrUpdateCalendarEvent, deleteCalendarEvent, resolveCalendarOwner } = require('../calendar-sync');
 
 const router = express.Router();
 
@@ -126,6 +128,7 @@ router.post('/sync', async (req, res) => {
   }
   const manager = canViewAllReservations(req.user) &&
     (req.user.role === 'admin' || !!(req.user.permissions && req.user.permissions.reservations));
+  const calendarSyncTasks = [];
 
   await withTransaction(async client => {
     const current = await listAllReservations(client);
@@ -166,6 +169,7 @@ router.post('/sync', async (req, res) => {
 
     for(const change of prepared){
       if(change.type === 'delete'){
+        const graphEventId = await getReservationGraphEventId(client, change.id);
         await notifyReservationCancellation(client, change.previous, req.user);
         await cancelReservation(client, change.id, req.user);
         await client.query(
@@ -175,7 +179,15 @@ router.post('/sync', async (req, res) => {
             description:`Reserva #${change.previous.numeroReserva || change.id} cancelada`
           })]
         );
+        if(graphEventId){
+          calendarSyncTasks.push({
+            type:'delete',
+            graphEventId,
+            criadorUsuarioId:change.previous.criadorUsuarioId
+          });
+        }
       }else{
+        const previousGraphEventId = await getReservationGraphEventId(client, change.reservation.id);
         await notifyReservationPassengerAdditions(client, change.previous, change.reservation, req.user);
         const saved = await persistReservation(client, change.reservation, req.user);
         await client.query(
@@ -185,12 +197,37 @@ router.post('/sync', async (req, res) => {
             description:`Reserva #${saved.reservationNumber} ${change.previous ? 'editada' : 'criada'}`
           })]
         );
+        calendarSyncTasks.push({
+          type:'upsert',
+          legacyId:saved.legacyId,
+          reservation:change.reservation,
+          previousGraphEventId
+        });
       }
     }
   });
 
   res.setHeader('Cache-Control', 'no-store');
   res.json({ ok:true, reservations:await listReservationsForUser(req.user) });
+
+  // Roda depois que a transação já foi confirmada e a resposta já foi enviada -
+  // a sincronização com o calendário do Outlook é só uma comodidade extra e
+  // nunca deve atrasar nem bloquear a criação/edição/cancelamento da reserva.
+  for(const task of calendarSyncTasks){
+    try{
+      if(task.type === 'delete'){
+        const upn = await resolveCalendarOwner(task.criadorUsuarioId);
+        if(upn) await deleteCalendarEvent(upn, task.graphEventId);
+      }else{
+        const newEventId = await createOrUpdateCalendarEvent(task.reservation, task.previousGraphEventId);
+        if(newEventId && newEventId !== task.previousGraphEventId){
+          await query('UPDATE reservations SET graph_event_id = $2 WHERE legacy_id = $1', [task.legacyId, newEventId]);
+        }
+      }
+    }catch(error){
+      console.error('Falha ao sincronizar reserva com o calendário do Outlook:', error.message);
+    }
+  }
 });
 
 router.get('/:reservationId/photos/:photoId', async (req, res) => {

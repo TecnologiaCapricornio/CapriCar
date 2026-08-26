@@ -283,6 +283,18 @@ function getVehicleDisplayName(reserva){
   return getVehicleFullModel(vehicle) + (vehicle.placa ? ' · ' + vehicle.placa : '');
 }
 
+// Mesma resolução de getVehicleDisplayName(), mas devolve HTML pronto para
+// innerHTML com a placa como badge visual em vez de texto simples (não use
+// em contextos de texto puro como <option>/.textContent/exportação).
+function getVehicleDisplayHTML(reserva, small){
+  if(!reserva) return escapeHTML('Veículo não identificado');
+  const vehicle = getVehicle(reserva.partida, reserva.carro);
+  if(!vehicle) return escapeHTML(reserva.carro || 'Veículo não identificado');
+  const model = escapeHTML(getVehicleFullModel(vehicle));
+  const badge = plateBadgeHTML(vehicle.placa, small);
+  return badge ? model + '<br>' + badge : model;
+}
+
 function getVehicleCapacity(reserva){
   const vehicle = getVehicle(reserva.partida, reserva.carro);
   return vehicle && Number(vehicle.capacidade) > 0 ? Number(vehicle.capacidade) : CAPACIDADE_MAXIMA;

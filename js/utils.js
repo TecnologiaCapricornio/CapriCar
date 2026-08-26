@@ -15,6 +15,19 @@ function escapeHTML(value){
     .replace(/'/g, '&#039;');
 }
 
+// Badge visual da placa (formato/cores do padrão Mercosul, sem os detalhes
+// de "BRASIL"/bandeira/estrelas) - reaproveitado em toda lista/cartão que
+// hoje só mostra a placa como texto simples. Devolve '' se não houver placa.
+function plateBadgeHTML(placa, small){
+  const value = String(placa || '').trim().toUpperCase();
+  if(!value) return '';
+  return '<span class="plate-badge' + (small ? ' plate-badge-sm' : '') +
+      '" role="img" aria-label="Placa ' + escapeHTML(value) + '">' +
+    '<span class="plate-badge-top"></span>' +
+    '<span class="plate-badge-text">' + escapeHTML(value) + '</span>' +
+  '</span>';
+}
+
 function isoFromParts(year, monthIndex, day){
   return year + '-' + pad2(monthIndex + 1) + '-' + pad2(day);
 }
