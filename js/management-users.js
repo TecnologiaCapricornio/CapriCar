@@ -15,6 +15,8 @@ const userAccountSubmitBtn = document.getElementById('userAccountSubmitBtn');
 const userAccountCancelBtn = document.getElementById('userAccountCancelBtn');
 const userAccountsList = document.getElementById('userAccountsList');
 const userAccountsSearch = document.getElementById('userAccountsSearch');
+const userAccountsPermissionFilter = document.getElementById('userAccountsPermissionFilter');
+const userAccountsPageSize = document.getElementById('userAccountsPageSize');
 const userPagination = document.getElementById('userPagination');
 const userBulkToolbar = document.getElementById('userBulkToolbar');
 const userSelectAllCheckbox = document.getElementById('userSelectAllCheckbox');
@@ -59,8 +61,9 @@ let userAccountEditingId = null;
 let userDeleteId = null;
 let userDeleteMode = 'single'; // 'single' | 'bulk'
 let userSearchTerm = '';
+let userPermissionFilter = '';
 let userCurrentPage = 1;
-const USER_PAGE_SIZE = 25;
+let USER_PAGE_SIZE = 25;
 const selectedUserIds = new Set();
 
 const MS_LOGO_SVG =
@@ -73,14 +76,14 @@ const MS_LOGO_SVG =
 
 const USER_PERMISSION_LABELS = {
   reservations:'Reservas',
-  branches: 'Filiais',
+  branches: 'Locais',
   fleet:'Veículos',
   blocks:'Bloqueios',
-  reports:'Relatórios',
   audit:'Auditoria',
+  reports:'Relatórios',
   rules:'Regras',
-  users:'Usuários',
-  integrations:'Integrações'
+  integrations:'Integrações',
+  users:'Usuários'
 };
 
 function selectedUserPermissions(){
@@ -180,11 +183,16 @@ function sortedAccounts(){
 }
 
 function filteredAccounts(){
-  const accounts = sortedAccounts();
+  let accounts = sortedAccounts();
   const term = userSearchTerm.trim().toLowerCase();
-  if(!term) return accounts;
-  return accounts.filter(account =>
-    account.nome.toLowerCase().includes(term) || account.username.toLowerCase().includes(term));
+  if(term){
+    accounts = accounts.filter(account =>
+      account.nome.toLowerCase().includes(term) || account.username.toLowerCase().includes(term));
+  }
+  if(userPermissionFilter){
+    accounts = accounts.filter(account => account.permissions && account.permissions[userPermissionFilter]);
+  }
+  return accounts;
 }
 
 function updateBulkToolbarState(){
@@ -251,7 +259,7 @@ function renderUserManagement(){
             (selectedUserIds.has(String(account.id)) ? ' checked' : '') + '>'
         : '<span class="user-select-spacer"></span>') +
       '<div><strong>' + escapeHTML(account.nome) + '</strong>' +
-        '<small>@' + escapeHTML(account.username) + ' · ' +
+        '<small>' + escapeHTML(account.email || account.username) + ' · ' +
           '<span class="' + (account.active ? '' : 'user-status-inactive') + '">' + (account.active ? 'Ativo' : 'Inativo') + '</span>' +
           (account.authProvider === 'entra'
             ? ' · <span class="user-auth-icon" role="img" aria-label="Conta Microsoft (Entra ID)" title="Conta Microsoft (Entra ID)">' + MS_LOGO_SVG + '</span>'
@@ -270,7 +278,8 @@ function renderUserManagement(){
           : '') +
       '</div>' +
     '</div>'
-  ).join('') : '<div class="empty-state">Nenhum usuário' + (userSearchTerm.trim() ? ' encontrado para esta busca' : ' cadastrado') + '.</div>';
+  ).join('') : '<div class="empty-state">Nenhum usuário' +
+    (userSearchTerm.trim() || userPermissionFilter ? ' encontrado para este filtro' : ' cadastrado') + '.</div>';
 
   userAccountsList.querySelectorAll('.user-select-checkbox').forEach(cb => {
     cb.addEventListener('change', function(){
@@ -346,6 +355,19 @@ function renderUserManagement(){
   updateBulkToolbarState();
   renderUserPagination(accounts.length);
 }
+
+userAccountsPageSize.value = String(USER_PAGE_SIZE);
+userAccountsPageSize.addEventListener('change', function(){
+  USER_PAGE_SIZE = Number(this.value) || 25;
+  userCurrentPage = 1;
+  renderUserManagement();
+});
+
+userAccountsPermissionFilter.addEventListener('change', function(){
+  userPermissionFilter = this.value;
+  userCurrentPage = 1;
+  renderUserManagement();
+});
 
 userAccountsSearch.addEventListener('input', function(){
   userSearchTerm = this.value;

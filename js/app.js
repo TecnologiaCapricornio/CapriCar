@@ -21,7 +21,7 @@ function setFieldRequiredMarker(fieldId, required){
 
 function markRequiredFields(){
   const requiredFieldIds = [
-    'partida', 'destino', 'carro', 'rangePickerTrigger',
+    'partida', 'destino', 'carro', 'dataIda', 'dataVolta',
     'horarioRetirada', 'horarioDevolucao',
     'branchName', 'vehicleBranch', 'vehiclePlate', 'vehicleBrand', 'vehicleModel', 'vehicleCapacity',
     'blockVehicle', 'blockType', 'blockRangePickerTrigger',
@@ -29,11 +29,12 @@ function markRequiredFields(){
     'userAccountName', 'userAccountUsername', 'userAccountPassword',
     'qDestino', 'qDataVolta', 'qHorarioRetirada', 'qHorarioDevolucao',
     'aNome', 'aPartida', 'aDestino', 'aCarro',
-    'adminRangePickerTrigger', 'aHorarioRetirada', 'aHorarioDevolucao',
+    'aDataIda', 'aDataVolta', 'aHorarioRetirada', 'aHorarioDevolucao',
     'fleetEditBranchName', 'fleetEditVehicleBranch', 'fleetEditVehiclePlate',
     'fleetEditVehicleBrand', 'fleetEditVehicleModel', 'fleetEditVehicleCapacity',
     'userDeleteJustification', 'vehicleDeleteJustification', 'branchDeleteJustification',
-    'operationKm', 'operationFuel'
+    'operationKm', 'operationFuel',
+    'watchOrigin', 'watchStartsOn', 'watchEndsOn'
   ];
   requiredFieldIds.forEach(fieldId => setFieldRequiredMarker(fieldId, true));
   document.querySelectorAll('[required][id]').forEach(field => setFieldRequiredMarker(field.id, true));

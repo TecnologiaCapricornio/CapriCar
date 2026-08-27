@@ -108,13 +108,6 @@ async function requireAuth(req, res, next){
   }
 }
 
-function requireAdmin(req, res, next){
-  if(!req.user || req.user.role !== 'admin'){
-    return res.status(403).json({ error:'Acesso exclusivo do administrador.' });
-  }
-  next();
-}
-
 function userCanManage(user, permission){
   return !!user && (user.role === 'admin' || user.permissions[permission] === true);
 }
@@ -134,7 +127,6 @@ module.exports = {
   permissionsFromRow,
   publicUser,
   requireAuth,
-  requireAdmin,
   requirePermission,
   userCanManage
 };

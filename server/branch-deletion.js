@@ -3,7 +3,7 @@ const { normalizedStatus } = require('./services/reservation-lifecycle');
 function getBranchDeletionBlockers(branch, vehicles, reservations){
   const branchName = String(branch && branch.nome || '');
   const linkedVehicles = (vehicles || []).filter(vehicle =>
-    String(vehicle && vehicle.filial || '') === branchName
+    String(vehicle && vehicle.local || '') === branchName
   );
   const activeReservations = (reservations || []).filter(reservation => {
     if(

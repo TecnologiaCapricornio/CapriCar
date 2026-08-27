@@ -50,7 +50,7 @@ function loadCore(){
   return context;
 }
 
-test('inicializa filiais e veículos padrão', () => {
+test('inicializa locais e veículos padrão', () => {
   const app = loadCore();
   assert.equal(app.getBranches().length, 3);
   assert.equal(app.getVehicles().length, 6);
@@ -84,7 +84,7 @@ test('bloqueio operacional impede período sobreposto', () => {
   const app = loadCore();
   app.saveVehicleBlocks([{
     id: 'b1',
-    filial: 'São Carlos',
+    local: 'São Carlos',
     carro: '78',
     tipo: 'Revisão',
     dataInicio: '2026-08-10',
@@ -97,7 +97,7 @@ test('bloqueio operacional impede período sobreposto', () => {
 test('usa a capacidade cadastrada do veículo', () => {
   const app = loadCore();
   const vehicles = app.getVehicles();
-  vehicles.find(v => v.filial === 'São Paulo' && v.codigo === '89').capacidade = 7;
+  vehicles.find(v => v.local === 'São Paulo' && v.codigo === '89').capacidade = 7;
   app.saveVehicles(vehicles);
   const reserva = {
     nome: 'Dimitri',
@@ -245,7 +245,7 @@ test('avisa sobre rodízio somente em viagens envolvendo São Paulo e no horári
   const app = loadCore();
   app.saveVehicles([{
     id:'rodizio-1',
-    filial:'São Carlos',
+    local:'São Carlos',
     codigo:'CAR-1',
     marca:'Volkswagen',
     modelo:'Polo',

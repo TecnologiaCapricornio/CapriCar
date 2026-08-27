@@ -12,7 +12,9 @@
   --card-border:rgba(231,235,239,.13);
   --texto:#f2f3f5;
   --texto-muted:#adb3bb;
-  --sombra:0 18px 42px rgba(0,0,0,.34);
+  --vermelho:#e2606d;
+  --verde:#2fb87d;
+  --sombra:0 16px 36px rgba(0,0,0,.26);
 }
 
 :root[data-theme="light"]{
@@ -243,6 +245,28 @@ html[data-theme="light"] .field label{
   color:#39434d;
 }
 
+html[data-theme="light"] .site-dialog-card.site-dialog-info{
+  background:#f5fafd;
+}
+
+html[data-theme="light"] .site-dialog-card.site-dialog-warning{
+  background:#fffaf0;
+}
+
+html[data-theme="light"] .site-dialog-card.site-dialog-danger{
+  background:#fff6f7;
+}
+
+html[data-theme="light"] .site-dialog-card.site-dialog-success{
+  background:#f5fcf9;
+}
+
+html[data-theme="light"] .operation-report-badge{
+  border-color:#e3bf76;
+  background:#fff7e5;
+  color:#9a6410;
+}
+
 html[data-theme="light"] .site-dialog-icon.warning{
   border-color:#e3bf76;
   background:#fff7e5;
@@ -400,7 +424,7 @@ html[data-theme="light"] .car-tab-btn:not(.active):hover{
 }
 
 html[data-theme="light"] .car-tab-btn.active{
-  background:linear-gradient(135deg,#2a648c,#173f5c);
+  background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
   border-color:transparent;
   color:#fff;
 }
@@ -426,7 +450,7 @@ html[data-theme="light"] .location-filter-btn.active,
 html[data-theme="light"] .time-picker-option.is-selected,
 html[data-theme="light"] .range-calendar-day.selected,
 html[data-theme="light"] .calendar-add-btn{
-  background:linear-gradient(135deg,#2a648c,#173f5c);
+  background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
   color:#fff;
   text-shadow:0 1px 1px rgba(0,0,0,.2);
   box-shadow:0 3px 8px rgba(23,63,92,.18);
@@ -542,11 +566,17 @@ html[data-theme="light"] .operation-photo-card{
   background:#fff;
 }
 
-html[data-theme="light"] .form-hint,
 html[data-theme="light"] .quick-reserve-summary{
   background:rgba(78,134,173,.08);
   border-color:rgba(78,134,173,.2);
   color:#40596b;
+}
+
+html[data-theme="light"] .form-hint{
+  background:rgba(37,116,197,.09);
+  border-color:rgba(37,116,197,.3);
+  border-left-color:#2574c5;
+  color:#1c4770;
 }
 
 html[data-theme="light"] .modal-overlay{
@@ -630,6 +660,91 @@ html[data-theme="light"] .range-calendar-day.in-range{
 
 html[data-theme="light"] footer{
   color:#68717c;
+}
+
+/* Correções de contraste no tema claro - estes componentes já ganham fundo
+   claro em algum lugar (container/card), mas o texto interno nunca tinha
+   sido ajustado e continuava com a cor pensada para fundo escuro. */
+html[data-theme="light"] .user-select-all-label{
+  color:#214f6e;
+}
+
+html[data-theme="light"] .permission-option{
+  color:#214f6e;
+}
+
+html[data-theme="light"] .operation-photo-download{
+  color:#1d5f85;
+}
+
+html[data-theme="light"] .operation-photo-download:hover{
+  color:#173f5c;
+}
+
+html[data-theme="light"] .ride-watch-item{
+  background:#f7f8fa;
+  border-color:rgba(31,45,58,.12);
+}
+
+html[data-theme="light"] .occupant-remove-btn{
+  background:#fdeced;
+  color:#c83f50;
+}
+
+html[data-theme="light"] .occupant-remove-btn:hover{
+  background:#fbd8da;
+  color:#ad3443;
+}
+
+html[data-theme="light"] .destructive-modal-icon{
+  border-color:#e5a5ad;
+  background:#fff0f2;
+  color:#ad3443;
+}
+
+html[data-theme="light"] .required-marker{
+  color:#c83f50;
+}
+
+html[data-theme="light"] .time-picker-close{
+  color:#526575;
+}
+
+html[data-theme="light"] .notification-item-icon{
+  color:#24658f;
+}
+
+html[data-theme="light"] .notification-item-icon.cancel{
+  color:#c83f50;
+}
+
+html[data-theme="light"] .notification-item-icon.key,
+html[data-theme="light"] .notification-item-icon.report{
+  color:#9a6410;
+}
+
+html[data-theme="light"] .reservation-moment-label{
+  color:#526a7c;
+}
+
+html[data-theme="light"] .calendar-weekday{
+  color:#526575;
+}
+
+html[data-theme="light"] .mobile-month-day{
+  color:#28323c;
+}
+
+html[data-theme="light"] .mobile-month-weekdays span{
+  color:#71808c;
+}
+
+html[data-theme="light"] .mobile-month-more{
+  color:#526a7c;
+}
+
+html[data-theme="light"] .mobile-selection-sheet span{
+  color:#526575;
 }
 
 @media (max-width:480px){

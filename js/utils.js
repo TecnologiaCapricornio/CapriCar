@@ -6,6 +6,15 @@ function pad2(n){
   return String(n).padStart(2, '0');
 }
 
+function reservationHasOperationReport(reservation){
+  return ['retirada', 'devolucao'].some(phase => {
+    const record = reservation && reservation.operacao && reservation.operacao[phase];
+    if(!record) return false;
+    return String(record.avarias || '').trim().length > 0 ||
+      (Array.isArray(record.fotos) && record.fotos.length > 0);
+  });
+}
+
 function escapeHTML(value){
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -143,11 +152,6 @@ function getOccupiedMinutesRangeForDate(reserva, iso){
   return { inicio: inicio, fim: fim };
 }
 
-// Verifica se dois intervalos de minutos [a.inicio, a.fim) e [b.inicio, b.fim) se sobrepõem.
-function faixasSeSobrepoem(a, b){
-  return a.inicio < b.fim && b.inicio < a.fim;
-}
-
 // Verifica se duas reservas do MESMO carro conflitam: precisam ter datas que se
 // sobrepõem e, nos dias em comum, faixas de horário que se sobrepõem.
 function reservationAbsoluteRange(reservation){
@@ -228,7 +232,7 @@ function getRodizioWarning(reservation){
     plate:plate,
     weekday:weekdayNames[restrictedWeekday],
     affectedDates:affectedDates,
-    message:'Atenção: o veículo ' + (vehicle ? getVehicleFullModel(vehicle) + ' · ' : '') + plate +
+    message:'O veículo ' + (vehicle ? getVehicleFullModel(vehicle) + ' · ' : '') + plate +
       ' (placa final ' + finalDigit + ') tem rodízio às ' + weekdayNames[restrictedWeekday] +
       ', das 7h às 10h e das 17h às 20h. O período selecionado coincide em ' + dates +
       '. Verifique se o trajeto passa pelo Centro Expandido de São Paulo.'

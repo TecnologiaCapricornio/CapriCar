@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
+  notifyOperationReport,
   reminderTypesForReservation
 } = require('../server/notifications');
 
@@ -90,4 +91,81 @@ test('passageiro vinculado recebe notificação ao ser adicionado à carona', as
     ...owner, role:'user', permissions:{}
   });
   assert.equal(inserted.length, 0);
+});
+
+test('motorista é notificado quando alguém entra na própria carona (mas não quando ele mesmo adiciona)', async () => {
+  const inserted = [];
+  const client = notificationClient([passenger.id, owner.id], inserted);
+
+  await notifyReservationPassengerAdditions(client, null, base, {
+    ...passenger, role:'user', permissions:{}
+  });
+  const driverEntries = inserted.filter(params => params[0] === owner.id);
+  assert.equal(driverEntries.length, 1);
+  assert.equal(driverEntries[0][1], 'passenger_joined');
+  assert.match(driverEntries[0][3], /respeitar os horários/i);
+
+  inserted.length = 0;
+  await notifyReservationPassengerAdditions(client, null, base, {
+    ...owner, role:'user', permissions:{}
+  });
+  assert.equal(inserted.filter(params => params[0] === owner.id).length, 0);
+});
+
+const manager = { id:'44444444-4444-4444-8444-444444444444', nome:'Gestor', role:'admin' };
+
+function dedupingNotificationClient(resolvedUserIds){
+  const seen = new Set();
+  const inserted = [];
+  return {
+    inserted,
+    async query(sql, params){
+      if(sql.includes('SELECT id FROM users')){
+        return { rows:resolvedUserIds.map(id => ({ id })) };
+      }
+      if(sql.includes('INSERT INTO notifications')){
+        const key = params[0] + '|' + params[5];
+        if(!seen.has(key)){
+          seen.add(key);
+          inserted.push(params);
+        }
+      }
+      return { rows:[], rowCount:0 };
+    }
+  };
+}
+
+test('gestor é notificado quando avarias e/ou fotos são registradas na retirada', async () => {
+  const client = dedupingNotificationClient([manager.id]);
+  const reservation = {
+    ...base,
+    operacao:{ retirada:{ avarias:'Risco na lateral', fotos:[{ dados:'x' }, { dados:'y' }] } }
+  };
+  await notifyOperationReport(client, reservation, 'retirada', owner);
+  assert.equal(client.inserted.length, 1);
+  assert.equal(client.inserted[0][0], manager.id);
+  assert.equal(client.inserted[0][1], 'operation_report');
+  assert.match(client.inserted[0][3], /uma observação e 2 fotos/i);
+});
+
+test('nenhuma notificação é criada quando o registro não tem avarias nem fotos', async () => {
+  const client = dedupingNotificationClient([manager.id]);
+  const reservation = { ...base, operacao:{ retirada:{ avarias:'', fotos:[] } } };
+  await notifyOperationReport(client, reservation, 'retirada', owner);
+  assert.equal(client.inserted.length, 0);
+});
+
+test('o próprio autor do registro não recebe notificação sobre a própria ação', async () => {
+  const client = dedupingNotificationClient([manager.id]);
+  const reservation = { ...base, operacao:{ retirada:{ avarias:'Risco na lateral', fotos:[] } } };
+  await notifyOperationReport(client, reservation, 'retirada', manager);
+  assert.equal(client.inserted.length, 0);
+});
+
+test('editar a mesma reserva de novo não duplica a notificação', async () => {
+  const client = dedupingNotificationClient([manager.id]);
+  const reservation = { ...base, operacao:{ retirada:{ avarias:'Risco na lateral', fotos:[] } } };
+  await notifyOperationReport(client, reservation, 'retirada', owner);
+  await notifyOperationReport(client, reservation, 'retirada', owner);
+  assert.equal(client.inserted.length, 1);
 });

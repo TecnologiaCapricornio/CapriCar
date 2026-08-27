@@ -127,7 +127,7 @@ function deleteBranchPermanently(branchId, justification){
       return result;
     });
   databaseSyncQueue = operation.catch(error => {
-    console.error('Falha ao excluir a filial:', error);
+    console.error('Falha ao excluir o local:', error);
   });
   return operation;
 }

@@ -7,16 +7,19 @@ const {
   listAllReservations,
   persistReservation,
   cancelReservation,
-  getReservationGraphEventId,
+  getReservationGraphEventIds,
   getPhotoForUser,
   normalizeName
 } = require('../reservations-store');
 const { readPhotoFile } = require('../photo-storage');
 const {
   notifyReservationCancellation,
-  notifyReservationPassengerAdditions
+  notifyReservationPassengerAdditions,
+  notifyOperationReport
 } = require('../notifications');
 const { createOrUpdateCalendarEvent, deleteCalendarEvent, resolveCalendarOwner } = require('../calendar-sync');
+const { sendPassengerJoinedEmail } = require('../reminders');
+const { notifyRideWatchMatches, sendRideWatchMatchEmails } = require('../ride-watches');
 
 const router = express.Router();
 
@@ -129,6 +132,8 @@ router.post('/sync', async (req, res) => {
   const manager = canViewAllReservations(req.user) &&
     (req.user.role === 'admin' || !!(req.user.permissions && req.user.permissions.reservations));
   const calendarSyncTasks = [];
+  const passengerJoinedEmailTasks = [];
+  const rideWatchEmailTasks = [];
 
   await withTransaction(async client => {
     const current = await listAllReservations(client);
@@ -167,9 +172,14 @@ router.post('/sync', async (req, res) => {
       currentReservations:current
     });
 
+    const graphEventIds = await getReservationGraphEventIds(
+      client,
+      prepared.map(change => change.type === 'delete' ? change.id : change.reservation.id)
+    );
+
     for(const change of prepared){
       if(change.type === 'delete'){
-        const graphEventId = await getReservationGraphEventId(client, change.id);
+        const graphEventId = graphEventIds.get(change.id) || null;
         await notifyReservationCancellation(client, change.previous, req.user);
         await cancelReservation(client, change.id, req.user);
         await client.query(
@@ -187,9 +197,19 @@ router.post('/sync', async (req, res) => {
           });
         }
       }else{
-        const previousGraphEventId = await getReservationGraphEventId(client, change.reservation.id);
-        await notifyReservationPassengerAdditions(client, change.previous, change.reservation, req.user);
+        const previousGraphEventId = graphEventIds.get(change.reservation.id) || null;
+        const addedPassengers = await notifyReservationPassengerAdditions(client, change.previous, change.reservation, req.user);
+        if(addedPassengers && addedPassengers.length && String(change.reservation.criadorUsuarioId || '') !== String(req.user.id)){
+          passengerJoinedEmailTasks.push({ reservation:change.reservation, addedPassengers });
+        }
         const saved = await persistReservation(client, change.reservation, req.user);
+        if(!change.previous){
+          const numberedReservation = { ...change.reservation, numeroReserva:saved.reservationNumber };
+          const matches = await notifyRideWatchMatches(client, numberedReservation, req.user);
+          if(matches.length) rideWatchEmailTasks.push({ reservation:numberedReservation, matches });
+        }
+        await notifyOperationReport(client, change.reservation, 'retirada', req.user);
+        await notifyOperationReport(client, change.reservation, 'devolucao', req.user);
         await client.query(
           `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
            VALUES ($1, $2, 'reserva', $3, $4::jsonb)`,
@@ -227,6 +247,16 @@ router.post('/sync', async (req, res) => {
     }catch(error){
       console.error('Falha ao sincronizar reserva com o calendário do Outlook:', error.message);
     }
+  }
+
+  for(const task of passengerJoinedEmailTasks){
+    const driverId = task.reservation.criadorUsuarioId;
+    const driverResult = await query('SELECT email, display_name FROM users WHERE id = $1', [driverId]);
+    await sendPassengerJoinedEmail(task.reservation, task.addedPassengers, driverResult.rows[0]);
+  }
+
+  for(const task of rideWatchEmailTasks){
+    await sendRideWatchMatchEmails(task.reservation, task.matches);
   }
 });
 

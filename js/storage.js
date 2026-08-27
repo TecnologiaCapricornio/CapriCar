@@ -17,12 +17,6 @@ function saveReservations(list){
 }
 
 // Retorna todas as reservas cuja faixa [dataIda, dataVolta] cobre a data informada (qualquer carro/rota).
-function getReservationsCoveringDate(iso){
-  return getReservations().filter(r =>
-    !isReservationCompleted(r) && iso >= r.dataIda && iso <= r.dataVolta
-  );
-}
-
 function carKey(partida, carro){
   return partida + '|' + carro;
 }
@@ -193,8 +187,8 @@ function logAudit(action, entity, entityId, details){
 
 function initializeFleetData(){
   if(getBranches().length === 0){
-    const defaults = Object.keys(CARROS_POR_FILIAL).map((nome, index) => ({
-      id: 'filial-' + (index + 1),
+    const defaults = Object.keys(CARROS_POR_LOCAL).map((nome, index) => ({
+      id: 'local-' + (index + 1),
       nome: nome,
       ativo: true
     }));
@@ -203,11 +197,11 @@ function initializeFleetData(){
 
   if(getVehicles().length === 0){
     const vehicles = [];
-    Object.keys(CARROS_POR_FILIAL).forEach(filial => {
-      (CARROS_POR_FILIAL[filial] || []).forEach(codigo => {
+    Object.keys(CARROS_POR_LOCAL).forEach(local => {
+      (CARROS_POR_LOCAL[local] || []).forEach(codigo => {
         vehicles.push({
-          id: 'veiculo-' + filial.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + codigo,
-          filial: filial,
+          id: 'veiculo-' + local.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + codigo,
+          local: local,
           codigo: codigo,
           marca: 'Volkswagen',
           modelo: 'Polo',
@@ -223,20 +217,20 @@ function initializeFleetData(){
 }
 
 function syncFleetGlobals(){
-  const filiais = getBranches().filter(f => f.ativo !== false);
+  const locais = getBranches().filter(f => f.ativo !== false);
   const veiculos = getVehicles().filter(v => v.ativo !== false);
 
-  Object.keys(CARROS_POR_FILIAL).forEach(key => delete CARROS_POR_FILIAL[key]);
-  filiais.forEach(f => {
-    CARROS_POR_FILIAL[f.nome] = veiculos
-      .filter(v => v.filial === f.nome)
+  Object.keys(CARROS_POR_LOCAL).forEach(key => delete CARROS_POR_LOCAL[key]);
+  locais.forEach(f => {
+    CARROS_POR_LOCAL[f.nome] = veiculos
+      .filter(v => v.local === f.nome)
       .map(v => String(v.codigo));
   });
-  CIDADES = filiais.map(f => f.nome);
+  CIDADES = locais.map(f => f.nome);
 }
 
 function getVehicle(partida, codigo){
-  return getVehicles().find(v => v.filial === partida && String(v.codigo) === String(codigo)) || null;
+  return getVehicles().find(v => v.local === partida && String(v.codigo) === String(codigo)) || null;
 }
 
 function getVehicleBrand(vehicle){
@@ -302,7 +296,7 @@ function getVehicleCapacity(reserva){
 
 function findVehicleBlocks(partida, carro, dataIda, dataVolta, excludeId){
   return getVehicleBlocks().filter(block => {
-    if(block.filial !== partida || String(block.carro) !== String(carro)) return false;
+    if(block.local !== partida || String(block.carro) !== String(carro)) return false;
     if(excludeId != null && String(block.id) === String(excludeId)) return false;
     return !(dataVolta < block.dataInicio || dataIda > block.dataFim);
   });

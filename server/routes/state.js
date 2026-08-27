@@ -24,7 +24,7 @@ function requireCollectionAccess(req, res, next){
     return res.status(404).json({ error:'Coleção desconhecida.' });
   }
   if(name === 'branches' && !userCanManage(req.user, 'branches')){
-    return res.status(403).json({ error:'Sem permissão para alterar as filiais.' });
+    return res.status(403).json({ error:'Sem permissão para alterar os locais.' });
   }
   if(name === 'vehicles' && !userCanManage(req.user, 'fleet')){
     return res.status(403).json({ error:'Sem permissão para alterar veículos.' });
@@ -181,7 +181,7 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
       const removed = current.filter(branch => !incomingIds.has(String(branch.id)));
       if(removed.length){
         throw Object.assign(new Error(
-          'Use a opção Excluir e informe a justificativa para remover uma filial definitivamente.'
+          'Use a opção Excluir e informe a justificativa para remover um local definitivamente.'
         ), { status:400 });
       }
     }
@@ -203,13 +203,13 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
 
 router.delete('/branches/:id', async (req, res) => {
   if(!userCanManage(req.user, 'branches')){
-    return res.status(403).json({ error:'Sem permissão para excluir filiais.' });
+    return res.status(403).json({ error:'Sem permissão para excluir locais.' });
   }
   const branchId = String(req.params.id || '').trim();
   const justification = String(req.body && req.body.justification || '').trim();
   const expectedRevision = Number(req.body && req.body.revision);
   if(!branchId || branchId.length > 100){
-    return res.status(400).json({ error:'Filial inválida.' });
+    return res.status(400).json({ error:'Local inválido.' });
   }
   if(
     justification.length < 5 || justification.length > 500 ||
@@ -234,10 +234,10 @@ router.delete('/branches/:id', async (req, res) => {
     const rows = Object.fromEntries(locked.rows.map(row => [row.collection_name, row]));
     const branchesRow = rows.branches;
     if(!branchesRow){
-      throw Object.assign(new Error('Cadastro de filiais não encontrado.'), { status:409 });
+      throw Object.assign(new Error('Cadastro de locais não encontrado.'), { status:409 });
     }
     if(Number(branchesRow.revision) !== expectedRevision){
-      const error = new Error('As filiais foram alteradas por outra pessoa. Atualize a página e tente novamente.');
+      const error = new Error('Os locais foram alterados por outra pessoa. Atualize a página e tente novamente.');
       error.status = 409;
       error.code = 'STATE_CONFLICT';
       error.currentRevision = Number(branchesRow.revision);
@@ -246,7 +246,7 @@ router.delete('/branches/:id', async (req, res) => {
     const branches = Array.isArray(branchesRow.value) ? branchesRow.value : [];
     const branch = branches.find(item => String(item.id) === branchId);
     if(!branch){
-      throw Object.assign(new Error('Essa filial já foi excluída ou não existe.'), { status:404 });
+      throw Object.assign(new Error('Esse local já foi excluído ou não existe.'), { status:404 });
     }
     const vehicles = Array.isArray(rows.vehicles && rows.vehicles.value) ? rows.vehicles.value : [];
     const reservations = await listAllReservations(client);
@@ -257,12 +257,12 @@ router.delete('/branches/:id', async (req, res) => {
     );
     if(linkedVehicles.length){
       throw Object.assign(new Error(
-        `Não é possível excluir: transfira ou exclua primeiro ${linkedVehicles.length} veículo(s) vinculado(s) a esta filial.`
+        `Não é possível excluir: transfira ou exclua primeiro ${linkedVehicles.length} veículo(s) vinculado(s) a este local.`
       ), { status:409 });
     }
     if(activeReservations.length){
       throw Object.assign(new Error(
-        `Não é possível excluir: existem ${activeReservations.length} reserva(s) ativa(s) envolvendo esta filial.`
+        `Não é possível excluir: existem ${activeReservations.length} reserva(s) ativa(s) envolvendo este local.`
       ), { status:409 });
     }
 
@@ -277,7 +277,7 @@ router.delete('/branches/:id', async (req, res) => {
     );
     await client.query(
       `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
-       VALUES ($1, 'excluiu definitivamente', 'filial', $2, $3::jsonb)`,
+       VALUES ($1, 'excluiu definitivamente', 'local', $2, $3::jsonb)`,
       [
         req.user.id,
         branchId,
@@ -354,7 +354,7 @@ router.delete('/vehicles/:id', async (req, res) => {
     const today = todaySaoPaulo();
     const pendingReservations = reservations.filter(reservation => {
       if(
-        String(reservation.partida) !== String(vehicle.filial) ||
+        String(reservation.partida) !== String(vehicle.local) ||
         String(reservation.carro) !== String(vehicle.codigo)
       ) return false;
       const status = normalizedStatus(reservation.status);
@@ -371,7 +371,7 @@ router.delete('/vehicles/:id', async (req, res) => {
     const nextVehicles = vehicles.filter(item => String(item.id) !== vehicleId);
     const blocks = Array.isArray(blocksRow && blocksRow.value) ? blocksRow.value : [];
     const linkedBlocks = blocks.filter(block =>
-      String(block.filial) === String(vehicle.filial) &&
+      String(block.local) === String(vehicle.local) &&
       String(block.carro) === String(vehicle.codigo)
     );
     if(linkedBlocks.length && Number(blocksRow.revision) !== blocksRevision){
@@ -409,7 +409,7 @@ router.delete('/vehicles/:id', async (req, res) => {
     }
 
     const description =
-      `${vehicle.filial} · ${vehicle.codigo} · ${vehicle.modelo || 'Veículo'} · ` +
+      `${vehicle.local} · ${vehicle.codigo} · ${vehicle.modelo || 'Veículo'} · ` +
       `Justificativa: ${justification}`;
     await client.query(
       `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)

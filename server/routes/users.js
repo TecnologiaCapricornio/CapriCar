@@ -43,7 +43,7 @@ async function audit(client, actorId, action, entityId, details){
 const MAX_BULK_IDS = 2000;
 
 const PERMISSION_LABELS = {
-  reservations:'Reservas', branches:'Filiais', fleet:'Veículos', blocks:'Bloqueios',
+  reservations:'Reservas', branches:'Locais', fleet:'Veículos', blocks:'Bloqueios',
   reports:'Relatórios', audit:'Auditoria', rules:'Regras', users:'Usuários',
   integrations:'Integrações'
 };

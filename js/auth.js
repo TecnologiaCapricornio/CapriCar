@@ -64,11 +64,6 @@ function ensureSystemUsers(){
   return getSystemUsers();
 }
 
-function findSystemUser(username){
-  const normalized = String(username || '').trim().toLowerCase();
-  return getSystemUsers().find(account => account.username === normalized) || null;
-}
-
 function accountToSession(account){
   return {
     id:account.id,
@@ -141,7 +136,7 @@ function canAccessAdminSection(section){
   if(isAdmin()) return true;
   const permissionBySection = {
     reservas:'reservations',
-    filiais:'branches',
+    locais:'branches',
     veiculos:'fleet',
     bloqueios:'blocks',
     relatorios:'reports',
@@ -175,7 +170,7 @@ const profileRole = document.getElementById('profileRole');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','filiais','veiculos','bloqueios','relatorios','auditoria','regras','integracoes','usuarios'];
+  const orderedSections = ['reservas','locais','veiculos','bloqueios','relatorios','auditoria','regras','integracoes','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');

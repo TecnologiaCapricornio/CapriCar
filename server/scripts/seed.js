@@ -92,14 +92,14 @@ async function seedApplicationState(client, adminUserId){
   const seeded = new Set(existing.rows.map(row => row.collection_name));
 
   const branches = DEFAULT_BRANCHES.map((branch, index) => ({
-    id:`filial-${index + 1}`,
+    id:`local-${index + 1}`,
     nome:branch.name,
     ativo:true
   }));
   const vehicles = DEFAULT_BRANCHES.flatMap(branch =>
     branch.vehicles.map(vehicle => ({
       id:`veiculo-${vehicle.code}`,
-      filial:branch.name,
+      local:branch.name,
       codigo:vehicle.code,
       marca:vehicle.brand,
       modelo:vehicle.model,

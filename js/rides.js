@@ -36,7 +36,8 @@ function initialFrom(nome){
 // Gera o HTML do bloco "Quem já está no carro" para uma reserva. Reutilizado nos
 // cards de carona (aba principal e "Caronas Disponíveis"), no Calendário e no
 // modal de confirmação de entrada. Nunca expõe email/senha — apenas nomes.
-function renderOcupantesHTML(reserva){
+function renderOcupantesHTML(reserva, options){
+  const allowRemove = !!(options && options.allowRemove);
   const passageiros = getPassageiros(reserva);
   const confirmados = getPassageirosConfirmados(reserva);
   const vagas = getVagasRestantes(reserva);
@@ -49,6 +50,11 @@ function renderOcupantesHTML(reserva){
         '<span class="occupant-avatar">' + escapeHtml(initialFrom(p.nome)) + '</span>' +
         '<span>' + escapeHtml(p.nome) + '</span>' +
         (isDriver ? '<span class="occupant-role">Motorista</span>' : '') +
+        (allowRemove && !isDriver
+          ? '<button type="button" class="occupant-remove-btn" data-reservation-id="' + escapeHtml(reserva.id) +
+            '" data-user-id="' + escapeHtml(p.usuarioId || '') + '" title="Remover passageiro" aria-label="Remover ' +
+            escapeHtml(p.nome) + '">&times;</button>'
+          : '') +
       '</div>';
   });
 
@@ -64,13 +70,90 @@ function renderOcupantesHTML(reserva){
 
   return (
     '<div class="occupants-block">' +
-      '<div class="occupants-title">Quem já está no carro</div>' +
+      '<div class="occupants-title">Quem já está no veículo</div>' +
       '<div class="occupants-chips">' + chipsHtml + '</div>' +
       extraHtml +
       emptyHtml +
       '<div class="occupants-vagas">' + vagas + (vagas === 1 ? ' vaga restante' : ' vagas restantes') + '</div>' +
     '</div>'
   );
+}
+
+// Liga um <input> de texto à busca de usuários corporativos (getPassengerDirectory),
+// com sugestões enquanto digita e vínculo automático em correspondência exata ao sair
+// do campo — mesmo comportamento usado nas linhas de passageiro, reaproveitado aqui
+// para qualquer campo de nome (responsável da reserva, passageiro, etc.). O input é
+// envolvido num wrapper (necessário para posicionar a lista de sugestões) que a
+// função devolve para o chamador inserir no DOM. Enquanto o campo estiver vinculado
+// a um usuário corporativo (input.dataset.userId preenchido), a classe
+// "person-input-matched" fica marcada no wrapper para destacar visualmente o campo.
+function attachPersonAutocomplete(input, options){
+  const opts = options || {};
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'passenger-input-wrap';
+  const suggestions = document.createElement('div');
+  suggestions.className = 'passenger-suggestions hidden';
+
+  function closeSuggestions(){
+    suggestions.classList.add('hidden');
+    suggestions.innerHTML = '';
+  }
+
+  function updateMatchedState(){
+    inputWrap.classList.toggle('person-input-matched', !!input.dataset.userId);
+  }
+
+  function selectUser(user){
+    input.value = user.nome;
+    input.dataset.userId = String(user.id);
+    updateMatchedState();
+    closeSuggestions();
+    if(opts.onChange) opts.onChange(user);
+  }
+
+  function renderSuggestions(){
+    input.dataset.userId = '';
+    updateMatchedState();
+    const query = input.value.trim().toLocaleLowerCase('pt-BR');
+    if(!query){ closeSuggestions(); return; }
+    const matches = getPassengerDirectory().filter(user =>
+      String(user.nome).toLocaleLowerCase('pt-BR').includes(query)
+    ).slice(0, 6);
+    if(!matches.length){ closeSuggestions(); return; }
+    suggestions.innerHTML = '';
+    matches.forEach(user => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'passenger-suggestion';
+      option.textContent = user.nome;
+      option.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        selectUser(user);
+      });
+      suggestions.appendChild(option);
+    });
+    suggestions.classList.remove('hidden');
+  }
+
+  input.addEventListener('input', renderSuggestions);
+  input.addEventListener('focus', renderSuggestions);
+  input.addEventListener('blur', function(){
+    const exact = findPassengerDirectoryUser(input.value);
+    if(exact){
+      selectUser(exact);
+    } else if(input.dataset.userId){
+      input.dataset.userId = '';
+      updateMatchedState();
+      if(opts.onChange) opts.onChange(null);
+    }
+    setTimeout(closeSuggestions, 100);
+  });
+
+  inputWrap.appendChild(input);
+  inputWrap.appendChild(suggestions);
+  updateMatchedState();
+  return { element:inputWrap, refresh:updateMatchedState };
 }
 
 // Widget reutilizável de "lista de passageiros nomeados" — usado nos 3 formulários
@@ -110,59 +193,14 @@ function createPassengerListWidget(containerId, options){
       : { nome:String(value || ''), usuarioId:'' };
     const row = document.createElement('div');
     row.className = 'passenger-row';
-    const inputWrap = document.createElement('div');
-    inputWrap.className = 'passenger-input-wrap';
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Busque um usuário ou digite o nome do visitante';
     input.autocomplete = 'off';
     input.value = initial.nome;
     input.dataset.userId = initial.usuarioId;
-    const suggestions = document.createElement('div');
-    suggestions.className = 'passenger-suggestions hidden';
+    const inputWrap = attachPersonAutocomplete(input).element;
 
-    function closeSuggestions(){
-      suggestions.classList.add('hidden');
-      suggestions.innerHTML = '';
-    }
-
-    function selectUser(user){
-      input.value = user.nome;
-      input.dataset.userId = String(user.id);
-      closeSuggestions();
-    }
-
-    function renderSuggestions(){
-      input.dataset.userId = '';
-      const query = input.value.trim().toLocaleLowerCase('pt-BR');
-      if(!query){ closeSuggestions(); return; }
-      const matches = getPassengerDirectory().filter(user =>
-        String(user.nome).toLocaleLowerCase('pt-BR').includes(query)
-      ).slice(0, 6);
-      if(!matches.length){ closeSuggestions(); return; }
-      suggestions.innerHTML = '';
-      matches.forEach(user => {
-        const option = document.createElement('button');
-        option.type = 'button';
-        option.className = 'passenger-suggestion';
-        option.textContent = user.nome;
-        option.addEventListener('click', event => {
-          event.preventDefault();
-          event.stopPropagation();
-          selectUser(user);
-        });
-        suggestions.appendChild(option);
-      });
-      suggestions.classList.remove('hidden');
-    }
-
-    input.addEventListener('input', renderSuggestions);
-    input.addEventListener('focus', renderSuggestions);
-    input.addEventListener('blur', function(){
-      const exact = findPassengerDirectoryUser(input.value);
-      if(exact) selectUser(exact);
-      setTimeout(closeSuggestions, 100);
-    });
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'passenger-remove-btn';
@@ -171,8 +209,6 @@ function createPassengerListWidget(containerId, options){
       row.remove();
       updateAddBtnState();
     });
-    inputWrap.appendChild(input);
-    inputWrap.appendChild(suggestions);
     row.appendChild(inputWrap);
     row.appendChild(removeBtn);
     listEl.appendChild(row);
@@ -391,6 +427,38 @@ async function removePassengerFromReservation(id, user){
   return { reserva: reserva };
 }
 
+// Remove um passageiro específico da reserva, usada pelo motorista (dono da
+// reserva) para liberar uma vaga - por exemplo, quando algo precisa ser
+// transportado no lugar de um passageiro. Diferente de
+// removePassengerFromReservation (o próprio passageiro saindo da carona):
+// aqui quem age é o motorista, removendo outra pessoa pelo usuarioId dela.
+async function removePassengerAsDriver(reservationId, passengerUserId){
+  const currentUser = getCurrentUser();
+  if(!currentUser) return null;
+  const list = getReservations();
+  const idx = list.findIndex(r => String(r.id) === String(reservationId));
+  if(idx === -1) return null;
+
+  const reserva = list[idx];
+  if(!isReservationCreator(reserva, currentUser)) return null;
+
+  reserva.passageiros = getPassageiros(reserva).filter(p =>
+    String(p.usuarioId || '') !== String(passengerUserId)
+  );
+  list[idx] = reserva;
+  try{
+    await saveReservations(list);
+  }catch(error){
+    await hydrateDatabaseState();
+    await showSiteAlert(error.message, {
+      title:'Não foi possível remover o passageiro',
+      type:'danger'
+    });
+    return null;
+  }
+  return { reserva: reserva };
+}
+
 function checkAndShowCompatibleRides(){
   const currentUser = getCurrentUser();
   const partida = partidaSelect.value;
@@ -533,6 +601,9 @@ function renderAvailableRideCard(reserva){
 
 function renderAvailableRides(){
   populateFiltroOptions();
+  ensureRideWatchDatePickers();
+  populateWatchOptions();
+  renderRideWatches();
 
   const currentUser = getCurrentUser();
   if(!currentUser){
@@ -567,6 +638,124 @@ availableRidesList.addEventListener('click', function(e){
   }
 
   openJoinConfirmModal(btn.getAttribute('data-id'), 'available');
+});
+
+/* =========================================================
+   Monitorar carona ("Monitorar rota") - avisa quem não pode/não vai
+   dirigir quando surge uma reserva nova compatível com o que ela monitora.
+   ========================================================= */
+const rideWatchForm = document.getElementById('rideWatchForm');
+const watchOriginSelect = document.getElementById('watchOrigin');
+const watchDestinationSelect = document.getElementById('watchDestination');
+const watchStartsOnInput = document.getElementById('watchStartsOn');
+const watchEndsOnInput = document.getElementById('watchEndsOn');
+const rideWatchError = document.getElementById('rideWatchError');
+const rideWatchListEl = document.getElementById('rideWatchList');
+
+function populateWatchOptions(){
+  const cidadesHtml = CIDADES.map(c => '<option value="' + escapeHTML(c) + '">' + escapeHTML(c) + '</option>').join('');
+  const origemAtual = watchOriginSelect.value;
+  const destinoAtual = watchDestinationSelect.value;
+  watchOriginSelect.innerHTML = '<option value="">Selecione...</option>' + cidadesHtml;
+  watchDestinationSelect.innerHTML = '<option value="">Qualquer</option>' + cidadesHtml;
+  watchOriginSelect.value = origemAtual;
+  watchDestinationSelect.value = destinoAtual;
+}
+
+// createDatePicker vem de js/modals.js, carregado DEPOIS de js/rides.js -
+// por isso a inicialização só roda sob demanda (na primeira renderização
+// da aba Caronas), nunca no escopo de topo do arquivo.
+let rideWatchDatePickersReady = false;
+function ensureRideWatchDatePickers(){
+  if(rideWatchDatePickersReady) return;
+  rideWatchDatePickersReady = true;
+
+  createDatePicker(watchStartsOnInput, document.getElementById('wrap-watchStartsOn'), null, {
+    title:'De quando',
+    getMinDate:() => todayISO(),
+    getMaxDate:() => watchEndsOnInput.value || null
+  });
+
+  createDatePicker(watchEndsOnInput, document.getElementById('wrap-watchEndsOn'), null, {
+    title:'Até quando',
+    getMinDate:() => watchStartsOnInput.value || todayISO()
+  });
+
+  watchStartsOnInput.addEventListener('change', function(){
+    if(watchEndsOnInput.value && watchEndsOnInput.value < watchStartsOnInput.value){
+      watchEndsOnInput.value = '';
+    }
+    refreshDatePickers();
+  });
+}
+
+function renderRideWatchItem(watch){
+  const origem = watch.origin || 'Origem não informada';
+  const destino = watch.destination || 'qualquer destino';
+  return '<div class="ride-watch-item">' +
+    '<div><strong>' + escapeHTML(origem) + ' → ' + escapeHTML(destino) + '</strong>' +
+    '<small>' + escapeHTML(formatDate(watch.startsOn)) + ' a ' + escapeHTML(formatDate(watch.endsOn)) + '</small></div>' +
+    '<button type="button" class="delete-btn ride-watch-cancel-btn" data-id="' + escapeHTML(watch.id) + '">Cancelar monitoramento</button>' +
+    '</div>';
+}
+
+async function renderRideWatches(){
+  if(!rideWatchListEl || !getCurrentUser()) return;
+  try{
+    const result = await apiRequest('/api/ride-watches');
+    const watches = Array.isArray(result.watches) ? result.watches : [];
+    rideWatchListEl.innerHTML = watches.length
+      ? watches.map(renderRideWatchItem).join('')
+      : '<div class="empty-state">Nenhuma rota monitorada no momento.</div>';
+  }catch(error){
+    rideWatchListEl.innerHTML = '';
+  }
+}
+
+rideWatchListEl.addEventListener('click', async function(e){
+  const btn = e.target.closest('.ride-watch-cancel-btn');
+  if(!btn) return;
+  try{
+    await apiRequest('/api/ride-watches/' + encodeURIComponent(btn.getAttribute('data-id')), { method:'DELETE' });
+  }catch(error){
+    // segue para atualizar a lista de qualquer forma
+  }
+  renderRideWatches();
+});
+
+rideWatchForm.addEventListener('submit', async function(e){
+  e.preventDefault();
+  rideWatchError.textContent = '';
+  if(!watchOriginSelect.value){
+    rideWatchError.textContent = 'Selecione a origem que deseja monitorar.';
+    return;
+  }
+  if(!watchStartsOnInput.value || !watchEndsOnInput.value){
+    rideWatchError.textContent = 'Informe o período que deseja monitorar.';
+    return;
+  }
+  if(watchEndsOnInput.value < watchStartsOnInput.value){
+    rideWatchError.textContent = 'A data final não pode ser anterior à data inicial.';
+    return;
+  }
+  try{
+    await apiRequest('/api/ride-watches', {
+      method:'POST',
+      body:{
+        origin:watchOriginSelect.value,
+        destination:watchDestinationSelect.value,
+        startsOn:watchStartsOnInput.value,
+        endsOn:watchEndsOnInput.value
+      }
+    });
+  }catch(error){
+    rideWatchError.textContent = error.message;
+    return;
+  }
+  rideWatchForm.reset();
+  watchOriginSelect.value = '';
+  watchDestinationSelect.value = '';
+  renderRideWatches();
 });
 
 async function joinRideFromAvailable(id){

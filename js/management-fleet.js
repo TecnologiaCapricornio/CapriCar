@@ -1,7 +1,7 @@
-/* Gestão — filiais e veículos */
+/* Gestão — locais e veículos */
 
 /* =========================================================
-   Filiais e veículos
+   Locais e veículos
    ========================================================= */
 const branchForm = document.getElementById('branchForm');
 const branchNameInput = document.getElementById('branchName');
@@ -58,7 +58,7 @@ function openBranchEditModal(branchId){
   fleetEditType = 'branch';
   fleetEditId = branch.id;
   fleetEditForm.reset();
-  fleetEditTitle.textContent = 'Editar filial';
+  fleetEditTitle.textContent = 'Editar local';
   fleetEditSubtitle.textContent = 'A alteração será aplicada aos veículos, bloqueios e reservas vinculados.';
   fleetEditBranchFields.classList.remove('hidden');
   fleetEditVehicleFields.classList.add('hidden');
@@ -82,7 +82,7 @@ function openVehicleEditModal(vehicleId){
     '<option value="' + escapeHTML(branch.nome) + '">' + escapeHTML(branch.nome) +
       (branch.ativo === false ? ' (inativa)' : '') + '</option>'
   ).join('');
-  fleetEditVehicleBranchSelect.value = vehicle.filial;
+  fleetEditVehicleBranchSelect.value = vehicle.local;
   fleetEditVehiclePlateInput.value = vehicle.placa || '';
   fleetEditVehicleBrandInput.value = getVehicleBrand(vehicle);
   fleetEditVehicleModelInput.value = getVehicleModelName(vehicle);
@@ -111,7 +111,7 @@ function openVehicleDeleteModal(vehicleId){
   vehicleDeleteSummary.innerHTML =
     '<strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
       (vehicle.placa ? '<br>' + plateBadgeHTML(vehicle.placa) : '') + '</strong>' +
-    '<small>' + escapeHTML(vehicle.filial) + '</small>';
+    '<small>' + escapeHTML(vehicle.local) + '</small>';
   vehicleDeleteModal.classList.remove('hidden');
   vehicleDeleteJustification.focus();
 }
@@ -132,7 +132,7 @@ function openBranchDeleteModal(branchId){
   branchDeleteId = branch.id;
   branchDeleteForm.reset();
   branchDeleteError.textContent = '';
-  const linkedVehicles = getVehicles().filter(vehicle => vehicle.filial === branch.nome).length;
+  const linkedVehicles = getVehicles().filter(vehicle => vehicle.local === branch.nome).length;
   branchDeleteSummary.innerHTML = '<strong>' + escapeHTML(branch.nome) + '</strong>' +
     '<small>' + linkedVehicles + (linkedVehicles === 1 ? ' veículo vinculado' : ' veículos vinculados') + '</small>';
   branchDeleteModal.classList.remove('hidden');
@@ -247,11 +247,11 @@ fleetEditForm.addEventListener('submit', function(e){
     const branch = list.find(item => String(item.id) === String(fleetEditId));
     const newName = fleetEditBranchNameInput.value.trim();
     if(!branch || !newName){
-      fleetEditError.textContent = 'Informe o nome da filial.';
+      fleetEditError.textContent = 'Informe o nome do local.';
       return;
     }
     if(list.some(item => item.id !== branch.id && item.nome.toLowerCase() === newName.toLowerCase())){
-      fleetEditError.textContent = 'Já existe uma filial com esse nome.';
+      fleetEditError.textContent = 'Já existe um local com esse nome.';
       return;
     }
     const oldName = branch.nome;
@@ -262,10 +262,10 @@ fleetEditForm.addEventListener('submit', function(e){
     branch.nome = newName;
     saveBranches(list);
     const vehiclesUpdated = getVehicles();
-    vehiclesUpdated.forEach(vehicle => { if(vehicle.filial === oldName) vehicle.filial = newName; });
+    vehiclesUpdated.forEach(vehicle => { if(vehicle.local === oldName) vehicle.local = newName; });
     saveVehicles(vehiclesUpdated);
     const blocksUpdated = getVehicleBlocks();
-    blocksUpdated.forEach(block => { if(block.filial === oldName) block.filial = newName; });
+    blocksUpdated.forEach(block => { if(block.local === oldName) block.local = newName; });
     saveVehicleBlocks(blocksUpdated);
     const reservationsUpdated = getReservations();
     reservationsUpdated.forEach(reservation => {
@@ -273,17 +273,17 @@ fleetEditForm.addEventListener('submit', function(e){
       if(reservation.destino === oldName) reservation.destino = newName;
     });
     saveReservations(reservationsUpdated);
-    logAudit('editou', 'filial', branch.id, oldName + ' → ' + newName);
+    logAudit('editou', 'local', branch.id, oldName + ' → ' + newName);
   } else {
     const list = getVehicles();
     const vehicle = list.find(item => String(item.id) === String(fleetEditId));
-    const filial = fleetEditVehicleBranchSelect.value;
+    const local = fleetEditVehicleBranchSelect.value;
     const marca = fleetEditVehicleBrandInput.value.trim();
     const modelo = fleetEditVehicleModelInput.value.trim();
     const placa = fleetEditVehiclePlateInput.value.trim().toUpperCase();
     const capacidade = Number(fleetEditVehicleCapacityInput.value);
-    if(!vehicle || !filial || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > 20){
-      fleetEditError.textContent = 'Preencha filial, placa, marca, modelo e uma capacidade entre 1 e 20.';
+    if(!vehicle || !local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > 20){
+      fleetEditError.textContent = 'Preencha local, placa, marca, modelo e uma capacidade entre 1 e 20.';
       return;
     }
     if(list.some(item =>
@@ -292,32 +292,32 @@ fleetEditForm.addEventListener('submit', function(e){
       fleetEditError.textContent = 'Já existe um veículo com essa placa.';
       return;
     }
-    const oldFilial = vehicle.filial;
+    const oldLocal = vehicle.local;
     const oldCode = String(vehicle.codigo);
-    vehicle.filial = filial;
+    vehicle.local = local;
     vehicle.marca = marca;
     vehicle.modelo = modelo;
     vehicle.placa = placa;
     vehicle.capacidade = capacidade;
     saveVehicles(list);
-    if(oldFilial !== filial){
+    if(oldLocal !== local){
       const blocksUpdated = getVehicleBlocks();
       blocksUpdated.forEach(block => {
-        if(block.filial === oldFilial && String(block.carro) === oldCode){
-          block.filial = filial;
+        if(block.local === oldLocal && String(block.carro) === oldCode){
+          block.local = local;
         }
       });
       saveVehicleBlocks(blocksUpdated);
       const reservationsUpdated = getReservations();
       reservationsUpdated.forEach(reservation => {
-        if(reservation.partida === oldFilial && String(reservation.carro) === oldCode){
-          reservation.partida = filial;
+        if(reservation.partida === oldLocal && String(reservation.carro) === oldCode){
+          reservation.partida = local;
         }
       });
       saveReservations(reservationsUpdated);
     }
     logAudit('editou', 'veículo', vehicle.id,
-      oldFilial + ' → ' + filial + ' · ' + marca + ' ' + modelo + ' · ' + placa);
+      oldLocal + ' → ' + local + ' · ' + marca + ' ' + modelo + ' · ' + placa);
   }
 
   const editedType = fleetEditType;
@@ -346,7 +346,7 @@ function refreshBranchSelectors(){
   [
     { el: document.getElementById('partida'), first: '<option value="">Selecione...</option>' },
     { el: document.getElementById('aPartida'), first: '<option value="">Selecione...</option>' },
-    { el: document.getElementById('adminFiltroFilial'), first: '<option value="">Todas</option>' },
+    { el: document.getElementById('adminFiltroLocal'), first: '<option value="">Todas</option>' },
     { el: document.getElementById('reportBranch'), first: '<option value="">Todas</option>' }
   ].forEach(item => {
     if(!item.el) return;
@@ -364,8 +364,8 @@ function refreshBranchSelectors(){
 function populateManagementVehicleSelectors(){
   const vehicles = getVehicles().filter(v => v.ativo !== false);
   const vehicleOptions = vehicles.map(v =>
-    '<option value="' + escapeHTML(v.filial + '|' + v.codigo) + '">' +
-      escapeHTML(v.filial + ' · ' + getVehicleFullModel(v) + (v.placa ? ' · ' + v.placa : '')) +
+    '<option value="' + escapeHTML(v.local + '|' + v.codigo) + '">' +
+      escapeHTML(v.local + ' · ' + getVehicleFullModel(v) + (v.placa ? ' · ' + v.placa : '')) +
     '</option>'
   ).join('');
   const blockVehicle = document.getElementById('blockVehicle');
@@ -394,7 +394,7 @@ function renderBranchManagement(){
       '<button type="button" class="secondary-btn branch-toggle-btn" data-id="' + escapeHTML(branch.id) + '">' + (branch.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
       '<button type="button" class="delete-btn branch-delete-btn" data-id="' + escapeHTML(branch.id) + '">Excluir</button></div>' +
     '</div>'
-  ).join('') : '<div class="empty-state">Nenhuma filial cadastrada.</div>';
+  ).join('') : '<div class="empty-state">Nenhum local cadastrado.</div>';
 
   branchesList.querySelectorAll('.branch-toggle-btn').forEach(btn => {
     btn.addEventListener('click', function(){
@@ -404,7 +404,7 @@ function renderBranchManagement(){
       if(!branch) return;
       branch.ativo = branch.ativo === false;
       saveBranches(list);
-      logAudit(branch.ativo ? 'ativou' : 'desativou', 'filial', branch.id, branch.nome);
+      logAudit(branch.ativo ? 'ativou' : 'desativou', 'local', branch.id, branch.nome);
       renderBranchManagement();
     });
   });
@@ -430,7 +430,7 @@ function renderFleetManagement(){
     '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
       '<div><strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
         (vehicle.placa ? '<br>' + plateBadgeHTML(vehicle.placa) : '') + '</strong>' +
-      '<small>' + escapeHTML(vehicle.filial) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
+      '<small>' + escapeHTML(vehicle.local) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
       '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
       '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
       '<button type="button" class="delete-btn vehicle-delete-btn" data-id="' + escapeHTML(vehicle.id) + '">Excluir</button></div>' +
@@ -446,7 +446,7 @@ function renderFleetManagement(){
       vehicle.ativo = vehicle.ativo === false;
       saveVehicles(list);
       logAudit(vehicle.ativo ? 'ativou' : 'desativou', 'veículo', vehicle.id,
-        vehicle.filial + ' · ' + getVehicleFullModel(vehicle) +
+        vehicle.local + ' · ' + getVehicleFullModel(vehicle) +
         (vehicle.placa ? ' · ' + vehicle.placa : ''));
       renderFleetManagement();
       renderCarSelector();
@@ -475,26 +475,26 @@ if(branchForm){
     if(!nome) return;
     const list = getBranches();
     if(list.some(f => f.nome.toLowerCase() === nome.toLowerCase())){
-      await showSiteAlert('Já existe uma filial com esse nome.', {
-        title:'Filial não cadastrada',
+      await showSiteAlert('Já existe um local com esse nome.', {
+        title:'Local não cadastrado',
         type:'warning'
       });
       return;
     }
-    const branch = { id: 'filial-' + Date.now(), nome: nome, ativo: true };
+    const branch = { id: 'local-' + Date.now(), nome: nome, ativo: true };
     list.push(branch);
     try{
       await saveBranches(list);
     }catch(error){
       await hydrateDatabaseState();
       await showSiteAlert(error.message, {
-        title:'Não foi possível cadastrar a filial',
+        title:'Não foi possível cadastrar o local',
         type:'danger'
       });
       renderBranchManagement();
       return;
     }
-    logAudit('cadastrou', 'filial', branch.id, nome);
+    logAudit('cadastrou', 'local', branch.id, nome);
     branchForm.reset();
     renderBranchManagement();
   });
@@ -504,13 +504,13 @@ if(vehicleForm){
   vehicleForm.addEventListener('submit', async function(e){
     e.preventDefault();
     if(!canManageFleet()) return;
-    const filial = vehicleBranchSelect.value;
+    const local = vehicleBranchSelect.value;
     const placa = vehiclePlateInput.value.trim().toUpperCase();
     const marca = vehicleBrandInput.value.trim();
     const modelo = vehicleModelInput.value.trim();
     const capacidade = Number(vehicleCapacityInput.value);
-    if(!filial || !placa || !marca || !modelo || !Number.isFinite(capacidade) || capacidade < 1){
-      await showSiteAlert('Preencha filial, placa, marca, modelo e capacidade.', {
+    if(!local || !placa || !marca || !modelo || !Number.isFinite(capacidade) || capacidade < 1){
+      await showSiteAlert('Preencha local, placa, marca, modelo e capacidade.', {
         title:'Revise os dados do veículo',
         type:'warning'
       });
@@ -526,7 +526,7 @@ if(vehicleForm){
     }
     const vehicle = {
       id: 'veiculo-' + Date.now(),
-      filial: filial,
+      local: local,
       codigo: placa,
       placa: placa,
       marca: marca,
@@ -547,7 +547,7 @@ if(vehicleForm){
       return;
     }
     logAudit('cadastrou', 'veículo', vehicle.id,
-      filial + ' · ' + vehicle.marca + ' ' + vehicle.modelo + ' · ' + placa);
+      local + ' · ' + vehicle.marca + ' ' + vehicle.modelo + ' · ' + placa);
     vehicleForm.reset();
     vehicleCapacityInput.value = '5';
     renderFleetManagement();

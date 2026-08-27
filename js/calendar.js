@@ -79,8 +79,8 @@ function formatWeekLabel(startISO){
 function syncCalendarCars(){
   TODOS_CARROS = [];
   CIDADES.forEach(cidade => {
-    (CARROS_POR_FILIAL[cidade] || []).forEach(carro => {
-      TODOS_CARROS.push({ filial:cidade, carro:carro, key:carKey(cidade, carro) });
+    (CARROS_POR_LOCAL[cidade] || []).forEach(carro => {
+      TODOS_CARROS.push({ local:cidade, carro:carro, key:carKey(cidade, carro) });
     });
   });
   if(!TODOS_CARROS.some(c => c.key === calSelectedCarKey)){
@@ -99,7 +99,7 @@ function getCarReservationsForDate(iso){
   if(!info) return [];
   return getReservations().filter(r =>
     !isReservationCompleted(r) &&
-    r.partida === info.filial &&
+    r.partida === info.local &&
     r.carro === info.carro &&
     iso >= r.dataIda &&
     iso <= r.dataVolta
@@ -110,37 +110,38 @@ function renderCarSelector(){
   syncCalendarCars();
   const selected = getSelectedCarInfo();
   calendarBranchSelect.innerHTML = CIDADES.map(branch => {
-    const hasCars = TODOS_CARROS.some(car => car.filial === branch);
+    const hasCars = TODOS_CARROS.some(car => car.local === branch);
     return '<option value="' + escapeHTML(branch) + '"' +
-      (selected && selected.filial === branch ? ' selected' : '') +
+      (selected && selected.local === branch ? ' selected' : '') +
       (hasCars ? '' : ' disabled') + '>' + escapeHTML(branch) + '</option>';
   }).join('');
   carSelector.innerHTML = CIDADES.map(branch => {
-    const branchCars = TODOS_CARROS.filter(car => car.filial === branch);
-    const active = selected && selected.filial === branch ? ' active' : '';
+    const branchCars = TODOS_CARROS.filter(car => car.local === branch);
+    const active = selected && selected.local === branch ? ' active' : '';
     return '<button type="button" class="car-tab-btn' + active + '" data-calendar-branch="' +
       escapeHTML(branch) + '"' + (branchCars.length ? '' : ' disabled') + '>' +
       '<span class="car-tab-city">' + escapeHTML(branch) + '</span>' +
       '</button>';
   }).join('');
 
-  const selectedBranch = selected ? selected.filial : '';
-  const branchCars = TODOS_CARROS.filter(car => car.filial === selectedBranch);
-  if(branchCars.length > 1){
+  const selectedBranch = selected ? selected.local : '';
+  const branchCars = TODOS_CARROS.filter(car => car.local === selectedBranch);
+  calendarVehicleFilter.classList.remove('hidden');
+  if(branchCars.length){
     calendarVehicleSelect.innerHTML = branchCars.map(car =>
       '<option value="' + escapeHTML(car.key) + '"' +
       (car.key === calSelectedCarKey ? ' selected' : '') + '>' +
-      escapeHTML(getVehicleDisplayName({ partida:car.filial, carro:car.carro })) + '</option>'
+      escapeHTML(getVehicleDisplayName({ partida:car.local, carro:car.carro })) + '</option>'
     ).join('');
-    calendarVehicleFilter.classList.remove('hidden');
+    calendarVehicleSelect.disabled = branchCars.length === 1;
   } else {
-    calendarVehicleSelect.innerHTML = '';
-    calendarVehicleFilter.classList.add('hidden');
+    calendarVehicleSelect.innerHTML = '<option value="">Nenhum veículo cadastrado</option>';
+    calendarVehicleSelect.disabled = true;
   }
 }
 
 function selectCalendarBranch(branch){
-  const firstCar = TODOS_CARROS.find(car => car.filial === branch);
+  const firstCar = TODOS_CARROS.find(car => car.local === branch);
   if(!firstCar) return;
   calSelectedCarKey = firstCar.key;
   clearCalendarSelection();
@@ -389,7 +390,7 @@ function buildMobileDayCalendar(){
     '<div class="mobile-day-top">' +
       '<button type="button" class="mobile-day-back" aria-label="Voltar para o mês">&#8249;</button>' +
       '<div><span>Agenda do dia</span><strong>' + escapeHTML(formatMobileDayTitle(mobileSelectedISO)) + '</strong>' +
-      (info ? '<small>' + escapeHTML(info.filial) + '</small>' : '') +
+      (info ? '<small>' + escapeHTML(info.local) + '</small>' : '') +
       '</div>' +
     '</div>' +
     '<div class="mobile-day-scroll">' +
@@ -809,11 +810,11 @@ function showDayDetails(iso, focusReservationId){
     const second = getOccupiedMinutesRangeForDate(b, iso);
     return (first ? first.inicio : 0) - (second ? second.inicio : 0);
   });
-  let html = '<div class="day-details-title">' + escapeHTML(info.filial) +
+  let html = '<div class="day-details-title">' + escapeHTML(info.local) +
     ' &mdash; <span class="reservation-moment-part">' + RESERVATION_CALENDAR_ICON + '<strong>' + formatDate(iso) + '</strong></span></div>';
 
   if(!list.length){
-    html += '<div class="day-empty-msg">Nenhuma reserva deste carro nesta data.</div>';
+    html += '<div class="day-empty-msg">Nenhuma reserva deste veículo nesta data.</div>';
   } else {
     list.forEach(reservation => {
       const ocupantes = getOcupantes(reservation);

@@ -120,14 +120,14 @@ function validateRules(value){
 }
 
 function validateBranches(value){
-  assert(Array.isArray(value) && value.length <= 500, 'Lista de filiais inválida.');
-  ensureUniqueIds(value, 'filiais');
+  assert(Array.isArray(value) && value.length <= 500, 'Lista de locais inválida.');
+  ensureUniqueIds(value, 'locais');
   const names = new Set();
   value.forEach(branch => {
-    const name = text(branch.nome, 'o nome da filial', 120).toLowerCase();
-    assert(!names.has(name), 'Já existe uma filial com esse nome.');
+    const name = text(branch.nome, 'o nome do local', 120).toLowerCase();
+    assert(!names.has(name), 'Já existe um local com esse nome.');
     names.add(name);
-    assert(typeof branch.ativo === 'boolean', 'O status da filial é inválido.');
+    assert(typeof branch.ativo === 'boolean', 'O status do local é inválido.');
   });
 }
 
@@ -139,14 +139,14 @@ function validateVehicles(value, branches, currentVehicles){
   const plates = new Set();
   const currentById = new Map((currentVehicles || []).map(vehicle => [String(vehicle.id), vehicle]));
   value.forEach(vehicle => {
-    const branch = text(vehicle.filial, 'a filial do veículo', 120);
+    const branch = text(vehicle.local, 'o local do veículo', 120);
     const code = text(vehicle.codigo, 'a referência interna do veículo', 40);
     const previous = currentById.get(String(vehicle.id));
     const legacyWithoutBrand = previous && !String(previous.marca || '').trim();
     text(vehicle.marca, 'a marca do veículo', 120, !legacyWithoutBrand);
     text(vehicle.modelo, 'o modelo do veículo', 120);
     const plate = text(vehicle.placa, 'a placa do veículo', 7).toUpperCase();
-    assert(branchNames.has(branch.toLowerCase()), 'O veículo referencia uma filial inexistente.');
+    assert(branchNames.has(branch.toLowerCase()), 'O veículo referencia um local inexistente.');
     assert(Number.isInteger(Number(vehicle.capacidade)) && Number(vehicle.capacidade) >= 1 && Number(vehicle.capacidade) <= 20,
       'A capacidade do veículo deve estar entre 1 e 20.');
     assert(typeof vehicle.ativo === 'boolean', 'O status do veículo é inválido.');
@@ -162,10 +162,10 @@ function validateBlocks(value, vehicles){
   assert(Array.isArray(value) && value.length <= 10000, 'Lista de bloqueios inválida.');
   ensureUniqueIds(value, 'bloqueios');
   const vehicleKeys = new Set(vehicles.map(vehicle =>
-    `${String(vehicle.filial).toLowerCase()}|${String(vehicle.codigo).toLowerCase()}`
+    `${String(vehicle.local).toLowerCase()}|${String(vehicle.codigo).toLowerCase()}`
   ));
   value.forEach(block => {
-    const branch = text(block.filial, 'a filial do bloqueio', 120);
+    const branch = text(block.local, 'o local do bloqueio', 120);
     const car = text(block.carro, 'o veículo do bloqueio', 40);
     text(block.tipo, 'o motivo do bloqueio', 40);
     text(block.observacoes, 'as observações do bloqueio', 2000, false);
@@ -244,7 +244,7 @@ function validateReservations(value, context){
   const today = todaySaoPaulo();
   const todayDay = dateDays(today);
   const vehicleMap = new Map(context.vehicles.map(vehicle => [
-    `${String(vehicle.filial).toLowerCase()}|${String(vehicle.codigo).toLowerCase()}`,
+    `${String(vehicle.local).toLowerCase()}|${String(vehicle.codigo).toLowerCase()}`,
     vehicle
   ]));
   const blocks = context.blocks || [];
@@ -340,7 +340,7 @@ function validateReservations(value, context){
     validateOperation(reservation.operacao);
 
     const blockConflict = blocks.some(block =>
-      String(block.filial).toLowerCase() === branch.toLowerCase() &&
+      String(block.local).toLowerCase() === branch.toLowerCase() &&
       String(block.carro).toLowerCase() === car.toLowerCase() &&
       !(reservation.dataVolta < block.dataInicio || reservation.dataIda > block.dataFim)
     );
@@ -356,7 +356,20 @@ function validateReservations(value, context){
     );
     assert(!conflict,
       `O veículo está indisponível no período. A margem configurada entre reservas é de ${rules.reservationBufferMinutes} minutos.`);
-    ranges.push({ ...range, vehicleKey });
+
+    // Mesmo usuário não pode ter duas reservas (em veículos diferentes) com
+    // horários que se sobrepõem - sem margem extra aqui, diferente do
+    // conflito de veículo acima, já que a pessoa não precisa do mesmo tempo
+    // de troca física que um carro precisa.
+    const ownerConflict = ranges.some(existing =>
+      reservationOwnersMatch(reservation, existing) &&
+      range.start < existing.end &&
+      range.end > existing.start
+    );
+    assert(!ownerConflict,
+      'Você já tem outra reserva em um período que se sobrepõe a este horário.');
+
+    ranges.push({ ...range, vehicleKey, nome:reservation.nome, criadorUsuarioId:reservation.criadorUsuarioId });
 
     if(startDay >= todayDay && startDay <= todayDay + Number(rules.maxAdvanceDays)){
       const ownerKey = owner.toLowerCase();

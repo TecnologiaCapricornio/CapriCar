@@ -48,6 +48,16 @@ const REMINDER_FIELDS = {
     enabled:document.getElementById('reminderReturnEnabled'),
     subject:document.getElementById('reminderReturnSubject'),
     body:document.getElementById('reminderReturnBody')
+  },
+  passengerJoined:{
+    enabled:document.getElementById('reminderPassengerJoinedEnabled'),
+    subject:document.getElementById('reminderPassengerJoinedSubject'),
+    body:document.getElementById('reminderPassengerJoinedBody')
+  },
+  rideWatchMatch:{
+    enabled:document.getElementById('reminderRideWatchMatchEnabled'),
+    subject:document.getElementById('reminderRideWatchMatchSubject'),
+    body:document.getElementById('reminderRideWatchMatchBody')
   }
 };
 
