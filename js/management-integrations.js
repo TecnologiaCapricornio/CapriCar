@@ -127,6 +127,10 @@ async function loadCalendarSyncForm(){
 
 async function renderIntegrationsManagement(){
   if(!canManageIntegrations()) return;
+  // Botões "Visualizar e-mail" (ver js/management-email-preview.js). São
+  // criados a partir de REMINDER_FIELDS e a função é idempotente, então
+  // pode ser chamada a cada abertura da aba.
+  if(typeof setupEmailPreviewButtons === 'function') setupEmailPreviewButtons();
   try{
     await Promise.all([loadEntraSsoForm(), loadSmtpForm(), loadEmailRemindersForm(), loadCalendarSyncForm()]);
     integrationsLoaded = true;

@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/base.css?v=20260825-2">
   <link rel="stylesheet" href="css/components.css?v=20260831-2">
   <link rel="stylesheet" href="css/calendar.css?v=20260826-3">
-  <link rel="stylesheet" href="css/admin.css?v=20260831-2">
+  <link rel="stylesheet" href="css/admin.css?v=20260831-3">
   <link rel="stylesheet" href="css/responsive.css?v=20260826-1">
   <link rel="stylesheet" href="css/themes.css?v=20260831-1">
 </head>
@@ -1112,6 +1112,35 @@
   </div>
 
   <!-- ===================== Modal de Perfil ===================== -->
+  <!-- ============ Pré-visualização de e-mail de lembrete ============ -->
+  <div class="modal-overlay hidden" id="emailPreviewModal">
+    <div class="modal-card email-preview-card" role="dialog" aria-modal="true"
+      aria-labelledby="emailPreviewTitle">
+      <button type="button" class="modal-close" id="emailPreviewCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="emailPreviewTitle">Pré-visualização</h3>
+
+      <div class="email-preview-meta">
+        <span class="email-preview-meta-label">Assunto</span>
+        <strong id="emailPreviewSubject"></strong>
+      </div>
+
+      <div class="email-preview-toolbar" role="group" aria-label="Largura da pré-visualização">
+        <button type="button" class="secondary-btn active" data-preview-width="desktop">Computador</button>
+        <button type="button" class="secondary-btn" data-preview-width="mobile">Celular</button>
+      </div>
+
+      <!-- sandbox sem allow-scripts: o HTML do template é renderizado, mas
+           nenhum script dele executa dentro do portal. -->
+      <iframe id="emailPreviewFrame" class="email-preview-frame" sandbox
+        title="Pré-visualização do e-mail"></iframe>
+
+      <p class="email-preview-hint">
+        Mostra o conteúdo que está nos campos agora, mesmo sem ter salvo, com os
+        tokens preenchidos com dados de exemplo.
+      </p>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="profileModal">
     <div class="modal-card profile-card">
       <button type="button" class="modal-close" id="profileCloseBtn">&times;</button>
@@ -1625,7 +1654,10 @@
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
   <script src="js/management-users.js?v=20260831-1"></script>
-  <script src="js/management-integrations.js?v=20260831-1"></script>
+  <script src="js/management-integrations.js?v=20260831-2"></script>
+  <!-- Depois de management-integrations.js: os botões são gerados a partir
+       do REMINDER_FIELDS declarado lá. -->
+  <script src="js/management-email-preview.js?v=20260831-2"></script>
   <script src="js/management-fleet.js?v=20260831-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <script src="js/management-indicators.js?v=20260831-1"></script>
