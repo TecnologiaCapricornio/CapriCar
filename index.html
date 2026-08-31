@@ -147,6 +147,11 @@
         <div class="card">
           <h2>Nova Reserva</h2>
           <div class="form-hint" id="solicitanteHint"></div>
+          <div class="notice notice-warning hidden" id="driverGateNotice">
+            Para reservar um veículo como motorista é preciso ter uma CNH válida
+            cadastrada. Abra <strong>Meu perfil</strong> para cadastrar a sua — sem
+            CNH você continua podendo entrar em caronas como passageiro.
+          </div>
           <form id="reservaForm" novalidate>
             <div class="mobile-reservation-progress" id="mobileReservationProgress" aria-label="Progresso da reserva">
               <span class="active" data-progress-step="1"><strong>1</strong> Trajeto</span>
@@ -921,6 +926,19 @@
                   <input type="text" id="reminderRideWatchMatchSubject" placeholder="Assunto do e-mail">
                   <textarea id="reminderRideWatchMatchBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
                 </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderCnhExpiringEnabled"> Aviso de
+                    CNH vencendo ou vencida</label>
+                  <input type="text" id="reminderCnhExpiringSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderCnhExpiringBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                  <div class="form-hint">
+                    Enviado nos marcos de 60, 30, 15, 7 e 1 dia antes do vencimento, no dia,
+                    e uma vez após vencer — e não diariamente. Tokens próprios deste aviso:
+                    <code>{{mensagem}}</code>, <code>{{situacaoCurta}}</code>,
+                    <code>{{validade}}</code>, <code>{{categoria}}</code>,
+                    <code>{{diasRestantes}}</code>.
+                  </div>
+                </div>
                 <div class="error-msg" id="emailRemindersError"></div>
                 <div class="user-form-actions">
                   <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
@@ -1072,11 +1090,67 @@
 
   <!-- ===================== Modal de Perfil ===================== -->
   <div class="modal-overlay hidden" id="profileModal">
-    <div class="modal-card">
+    <div class="modal-card profile-card">
       <button type="button" class="modal-close" id="profileCloseBtn">&times;</button>
       <div class="profile-avatar-lg" id="profileAvatarLg">--</div>
       <h3 id="profileName"></h3>
       <div class="form-hint" id="profileRole"></div>
+
+      <section class="profile-cnh">
+        <div class="profile-cnh-head">
+          <h4>Minha CNH</h4>
+          <span class="tag" id="cnhDriveBadge"></span>
+        </div>
+
+        <div id="cnhAlert" class="hidden"></div>
+
+        <form id="cnhForm" class="compact-form" novalidate>
+          <div class="row">
+            <div class="field">
+              <label for="cnhNumero">Número</label>
+              <input type="text" id="cnhNumero" inputmode="numeric" maxlength="11"
+                placeholder="Somente números" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="cnhCategoria">Categoria</label>
+              <select id="cnhCategoria">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+            <div class="field" id="field-cnhValidade">
+              <label for="cnhValidade">Validade</label>
+              <div class="date-input-wrapper" id="wrap-cnhValidade">
+                <input type="date" id="cnhValidade" readonly autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="cnhFrente">Foto da frente</label>
+              <input type="file" id="cnhFrente" accept="image/*">
+              <small class="cnh-photo-state" id="cnhFrenteEstado"></small>
+            </div>
+            <div class="field">
+              <label for="cnhVerso">Foto do verso</label>
+              <input type="file" id="cnhVerso" accept="image/*">
+              <small class="cnh-photo-state" id="cnhVersoEstado"></small>
+            </div>
+          </div>
+
+          <div class="form-hint">
+            As fotos ficam visíveis só para você e para quem administra usuários, e
+            nunca são publicadas em endereço aberto. Máximo de 1 MB cada.
+          </div>
+
+          <div class="error-msg" id="cnhError"></div>
+          <div class="user-form-actions">
+            <button type="button" class="secondary-btn" id="cnhRemoverBtn">Remover CNH</button>
+            <button type="submit" class="submit-btn">Salvar CNH</button>
+          </div>
+        </form>
+      </section>
+
       <button type="button" class="danger-btn" id="logoutBtn">Sair</button>
     </div>
   </div>
@@ -1518,7 +1592,7 @@
   <script src="js/storage.js?v=20260826-4"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
   <script src="js/rides.js?v=20260826-5"></script>
-  <script src="js/reservations.js?v=20260826-4"></script>
+  <script src="js/reservations.js?v=20260831-1"></script>
   <script src="js/calendar.js?v=20260826-3"></script>
   <script src="js/modals.js?v=20260826-4"></script>
   <script src="js/admin.js?v=20260826-5"></script>
@@ -1530,7 +1604,10 @@
   <script src="js/management-fleet.js?v=20260826-3"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <script src="js/management-reports.js?v=20260826-4"></script>
-  <script src="js/auth.js?v=20260826-4"></script>
+  <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
+       auth.js, que chama loadDriverLicense() ao abrir o app. -->
+  <script src="js/driver-license.js?v=20260831-1"></script>
+  <script src="js/auth.js?v=20260831-1"></script>
   <script src="js/app.js?v=20260826-3"></script>
 
 </body>

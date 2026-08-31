@@ -660,6 +660,21 @@ function buildConflictMessage(conflitos){
   return 'Horários ocupados: ' + partes.join('; ') + '.';
 }
 
+// Mostra ou esconde o aviso de CNH obrigatória e desabilita o envio.
+// Chamado por js/driver-license.js sempre que o estado da CNH muda.
+const driverGateNotice = document.getElementById('driverGateNotice');
+
+function refreshDriverGate(){
+  if(!driverGateNotice) return;
+  // Enquanto a CNH ainda não carregou, não bloqueia nada - evita travar o
+  // formulário por um instante logo depois do login.
+  const carregou = typeof getLicenseState === 'function' && getLicenseState() !== null;
+  const bloqueado = carregou && !userCanDrive();
+  driverGateNotice.classList.toggle('hidden', !bloqueado);
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if(submitBtn) submitBtn.disabled = bloqueado;
+}
+
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   confirmation.classList.remove('show');
@@ -667,6 +682,18 @@ form.addEventListener('submit', async function(e){
   const currentUser = getCurrentUser();
   if(!currentUser){
     showLogin();
+    return;
+  }
+
+  // Trava de motorista. A checagem também existe aqui, e não só no botão
+  // desabilitado, porque o estado da CNH pode ter mudado desde o carregamento
+  // da tela (ex.: venceu durante a sessão aberta).
+  if(typeof userCanDrive === 'function' && !userCanDrive()){
+    await showSiteAlert(
+      'Para reservar um veículo como motorista é preciso ter uma CNH válida cadastrada. ' +
+      'Abra "Meu perfil" para cadastrar a sua.',
+      { title:'CNH obrigatória', type:'warning' }
+    );
     return;
   }
 

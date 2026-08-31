@@ -4,6 +4,7 @@ const { hashPassword, createSessionToken } = require('../security');
 const { publicUser, requirePermission } = require('../auth');
 const { isValidEmail } = require('../validation');
 const { importSsoUsers, resolveSsoConfig } = require('../sso');
+const { getLicensesForUsers, licenseStatus, todayISO } = require('../driver-licenses');
 
 const router = express.Router();
 router.use(requirePermission('users'));
@@ -165,7 +166,23 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
 
 router.get('/', async (req, res) => {
   const result = await query(USER_SELECT + " ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name");
-  res.json({ users:result.rows.map(publicUser) });
+
+  // Uma consulta só para todas as CNHs, e não uma por usuário - a lista de
+  // usuários é paginada no cliente, então o N+1 apareceria em cheio aqui.
+  const licenses = await getLicensesForUsers(result.rows.map(row => row.id));
+  const hoje = todayISO();
+
+  res.json({
+    users:result.rows.map(row => {
+      const user = publicUser(row);
+      const cnh = licenses.get(String(row.id)) || null;
+      const status = licenseStatus(cnh, hoje);
+      user.cnh = cnh;
+      user.cnhStatus = status.estado;
+      user.cnhDiasRestantes = status.diasRestantes;
+      return user;
+    })
+  });
 });
 
 router.post('/sso-import', async (req, res) => {

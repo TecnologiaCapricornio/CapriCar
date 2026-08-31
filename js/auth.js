@@ -229,6 +229,7 @@ function showApp(user){
   renderMainCalendar();
   renderAvailableRides();
   initializeNotifications();
+  loadDriverLicense();
 }
 
 function showLogin(){
@@ -326,6 +327,9 @@ if(typeof window !== 'undefined' && typeof URLSearchParams !== 'undefined'){
 
 profileBtn.addEventListener('click', function(){
   profileModal.classList.remove('hidden');
+  // O seletor de data da CNH só pode ser criado depois de js/modals.js ter
+  // carregado, por isso a inicialização é sob demanda (ver js/driver-license.js).
+  if(typeof ensureCnhDatePicker === 'function') ensureCnhDatePicker();
 });
 
 profileCloseBtn.addEventListener('click', function(){

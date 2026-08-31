@@ -58,6 +58,11 @@ const REMINDER_FIELDS = {
     enabled:document.getElementById('reminderRideWatchMatchEnabled'),
     subject:document.getElementById('reminderRideWatchMatchSubject'),
     body:document.getElementById('reminderRideWatchMatchBody')
+  },
+  cnhExpiring:{
+    enabled:document.getElementById('reminderCnhExpiringEnabled'),
+    subject:document.getElementById('reminderCnhExpiringSubject'),
+    body:document.getElementById('reminderCnhExpiringBody')
   }
 };
 

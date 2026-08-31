@@ -1906,3 +1906,54 @@
     font-size:var(--fs-sm);
     padding-bottom:calc(30px + env(safe-area-inset-bottom, 0px));
   }
+
+/* ============ CNH no "Meu perfil" ============ */
+  .modal-card.profile-card{
+    max-width:640px;
+    text-align:left;
+  }
+
+  .profile-card > h3,
+  .profile-card > .profile-avatar-lg{
+    text-align:center;
+  }
+
+  .profile-card > h3{
+    margin-bottom:10px;
+  }
+
+  .profile-cnh{
+    margin:20px 0;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  .profile-cnh-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .profile-cnh-head h4{
+    margin:0;
+    font-size:var(--fs-md);
+    color:var(--text);
+  }
+
+  .cnh-photo-state{
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+  }
+
+  .cnh-photo-state.cnh-photo-ok{
+    color:var(--success-text);
+  }
+
+  .cnh-photo-state a{
+    color:var(--accent);
+  }

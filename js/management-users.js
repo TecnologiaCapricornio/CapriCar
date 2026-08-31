@@ -182,6 +182,23 @@ function sortedAccounts(){
   });
 }
 
+// Selo de CNH no card do usuário. O estado vem calculado do servidor
+// (users.js -> cnhStatus), para a lista e o portal nunca divergirem.
+const CNH_BADGE = {
+  valida:{ classe:'tag-success', texto:'CNH válida' },
+  vencendo:{ classe:'tag-warning', texto:'CNH vencendo' },
+  vencida:{ classe:'tag-danger', texto:'CNH vencida' }
+};
+
+function cnhBadge(account){
+  const info = CNH_BADGE[account.cnhStatus];
+  if(!info) return '';
+  const detalhe = account.cnh && account.cnh.validade
+    ? ' title="Validade: ' + escapeHTML(formatDate(account.cnh.validade)) + '"'
+    : '';
+  return '<span class="tag ' + info.classe + '"' + detalhe + '>' + info.texto + '</span>';
+}
+
 function filteredAccounts(){
   let accounts = sortedAccounts();
   const term = userSearchTerm.trim().toLowerCase();
@@ -265,7 +282,7 @@ function renderUserManagement(){
             ? ' · <span class="user-auth-icon" role="img" aria-label="Conta Microsoft (Entra ID)" title="Conta Microsoft (Entra ID)">' + MS_LOGO_SVG + '</span>'
             : '') +
         '</small>' +
-        '<div class="user-permissions">' + permissionBadges(account) + '</div>' +
+        '<div class="user-permissions">' + cnhBadge(account) + permissionBadges(account) + '</div>' +
       '</div>' +
       '<div class="management-actions">' +
         (account.role !== 'admin' || isAdmin()
