@@ -29,7 +29,16 @@ function openSiteDialog(options){
     siteDialogIcon.className = 'site-dialog-icon ' + type;
     siteDialogIcon.innerHTML = SITE_DIALOG_ICONS[type];
     siteDialogTitle.textContent = settings.title || (type === 'danger' ? 'Atenção' : 'Aviso');
-    siteDialogMessage.textContent = String(settings.message || '');
+    // `message` é sempre tratado como texto puro. Para destacar um trecho
+    // (ex.: o nome de quem será removido) use `messageHtml` - que é opt-in
+    // justamente porque a maioria das mensagens carrega nome, e-mail ou
+    // texto de erro vindos do usuário, e trocar tudo para innerHTML abriria
+    // XSS. Quem usa messageHtml precisa escapar o que interpola.
+    if(settings.messageHtml){
+      siteDialogMessage.innerHTML = String(settings.messageHtml);
+    } else {
+      siteDialogMessage.textContent = String(settings.message || '');
+    }
     siteDialogConfirmBtn.textContent = settings.confirmText || 'Entendi';
     siteDialogConfirmBtn.className = 'submit-btn site-dialog-confirm' + (type === 'danger' ? ' danger' : '');
     siteDialogCancelBtn.textContent = settings.cancelText || 'Cancelar';

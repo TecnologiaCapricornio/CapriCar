@@ -452,13 +452,15 @@ function bindOccupantRemoveButtons(container){
       // nada - por isso a checagem é contra null, e não pela verdade do valor:
       // a mensagem é opcional.
       const motivo = await showSitePrompt(
-        'Remover ' + passengerName + ' desta carona? A pessoa será removida da lista de passageiros ' +
-        'e avisada por notificação e e-mail.',
+        '',
         {
           title:'Remover passageiro',
           confirmText:'Sim, remover',
           type:'warning',
           multiline:true,
+          // O nome vem do cadastro, então é escapado antes de virar HTML.
+          messageHtml:'Remover <strong>' + escapeHTML(passengerName) + '</strong> desta carona? ' +
+            'O passageiro será avisado por notificação e e-mail.',
           inputPlaceholder:'Mensagem para ' + passengerName + ' (opcional). Ex.: preciso do lugar para levar equipamento.'
         }
       );
