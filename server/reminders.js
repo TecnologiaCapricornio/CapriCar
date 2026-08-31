@@ -47,9 +47,15 @@ const REMINDER_TYPES = {
 
 // Marcos de aviso de vencimento da CNH, em dias restantes.
 // O aviso sai UMA vez por marco cruzado - não todo dia. Um e-mail diário
-// durante os 60 dias da janela seria 60 mensagens iguais por pessoa, que é
+// durante toda a janela seria dezenas de mensagens iguais por pessoa, que é
 // a receita para o aviso virar ruído e ser filtrado.
-const CNH_MILESTONES = [0, 1, 7, 15, 30, 60];
+//
+// Só estes três marcos, mais um único aviso depois de vencida. Como não há
+// marco acima de 30, uma CNH a 45 dias do vencimento não gera aviso - ela
+// aparece com o estado "vencendo" no portal (a janela de exibição é de 60
+// dias, ver DEFAULT_WARNING_DAYS), mas notificação e e-mail só a partir de 30.
+// Faltando 0 dias cai no marco 1, que já foi avisado no dia anterior.
+const CNH_MILESTONES = [1, 15, 30];
 
 // Marco a que um determinado "faltam N dias" pertence: o menor marco que
 // ainda é >= N. Assim 45 dias e 60 dias caem no mesmo marco (60) e só geram

@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/base.css?v=20260825-2">
   <link rel="stylesheet" href="css/components.css?v=20260831-2">
   <link rel="stylesheet" href="css/calendar.css?v=20260826-3">
-  <link rel="stylesheet" href="css/admin.css?v=20260831-3">
+  <link rel="stylesheet" href="css/admin.css?v=20260831-4">
   <link rel="stylesheet" href="css/responsive.css?v=20260826-1">
   <link rel="stylesheet" href="css/themes.css?v=20260831-1">
 </head>
@@ -955,8 +955,8 @@
                   <input type="text" id="reminderCnhExpiringSubject" placeholder="Assunto do e-mail">
                   <textarea id="reminderCnhExpiringBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
                   <div class="form-hint">
-                    Enviado nos marcos de 60, 30, 15, 7 e 1 dia antes do vencimento, no dia,
-                    e uma vez após vencer — e não diariamente. Tokens próprios deste aviso:
+                    Enviado 30, 15 e 1 dia antes do vencimento, e uma vez depois de vencida —
+                    quatro avisos no total, não diariamente. Tokens próprios deste aviso:
                     <code>{{mensagem}}</code>, <code>{{situacaoCurta}}</code>,
                     <code>{{validade}}</code>, <code>{{categoria}}</code>,
                     <code>{{diasRestantes}}</code>.
@@ -1039,8 +1039,6 @@
                 </div>
                 <div class="error-msg" id="userAccountError"></div>
                 <div class="user-form-actions">
-                  <button type="button" class="secondary-btn hidden" id="userAccountCancelBtn">Cancelar
-                    edição</button>
                   <button type="submit" class="submit-btn" id="userAccountSubmitBtn">Criar usuário</button>
                 </div>
               </form>
@@ -1450,6 +1448,67 @@
   </div>
 
   <!-- ===================== Modal de Retirada / Devolução ===================== -->
+  <!-- ============ Edição de usuário ============
+       Campos próprios, separados dos de "Novo usuário": carregar um
+       registro existente no formulário de cadastro deixava ambíguo se o
+       envio criaria ou alteraria alguém. -->
+  <div class="modal-overlay hidden" id="userEditModal">
+    <div class="modal-card user-edit-card" role="dialog" aria-modal="true"
+      aria-labelledby="userEditTitle">
+      <button type="button" class="modal-close" id="userEditCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="userEditTitle">Editar usuário</h3>
+
+      <form id="userEditForm" class="compact-form" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="userEditName">Nome</label>
+            <input type="text" id="userEditName" placeholder="Nome do usuário" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="userEditUsername">Usuário de acesso</label>
+            <input type="text" id="userEditUsername" disabled>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="userEditEmail">E-mail</label>
+            <input type="email" id="userEditEmail" placeholder="nome@empresa.com" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="userEditPassword">Nova senha</label>
+            <input type="password" id="userEditPassword" placeholder="Deixe vazio para manter"
+              autocomplete="new-password">
+            <div class="form-hint" id="userEditPasswordHint">Deixe a senha vazia para manter a atual.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Permissões adicionais</label>
+          <div class="permission-grid">
+            <label class="permission-option"><input type="checkbox" id="editPermissionReservations">
+              Reservas</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionBranches"> Locais</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionBlocks"> Bloqueios</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionAudit"> Auditoria</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionRules"> Regras</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionIntegrations">
+              Integrações</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionUsers"> Usuários</label>
+          </div>
+        </div>
+
+        <div class="error-msg" id="userEditError"></div>
+        <div class="user-form-actions">
+          <button type="button" class="secondary-btn" id="userEditCancelBtn">Cancelar</button>
+          <button type="submit" class="submit-btn" id="userEditSubmitBtn">Salvar alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="userDeleteModal">
     <div class="modal-card user-delete-card" role="dialog" aria-modal="true" aria-labelledby="userDeleteTitle">
       <button type="button" class="modal-close" id="userDeleteCloseBtn" aria-label="Fechar">&times;</button>
@@ -1653,7 +1712,7 @@
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
-  <script src="js/management-users.js?v=20260831-1"></script>
+  <script src="js/management-users.js?v=20260831-2"></script>
   <script src="js/management-integrations.js?v=20260831-2"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->

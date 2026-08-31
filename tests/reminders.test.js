@@ -97,20 +97,26 @@ test('plateBadgeEmailHTML devolve string vazia sem placa e HTML em maiúsculas c
 /* ===== Aviso de vencimento de CNH ===== */
 
 test('cada marco de vencimento da CNH avisa uma vez só', () => {
-  // 60 e 45 dias caem no mesmo marco: quem já foi avisado aos 60 não
-  // recebe de novo aos 45.
-  assert.equal(cnhMilestoneFor(60), '60');
-  assert.equal(cnhMilestoneFor(45), '60');
-  assert.equal(cnhMilestoneFor(31), '60');
-  // Ao cruzar 30 o marco muda e um aviso novo sai.
+  // 30 e 16 dias caem no mesmo marco: quem já foi avisado aos 30 não
+  // recebe de novo aos 16.
   assert.equal(cnhMilestoneFor(30), '30');
+  assert.equal(cnhMilestoneFor(22), '30');
   assert.equal(cnhMilestoneFor(16), '30');
+  // Ao cruzar 15 o marco muda e um aviso novo sai.
   assert.equal(cnhMilestoneFor(15), '15');
-  assert.equal(cnhMilestoneFor(8), '15');
-  assert.equal(cnhMilestoneFor(7), '7');
-  assert.equal(cnhMilestoneFor(2), '7');
+  assert.equal(cnhMilestoneFor(2), '15');
   assert.equal(cnhMilestoneFor(1), '1');
-  assert.equal(cnhMilestoneFor(0), '0');
+});
+
+test('o dia do vencimento cai no marco de 1 dia, já avisado na véspera', () => {
+  assert.equal(cnhMilestoneFor(0), '1');
+});
+
+test('acima de 30 dias não há marco - o aviso começa aos 30', () => {
+  assert.equal(cnhMilestoneFor(31), null);
+  assert.equal(cnhMilestoneFor(45), null);
+  assert.equal(cnhMilestoneFor(60), null);
+  assert.equal(cnhMilestoneFor(400), null);
 });
 
 test('CNH vencida tem marco próprio, avisado uma vez', () => {
@@ -118,9 +124,14 @@ test('CNH vencida tem marco próprio, avisado uma vez', () => {
   assert.equal(cnhMilestoneFor(-90), 'vencida');
 });
 
-test('fora da janela de aviso não há marco', () => {
-  assert.equal(cnhMilestoneFor(61), null);
-  assert.equal(cnhMilestoneFor(400), null);
+test('são exatamente 4 avisos ao longo de toda a vida da CNH', () => {
+  // 30 -> 15 -> 1 -> vencida. Nenhum dia entre eles gera marco novo.
+  const marcos = [];
+  for(let dias = 60; dias >= -5; dias--){
+    const marco = cnhMilestoneFor(dias);
+    if(marco && marco !== marcos[marcos.length - 1]) marcos.push(marco);
+  }
+  assert.deepEqual(marcos, ['30', '15', '1', 'vencida']);
 });
 
 test('formatDateBR aceita string ISO e Date do banco', () => {

@@ -899,3 +899,11 @@
   color:var(--text-muted);
   line-height:1.5;
 }
+
+/* Modal de edição de usuário: mais largo que o padrão para a grade de
+   permissões caber em colunas, como no formulário de cadastro. */
+.modal-card.user-edit-card{
+  max-width:680px;
+  width:min(680px, calc(100vw - 32px));
+  text-align:left;
+}
