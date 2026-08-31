@@ -31,7 +31,9 @@ const REMINDER_LABELS = {
   returnOverdue:'Lembrete de devolução pendente',
   passengerJoined:'Aviso ao motorista de passageiro na carona',
   rideWatchMatch:'Aviso de carona monitorada disponível',
-  cnhExpiring:'Aviso de CNH vencendo ou vencida'
+  cnhExpiring:'Aviso de CNH vencendo ou vencida',
+  passengerRemoved:'Aviso a quem foi removido de uma carona',
+  passengerLeft:'Aviso ao motorista quando alguém sai da carona'
 };
 
 // Réplica do badge de placa dos e-mails (server/reminders.js:
@@ -48,6 +50,23 @@ function previewPlateBadge(placa){
       'font-family:\'Arial Narrow\',Arial,Helvetica,sans-serif;font-weight:800;' +
       'font-size:14px;letter-spacing:1.2px;color:#1a1a1a;">' + value + '</td></tr>' +
     '</table>';
+}
+
+// Réplica de blocoMotivoHTML (server/reminders.js) para a prévia mostrar a
+// citação da mensagem exatamente como ela sai no e-mail.
+function previewMotivoBloco(motivo, autor){
+  const texto = String(motivo || '').trim();
+  if(!texto) return '';
+  return '<tr><td style="padding:18px 32px 0 32px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+      '<td style="background-color:#f7f9fb;border-left:3px solid #c2cedb;' +
+        'border-radius:4px;padding:14px 16px;">' +
+        '<div style="font-size:12px;color:#8a95a3;margin-bottom:6px;">Mensagem de ' +
+          escapeHTML(autor) + '</div>' +
+        '<div style="font-size:14px;color:#3c4753;line-height:1.55;">' +
+          escapeHTML(texto) + '</div>' +
+      '</td>' +
+    '</tr></table></td></tr>';
 }
 
 // Dados de exemplo cobrindo todos os tokens de todos os tipos. Um só
@@ -69,7 +88,10 @@ const PREVIEW_TOKENS = {
   situacaoCurta:'está próxima do vencimento',
   validade:'30/09/2026',
   categoria:'AB',
-  diasRestantes:'30'
+  diasRestantes:'30',
+  outraParte:'Renan Guedes',
+  motivo:'Preciso do lugar para levar equipamento.',
+  blocoMotivo:previewMotivoBloco('Preciso do lugar para levar equipamento.', 'Renan Guedes')
 };
 
 // Mesma substituição de server/reminders.js:renderTemplate - token

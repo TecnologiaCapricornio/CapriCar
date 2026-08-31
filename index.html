@@ -975,6 +975,23 @@
                     <code>{{diasRestantes}}</code>.
                   </div>
                 </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderPassengerRemovedEnabled"> Aviso
+                    a quem foi removido de uma carona</label>
+                  <input type="text" id="reminderPassengerRemovedSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderPassengerRemovedBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderPassengerLeftEnabled"> Aviso ao
+                    motorista quando alguém sai da carona</label>
+                  <input type="text" id="reminderPassengerLeftSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderPassengerLeftBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                  <div class="form-hint">
+                    Tokens próprios destes dois avisos: <code>{{outraParte}}</code> (quem removeu, ou quem saiu),
+                    <code>{{motivo}}</code> com a mensagem escrita na hora, e <code>{{blocoMotivo}}</code>, que
+                    monta a citação já formatada e some sozinho quando ninguém escreveu nada.
+                  </div>
+                </div>
                 <div class="error-msg" id="emailRemindersError"></div>
                 <div class="user-form-actions">
                   <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
@@ -1715,6 +1732,7 @@
       <p id="siteDialogMessage"></p>
       <div class="field hidden" id="siteDialogInputWrap">
         <input type="text" id="siteDialogInput" autocomplete="off">
+        <textarea id="siteDialogTextarea" class="hidden" rows="3"></textarea>
       </div>
       <div class="site-dialog-actions">
         <button type="button" class="secondary-btn hidden" id="siteDialogCancelBtn">Cancelar</button>
@@ -1727,14 +1745,14 @@
   <script src="js/config.js?v=20260826-1"></script>
   <script src="js/theme.js?v=20260804-2"></script>
   <script src="js/utils.js?v=20260826-4"></script>
-  <script src="js/dialogs.js?v=20260804-1"></script>
-  <script src="js/api.js?v=20260826-1"></script>
-  <script src="js/storage.js?v=20260826-4"></script>
+  <script src="js/dialogs.js?v=20260831-1"></script>
+  <script src="js/api.js?v=20260831-1"></script>
+  <script src="js/storage.js?v=20260831-1"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
   <script src="js/seat-map.js?v=20260831-2"></script>
-  <script src="js/rides.js?v=20260831-3"></script>
-  <script src="js/reservations.js?v=20260831-3"></script>
+  <script src="js/rides.js?v=20260831-4"></script>
+  <script src="js/reservations.js?v=20260831-4"></script>
   <script src="js/calendar.js?v=20260831-2"></script>
   <script src="js/modals.js?v=20260831-2"></script>
   <script src="js/admin.js?v=20260831-2"></script>
@@ -1742,10 +1760,10 @@
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
   <script src="js/management-users.js?v=20260831-3"></script>
-  <script src="js/management-integrations.js?v=20260831-3"></script>
+  <script src="js/management-integrations.js?v=20260831-4"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
-  <script src="js/management-email-preview.js?v=20260831-2"></script>
+  <script src="js/management-email-preview.js?v=20260831-3"></script>
   <script src="js/management-fleet.js?v=20260831-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <script src="js/management-indicators.js?v=20260831-1"></script>

@@ -64,6 +64,16 @@ const REMINDER_FIELDS = {
     enabled:document.getElementById('reminderCnhExpiringEnabled'),
     subject:document.getElementById('reminderCnhExpiringSubject'),
     body:document.getElementById('reminderCnhExpiringBody')
+  },
+  passengerRemoved:{
+    enabled:document.getElementById('reminderPassengerRemovedEnabled'),
+    subject:document.getElementById('reminderPassengerRemovedSubject'),
+    body:document.getElementById('reminderPassengerRemovedBody')
+  },
+  passengerLeft:{
+    enabled:document.getElementById('reminderPassengerLeftEnabled'),
+    subject:document.getElementById('reminderPassengerLeftSubject'),
+    body:document.getElementById('reminderPassengerLeftBody')
   }
 };
 

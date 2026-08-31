@@ -15,10 +15,11 @@ const { readPhotoFile } = require('../photo-storage');
 const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
+  notifyReservationPassengerRemovals,
   notifyOperationReport
 } = require('../notifications');
 const { createOrUpdateCalendarEvent, deleteCalendarEvent, resolveCalendarOwner } = require('../calendar-sync');
-const { sendPassengerJoinedEmail } = require('../reminders');
+const { sendPassengerJoinedEmail, sendPassengerRemovalEmail } = require('../reminders');
 const { notifyRideWatchMatches, sendRideWatchMatchEmails } = require('../ride-watches');
 
 const router = express.Router();
@@ -60,6 +61,19 @@ function rejectPassengerPrivateChanges(current, incoming){
       throw Object.assign(new Error('VocÃª nÃ£o pode alterar os dados privados de uma reserva de outro usuÃ¡rio.'), { status:403 });
     }
   }
+}
+
+// Mensagem opcional de quem removeu (ou de quem saiu da carona). Vai parar
+// numa notificação e num e-mail HTML, então não pode confiar no cliente:
+// tira marcação, caracteres de controle e limita o tamanho.
+function sanitizeRemovalReason(value){
+  return String(value == null ? '' : value)
+    .replace(/[<>]/g, '')
+    // Remove caracteres de controle, mas preserva quebra de linha e tabulacao:
+    // o campo e multilinha e a mensagem pode ter mais de um paragrafo.
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .trim()
+    .slice(0, 300);
 }
 
 function sanitizeIncoming(current, incoming, user, manager){
@@ -133,6 +147,7 @@ router.post('/sync', async (req, res) => {
     (req.user.role === 'admin' || !!(req.user.permissions && req.user.permissions.reservations));
   const calendarSyncTasks = [];
   const passengerJoinedEmailTasks = [];
+  const passengerRemovedEmailTasks = [];
   const rideWatchEmailTasks = [];
 
   await withTransaction(async client => {
@@ -162,7 +177,10 @@ router.post('/sync', async (req, res) => {
       }
       const reservation = sanitizeIncoming(previous, change.reservation, req.user, manager);
       nextById.set(String(reservation.id), reservation);
-      prepared.push({ type, previous, reservation });
+      prepared.push({
+        type, previous, reservation,
+        motivoRemocao:sanitizeRemovalReason(change.motivoRemocao)
+      });
     }
 
     const next = [...nextById.values()];
@@ -201,6 +219,12 @@ router.post('/sync', async (req, res) => {
         const addedPassengers = await notifyReservationPassengerAdditions(client, change.previous, change.reservation, req.user);
         if(addedPassengers && addedPassengers.length && String(change.reservation.criadorUsuarioId || '') !== String(req.user.id)){
           passengerJoinedEmailTasks.push({ reservation:change.reservation, addedPassengers });
+        }
+        const removalTasks = await notifyReservationPassengerRemovals(
+          client, change.previous, change.reservation, req.user, change.motivoRemocao
+        );
+        for(const task of removalTasks){
+          passengerRemovedEmailTasks.push({ ...task, reservation:change.reservation });
         }
         const saved = await persistReservation(client, change.reservation, req.user);
         if(!change.previous){
@@ -253,6 +277,10 @@ router.post('/sync', async (req, res) => {
     const driverId = task.reservation.criadorUsuarioId;
     const driverResult = await query('SELECT email, display_name FROM users WHERE id = $1', [driverId]);
     await sendPassengerJoinedEmail(task.reservation, task.addedPassengers, driverResult.rows[0]);
+  }
+
+  for(const task of passengerRemovedEmailTasks){
+    await sendPassengerRemovalEmail(task);
   }
 
   for(const task of rideWatchEmailTasks){

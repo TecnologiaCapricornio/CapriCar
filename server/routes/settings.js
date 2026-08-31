@@ -195,7 +195,8 @@ router.put('/email-reminders', async (req, res) => {
   const body = req.body || {};
   const types = [
     'reservationUpcoming', 'pickupOverdue', 'returnOverdue',
-    'passengerJoined', 'rideWatchMatch', 'cnhExpiring'
+    'passengerJoined', 'rideWatchMatch', 'cnhExpiring',
+    'passengerRemoved', 'passengerLeft'
   ];
   const next = {};
   for(const type of types){

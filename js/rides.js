@@ -418,7 +418,7 @@ async function addPassengerToReservation(id, user){
 // O criador da reserva não pode sair por essa via — apenas excluir a reserva inteira.
 // Retorna { reserva } em caso de sucesso, ou null se a reserva não existir, o usuário for
 // o criador, ou o usuário não for passageiro dela.
-async function removePassengerFromReservation(id, user){
+async function removePassengerFromReservation(id, user, motivo){
   const list = getReservations();
   const idx = list.findIndex(r => String(r.id) === String(id));
   if(idx === -1) return null;
@@ -436,7 +436,7 @@ async function removePassengerFromReservation(id, user){
   ));
   list[idx] = reserva;
   try{
-    await saveReservations(list);
+    await saveReservations(list, { motivoRemocao:motivo, reservationId:reserva.id });
   }catch(error){
     await hydrateDatabaseState();
     await showSiteAlert(error.message, {
@@ -453,7 +453,7 @@ async function removePassengerFromReservation(id, user){
 // transportado no lugar de um passageiro. Diferente de
 // removePassengerFromReservation (o próprio passageiro saindo da carona):
 // aqui quem age é o motorista, removendo outra pessoa pelo usuarioId dela.
-async function removePassengerAsDriver(reservationId, passengerUserId){
+async function removePassengerAsDriver(reservationId, passengerUserId, motivo){
   const currentUser = getCurrentUser();
   if(!currentUser) return null;
   const list = getReservations();
@@ -468,7 +468,7 @@ async function removePassengerAsDriver(reservationId, passengerUserId){
   );
   list[idx] = reserva;
   try{
-    await saveReservations(list);
+    await saveReservations(list, { motivoRemocao:motivo, reservationId:reserva.id });
   }catch(error){
     await hydrateDatabaseState();
     await showSiteAlert(error.message, {

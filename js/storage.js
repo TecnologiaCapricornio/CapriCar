@@ -8,11 +8,15 @@ function getReservations(){
   }
 }
 
-function saveReservations(list){
+// options.motivoRemocao + options.reservationId: mensagem opcional escrita por
+// quem removeu (ou por quem saiu da carona). Não faz parte da reserva - é
+// metadado da AÇÃO, então viaja junto da alteração e só serve para compor a
+// notificação e o e-mail enviados à outra parte.
+function saveReservations(list, options){
   const previous = getReservations();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   return typeof syncReservations === 'function'
-    ? syncReservations(previous, list)
+    ? syncReservations(previous, list, options)
     : Promise.resolve({ localOnly:true, reservations:list });
 }
 

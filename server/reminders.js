@@ -397,6 +397,89 @@ const DEFAULT_TEMPLATES = {
     </table>
   </td></tr>
 </table>`
+  },
+  passengerRemoved:{
+    enabled:false,
+    subject:'🚫 {{outraParte}} removeu você da carona {{origem}} → {{destino}}',
+    body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
+      <tr><td style="background-color:#fdf0f1;padding:24px 32px;border-radius:12px 12px 0 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:52px;height:52px;background-color:#f5d7da;border-radius:26px;text-align:center;font-size:24px;line-height:52px;">🚫</td>
+          <td style="padding-left:14px;vertical-align:middle;">
+            <div style="color:#a3323f;font-size:18px;font-weight:700;">Você saiu de uma carona</div>
+            <div style="color:#b9737c;font-size:12px;margin-top:2px;">CapriCar</div>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:26px 32px 8px 32px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#3c4753;line-height:1.55;">Olá, {{nome}}. {{outraParte}} removeu você desta carona. A reserva continua existindo, mas sem você na lista de passageiros.</p>
+      </td></tr>
+      <tr><td style="padding:0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eef1f5;border-radius:8px;">
+          <tr style="background-color:#fbfcfd;">
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;width:38%;">Trajeto</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;">{{origem}} → {{destino}}</td>
+          </tr>
+          <tr>
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;border-top:1px solid #eef1f5;">Saída</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;border-top:1px solid #eef1f5;">{{dataIda}} às {{horarioRetirada}}</td>
+          </tr>
+        </table>
+      </td></tr>
+      {{blocoMotivo}}
+      <tr><td style="padding:18px 32px 28px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="background-color:#f5f9fd;border-left:3px solid #a7c6e3;border-radius:4px;padding:12px 16px;font-size:13px;color:#3c6182;">
+            💡 Precisa dessa viagem? Veja em "Caronas Disponíveis" se há outra reserva no mesmo trajeto, ou monitore a rota para ser avisado quando surgir uma.
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="background-color:#fafbfc;padding:16px 32px;border-top:1px solid #f0f3f6;border-radius:0 0 12px 12px;">
+        <p style="margin:0;font-size:12px;color:#a7b0bc;">Você está recebendo isso porque estava nesta carona no CapriCar.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`
+  },
+  passengerLeft:{
+    enabled:false,
+    subject:'🚶 {{outraParte}} saiu da sua carona {{origem}} → {{destino}}',
+    body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
+      <tr><td style="background-color:#eef4fb;padding:24px 32px;border-radius:12px 12px 0 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:52px;height:52px;background-color:#d9e6f5;border-radius:26px;text-align:center;font-size:24px;line-height:52px;">🚶</td>
+          <td style="padding-left:14px;vertical-align:middle;">
+            <div style="color:#2c5073;font-size:18px;font-weight:700;">Alguém saiu da sua carona</div>
+            <div style="color:#6488a8;font-size:12px;margin-top:2px;">CapriCar</div>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:26px 32px 8px 32px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#3c4753;line-height:1.55;">Olá, {{nome}}. {{outraParte}} saiu desta carona, e a vaga voltou a ficar disponível para outra pessoa.</p>
+      </td></tr>
+      <tr><td style="padding:0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eef1f5;border-radius:8px;">
+          <tr style="background-color:#fbfcfd;">
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;width:38%;">Trajeto</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;">{{origem}} → {{destino}}</td>
+          </tr>
+          <tr>
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;border-top:1px solid #eef1f5;">Saída</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;border-top:1px solid #eef1f5;">{{dataIda}} às {{horarioRetirada}}</td>
+          </tr>
+        </table>
+      </td></tr>
+      {{blocoMotivo}}
+      <tr><td style="background-color:#fafbfc;padding:16px 32px;border-top:1px solid #f0f3f6;border-radius:0 0 12px 12px;">
+        <p style="margin:0;font-size:12px;color:#a7b0bc;">Você está recebendo isso porque é o motorista desta carona no CapriCar.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`
   }
 };
 
@@ -648,6 +731,53 @@ async function sendPassengerJoinedEmail(reservation, addedPassengers, driver){
   }
 }
 
+// Bloco de citação da mensagem opcional. Fora do template para que, sem
+// mensagem, o e-mail não fique com uma caixa vazia - o token {{blocoMotivo}}
+// simplesmente some.
+function blocoMotivoHTML(motivo, autor){
+  const texto = String(motivo || '').trim();
+  if(!texto) return '';
+  const escapado = texto
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+  return `<tr><td style="padding:18px 32px 0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="background-color:#f7f9fb;border-left:3px solid #c2cedb;border-radius:4px;padding:14px 16px;">
+            <div style="font-size:12px;color:#8a95a3;margin-bottom:6px;">Mensagem de ${autor}</div>
+            <div style="font-size:14px;color:#3c4753;line-height:1.55;">${escapado}</div>
+          </td>
+        </tr></table>
+      </td></tr>`;
+}
+
+// Dispara na hora (não pelo sweep) quando alguém sai ou é removido de uma
+// carona. `task` vem de notifyReservationPassengerRemovals. Como os demais
+// e-mails de evento, nunca interrompe o fluxo: erro só vai para o console.
+async function sendPassengerRemovalEmail(task){
+  if(!task || !task.destinatario || !task.destinatario.email) return;
+  try{
+    const settings = await getEmailReminderSettings();
+    const config = settings[task.tipo];
+    if(!config || !config.enabled) return;
+
+    const vehicle = await resolveVehicle(task.reservation.carro, task.reservation.partida);
+    const tokens = {
+      ...reservationTokens(task.reservation, vehicle),
+      nome:task.destinatario.display_name,
+      outraParte:task.outraParte,
+      motivo:String(task.motivo || ''),
+      blocoMotivo:blocoMotivoHTML(task.motivo, task.outraParte)
+    };
+    await sendMail({
+      to:task.destinatario.email,
+      subject:renderTemplate(config.subject, tokens),
+      html:renderTemplate(config.body, tokens)
+    });
+  }catch(error){
+    console.error('Falha ao enviar e-mail de remoção de passageiro:', error.message);
+  }
+}
+
 module.exports = {
   sweepEmailReminders,
   sweepDriverLicenseReminders,
@@ -660,5 +790,7 @@ module.exports = {
   reservationTokens,
   formatDateBR,
   plateBadgeEmailHTML,
-  sendPassengerJoinedEmail
+  blocoMotivoHTML,
+  sendPassengerJoinedEmail,
+  sendPassengerRemovalEmail
 };

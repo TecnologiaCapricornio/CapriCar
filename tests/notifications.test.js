@@ -4,6 +4,7 @@ const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
   notifyOperationReport,
+  notifyReservationPassengerRemovals,
   reminderTypesForReservation
 } = require('../server/notifications');
 
@@ -184,4 +185,90 @@ test('o módulo exporta as funções consumidas por outros módulos do servidor'
       `server/notifications.js precisa exportar ${nome}`
     );
   }
+});
+
+/* ===== Saída / remoção de passageiro ===== */
+
+// Cliente que resolve contas ativas para a consulta de destinatários da
+// remoção e registra as notificações inseridas.
+function removalClient(contas){
+  const inserted = [];
+  return {
+    inserted,
+    async query(sql, params){
+      if(sql.includes('FROM users')){
+        const ids = Array.isArray(params[0]) ? params[0].map(String) : [String(params[0])];
+        return { rows:contas.filter(c => ids.includes(String(c.id))) };
+      }
+      if(sql.includes('INSERT INTO notifications')){
+        inserted.push({ userId:params[0], tipo:params[1], titulo:params[2], mensagem:params[3] });
+        return { rows:[], rowCount:1 };
+      }
+      return { rows:[], rowCount:0 };
+    }
+  };
+}
+
+const contas = [
+  { id:owner.id, email:'motorista@ex.com', display_name:'Motorista' },
+  { id:passenger.id, email:'passageiro@ex.com', display_name:'Passageiro' }
+];
+const comPassageiro = { ...base, passageiros:[{ nome:'Passageiro', usuarioId:passenger.id }] };
+const semPassageiro = { ...base, passageiros:[] };
+
+test('motorista removendo passageiro avisa quem foi removido', async () => {
+  const client = removalClient(contas);
+  const tarefas = await notifyReservationPassengerRemovals(
+    client, comPassageiro, semPassageiro, owner, ''
+  );
+  assert.equal(client.inserted.length, 1);
+  assert.equal(client.inserted[0].userId, passenger.id);
+  assert.equal(client.inserted[0].tipo, 'passenger_removed');
+  assert.match(client.inserted[0].mensagem, /Motorista removeu você/);
+  assert.equal(tarefas.length, 1);
+  assert.equal(tarefas[0].tipo, 'passengerRemoved');
+});
+
+test('passageiro saindo por conta própria avisa o motorista', async () => {
+  const client = removalClient(contas);
+  const tarefas = await notifyReservationPassengerRemovals(
+    client, comPassageiro, semPassageiro, passenger, ''
+  );
+  assert.equal(client.inserted.length, 1);
+  assert.equal(client.inserted[0].userId, owner.id, 'quem recebe é o motorista');
+  assert.equal(client.inserted[0].tipo, 'passenger_left');
+  assert.match(client.inserted[0].mensagem, /Passageiro saiu/);
+  assert.equal(tarefas[0].tipo, 'passengerLeft');
+});
+
+test('a mensagem opcional entra na notificação, citando quem escreveu', async () => {
+  const client = removalClient(contas);
+  await notifyReservationPassengerRemovals(
+    client, comPassageiro, semPassageiro, owner, 'Preciso do lugar para equipamento.'
+  );
+  assert.match(client.inserted[0].mensagem, /Mensagem de Motorista: "Preciso do lugar para equipamento\."/);
+});
+
+test('sem mensagem a notificação não ganha trecho vazio', async () => {
+  const client = removalClient(contas);
+  await notifyReservationPassengerRemovals(client, comPassageiro, semPassageiro, owner, '   ');
+  assert.doesNotMatch(client.inserted[0].mensagem, /Mensagem de/);
+});
+
+test('nada muda na lista de passageiros não gera notificação', async () => {
+  const client = removalClient(contas);
+  const tarefas = await notifyReservationPassengerRemovals(
+    client, comPassageiro, comPassageiro, owner, ''
+  );
+  assert.equal(client.inserted.length, 0);
+  assert.equal(tarefas.length, 0);
+});
+
+test('passageiro removido cuja conta não existe mais é ignorado', async () => {
+  const client = removalClient([]); // nenhuma conta ativa
+  const tarefas = await notifyReservationPassengerRemovals(
+    client, comPassageiro, semPassageiro, owner, ''
+  );
+  assert.equal(client.inserted.length, 0);
+  assert.equal(tarefas.length, 0);
 });

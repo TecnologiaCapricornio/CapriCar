@@ -448,11 +448,22 @@ function bindOccupantRemoveButtons(container){
       const reservationId = this.getAttribute('data-reservation-id');
       const userId = this.getAttribute('data-user-id');
       const passengerName = (this.getAttribute('aria-label') || '').replace(/^Remover /, '');
-      if(!await showSiteConfirm(
-        'Remover ' + passengerName + ' desta carona? A pessoa será removida da lista de passageiros.',
-        { title:'Remover passageiro', confirmText:'Sim, remover', type:'warning' }
-      )) return;
-      await removePassengerAsDriver(reservationId, userId);
+      // showSitePrompt devolve null se cancelou e '' se confirmou sem escrever
+      // nada - por isso a checagem é contra null, e não pela verdade do valor:
+      // a mensagem é opcional.
+      const motivo = await showSitePrompt(
+        'Remover ' + passengerName + ' desta carona? A pessoa será removida da lista de passageiros ' +
+        'e avisada por notificação e e-mail.',
+        {
+          title:'Remover passageiro',
+          confirmText:'Sim, remover',
+          type:'warning',
+          multiline:true,
+          inputPlaceholder:'Mensagem para ' + passengerName + ' (opcional). Ex.: preciso do lugar para levar equipamento.'
+        }
+      );
+      if(motivo === null) return;
+      await removePassengerAsDriver(reservationId, userId, motivo);
       renderMyReservations();
     });
   });
@@ -517,7 +528,19 @@ function bindLeaveButtons(container){
       }
 
       const id = this.getAttribute('data-id');
-      const result = await removePassengerFromReservation(id, currentUser);
+      const motivo = await showSitePrompt(
+        'Sair desta carona? O motorista será avisado por notificação e e-mail.',
+        {
+          title:'Sair da carona',
+          confirmText:'Sim, sair',
+          type:'warning',
+          multiline:true,
+          inputPlaceholder:'Mensagem para o motorista (opcional). Ex.: consegui outra condução.'
+        }
+      );
+      if(motivo === null) return;
+
+      const result = await removePassengerFromReservation(id, currentUser, motivo);
       if(!result){
         renderMyReservations();
         return;

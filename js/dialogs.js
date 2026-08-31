@@ -5,6 +5,7 @@ const siteDialogTitle = document.getElementById('siteDialogTitle');
 const siteDialogMessage = document.getElementById('siteDialogMessage');
 const siteDialogInputWrap = document.getElementById('siteDialogInputWrap');
 const siteDialogInput = document.getElementById('siteDialogInput');
+const siteDialogTextarea = document.getElementById('siteDialogTextarea');
 const siteDialogCloseBtn = document.getElementById('siteDialogCloseBtn');
 const siteDialogCancelBtn = document.getElementById('siteDialogCancelBtn');
 const siteDialogConfirmBtn = document.getElementById('siteDialogConfirmBtn');
@@ -33,9 +34,17 @@ function openSiteDialog(options){
     siteDialogConfirmBtn.className = 'submit-btn site-dialog-confirm' + (type === 'danger' ? ' danger' : '');
     siteDialogCancelBtn.textContent = settings.cancelText || 'Cancelar';
     siteDialogCancelBtn.classList.toggle('hidden', settings.cancelable !== true);
+    // Campo de entrada: uma linha por padrão, ou textarea quando o texto
+    // esperado é uma mensagem (settings.multiline).
+    const multiline = settings.multiline === true;
+    const campo = multiline ? siteDialogTextarea : siteDialogInput;
     siteDialogInputWrap.classList.toggle('hidden', settings.input !== true);
-    siteDialogInput.value = settings.inputValue || '';
-    siteDialogInput.placeholder = settings.inputPlaceholder || '';
+    siteDialogInput.classList.toggle('hidden', multiline);
+    siteDialogTextarea.classList.toggle('hidden', !multiline);
+    siteDialogInput.value = '';
+    siteDialogTextarea.value = '';
+    campo.value = settings.inputValue || '';
+    campo.placeholder = settings.inputPlaceholder || '';
     siteDialogModal.classList.remove('hidden');
 
     let finished = false;
@@ -45,11 +54,17 @@ function openSiteDialog(options){
       document.removeEventListener('keydown', onKeyDown);
       siteDialogModal.classList.add('hidden');
       if(previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
-      resolve({ confirmed:!!confirmed, value:siteDialogInput.value.trim() });
+      resolve({ confirmed:!!confirmed, value:campo.value.trim() });
     }
     function onKeyDown(event){
       if(event.key === 'Escape' && settings.cancelable === true) finish(false);
-      if(event.key === 'Enter' && document.activeElement !== siteDialogCancelBtn) finish(true);
+      // Num textarea o Enter precisa quebrar linha, não confirmar - senão não
+      // há como escrever uma mensagem de mais de uma linha.
+      if(event.key === 'Enter' &&
+         document.activeElement !== siteDialogCancelBtn &&
+         document.activeElement !== siteDialogTextarea){
+        finish(true);
+      }
     }
     siteDialogCloseBtn.onclick = () => finish(false);
     siteDialogCancelBtn.onclick = () => finish(false);
@@ -59,7 +74,7 @@ function openSiteDialog(options){
     };
     document.addEventListener('keydown', onKeyDown);
     window.setTimeout(() => {
-      if(settings.input === true) siteDialogInput.focus();
+      if(settings.input === true) campo.focus();
       else siteDialogConfirmBtn.focus();
     }, 0);
   });
