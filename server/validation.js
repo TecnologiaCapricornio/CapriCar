@@ -398,5 +398,9 @@ module.exports = {
   validateBlocks,
   validateReservations,
   decodeImageDataUrl,
-  isValidEmail
+  isValidEmail,
+  // Reaproveitados por server/driver-licenses.js - exportar evita que a
+  // validação de data e a de mensagem de erro sigam caminhos diferentes.
+  assert,
+  validDate
 };

@@ -12,6 +12,7 @@ const notificationRoutes = require('./routes/notifications');
 const reservationRoutes = require('./routes/reservations');
 const settingsRoutes = require('./routes/settings');
 const rideWatchRoutes = require('./routes/ride-watches');
+const profileRoutes = require('./routes/profile');
 const { sweepEmailReminders } = require('./reminders');
 
 const app = express();
@@ -63,6 +64,9 @@ app.use('/api/notifications', requireAuth, notificationRoutes);
 app.use('/api/reservations', requireAuth, reservationRoutes);
 app.use('/api/settings', requireAuth, settingsRoutes);
 app.use('/api/ride-watches', requireAuth, rideWatchRoutes);
+// Autosserviço do próprio usuário (CNH). Só requireAuth - diferente de
+// /api/users, que exige a permissão de gestão de usuários.
+app.use('/api/profile', requireAuth, profileRoutes);
 
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));
