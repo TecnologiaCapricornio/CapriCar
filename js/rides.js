@@ -591,6 +591,7 @@ function renderAvailableRideCard(reserva){
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
       '<div class="ride-occupants-badge">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
       '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + '</span></div>' +
+      (typeof renderSeatMapHTML === 'function' ? renderSeatMapHTML(reserva) : '') +
       renderOcupantesHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +

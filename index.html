@@ -15,7 +15,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="css/variables.css?v=20260831-1">
   <link rel="stylesheet" href="css/base.css?v=20260825-2">
-  <link rel="stylesheet" href="css/components.css?v=20260831-1">
+  <link rel="stylesheet" href="css/components.css?v=20260831-2">
   <link rel="stylesheet" href="css/calendar.css?v=20260826-3">
   <link rel="stylesheet" href="css/admin.css?v=20260831-1">
   <link rel="stylesheet" href="css/responsive.css?v=20260826-1">
@@ -564,6 +564,27 @@
                   <div class="field">
                     <label for="vehicleCapacity">Capacidade</label>
                     <input type="number" id="vehicleCapacity" min="1" max="20" value="5">
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="vehicleType">Tipo</label>
+                    <select id="vehicleType">
+                      <option value="carro">Carro</option>
+                      <option value="van">Van</option>
+                      <option value="onibus">Ônibus</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="vehicleCostCenter">Centro de custo (opcional)</label>
+                    <input type="text" id="vehicleCostCenter" maxlength="60" placeholder="Ex.: 1010"
+                      autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label>Propriedade</label>
+                    <label class="permission-option">
+                      <input type="checkbox" id="vehicleRented"> Veículo alugado
+                    </label>
                   </div>
                 </div>
                 <button type="submit" class="submit-btn">Adicionar veículo</button>
@@ -1591,7 +1612,9 @@
   <script src="js/api.js?v=20260826-1"></script>
   <script src="js/storage.js?v=20260826-4"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
-  <script src="js/rides.js?v=20260826-5"></script>
+  <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
+  <script src="js/seat-map.js?v=20260831-1"></script>
+  <script src="js/rides.js?v=20260831-1"></script>
   <script src="js/reservations.js?v=20260831-1"></script>
   <script src="js/calendar.js?v=20260826-3"></script>
   <script src="js/modals.js?v=20260826-4"></script>
@@ -1599,9 +1622,9 @@
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
-  <script src="js/management-users.js?v=20260826-8"></script>
-  <script src="js/management-integrations.js?v=20260826-5"></script>
-  <script src="js/management-fleet.js?v=20260826-3"></script>
+  <script src="js/management-users.js?v=20260831-1"></script>
+  <script src="js/management-integrations.js?v=20260831-1"></script>
+  <script src="js/management-fleet.js?v=20260831-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <script src="js/management-reports.js?v=20260826-4"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de

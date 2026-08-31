@@ -1957,3 +1957,74 @@
   .cnh-photo-state a{
     color:var(--accent);
   }
+
+/* ============ Mapa de lugares (ver js/seat-map.js) ============
+   O desenho vem do tipo e da capacidade do veículo, então van e ônibus
+   funcionam sem CSS novo. */
+  .seat-map{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    align-items:center;
+    width:fit-content;
+    margin:10px 0;
+    padding:10px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,.03);
+  }
+
+  .seat-map-head{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin-bottom:3px;
+  }
+
+  .seat-map-head strong{
+    font-size:var(--fs-xs);
+    color:var(--text);
+  }
+
+  .seat-map-head small{
+    font-size:var(--fs-2xs);
+    color:var(--text-muted);
+  }
+
+  .seat-row{
+    display:flex;
+    gap:5px;
+  }
+
+  /* Van e ônibus têm corredor central: separa a primeira coluna do resto. */
+  .seat-row-aisle > .seat:first-child{
+    margin-right:12px;
+  }
+
+  .seat{
+    display:grid;
+    place-items:center;
+    width:24px;
+    height:24px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.05);
+    font-size:11px;
+    line-height:1;
+  }
+
+  .seat-motorista{
+    border-color:var(--info-border);
+    background:var(--info-surface);
+  }
+
+  .seat-ocupado{
+    border-color:var(--danger-border);
+    background:var(--danger-surface);
+    color:var(--danger-text);
+  }
+
+  .seat-livre{
+    border-color:var(--success-border);
+    background:var(--success-surface);
+  }
