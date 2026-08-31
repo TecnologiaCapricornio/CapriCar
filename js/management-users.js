@@ -8,6 +8,7 @@ const userAccountNameInput = document.getElementById('userAccountName');
 const userAccountUsernameInput = document.getElementById('userAccountUsername');
 const userAccountEmailInput = document.getElementById('userAccountEmail');
 const userAccountPasswordInput = document.getElementById('userAccountPassword');
+const userAccountCostCenterInput = document.getElementById('userAccountCostCenter');
 const userAccountError = document.getElementById('userAccountError');
 const userAccountsList = document.getElementById('userAccountsList');
 const userAccountsSearch = document.getElementById('userAccountsSearch');
@@ -551,6 +552,7 @@ userAccountForm.addEventListener('submit', async function(e){
         nome:nome,
         email:email,
         password:password,
+        centroCusto:userAccountCostCenterInput.value.trim(),
         permissions:selectedUserPermissions()
       }
     });
@@ -573,6 +575,7 @@ const userEditNameInput = document.getElementById('userEditName');
 const userEditUsernameInput = document.getElementById('userEditUsername');
 const userEditEmailInput = document.getElementById('userEditEmail');
 const userEditPasswordInput = document.getElementById('userEditPassword');
+const userEditCostCenterInput = document.getElementById('userEditCostCenter');
 const userEditPasswordHint = document.getElementById('userEditPasswordHint');
 const userEditError = document.getElementById('userEditError');
 const userEditCloseBtn = document.getElementById('userEditCloseBtn');
@@ -625,6 +628,7 @@ function openUserEditModal(accountId){
   userEditEmailInput.disabled = isEntra;
   userEditPasswordInput.value = '';
   userEditPasswordInput.disabled = isEntra;
+  userEditCostCenterInput.value = account.centroCusto || '';
   userEditPasswordHint.textContent = isEntra
     ? 'Conta gerenciada pelo Microsoft Entra ID — nome, e-mail, usuário e senha não podem ser alterados aqui.'
     : 'Deixe a senha vazia para manter a atual.';
@@ -685,6 +689,7 @@ if(userEditForm){
       const body = {
         nome:nome,
         email:email,
+        centroCusto:userEditCostCenterInput.value.trim(),
         permissions:editing.role === 'admin' ? editing.permissions : selectedUserEditPermissions()
       };
       if(!isEntra && password) body.password = password;

@@ -18,9 +18,12 @@
   --text-muted:#adb3bb;
   --on-primary:#ffffff;
 
-  --primary:#4f7591;
-  --primary-strong:#294d68;
-  --accent:#7ea9c7;
+  /* Azul Capricórnio (#151F6D / #0033A0) clareado o suficiente para o botão
+     se destacar do fundo escuro mantendo texto branco legível por cima.
+     O #6CACE4 da marca é o acento de texto/ícone, onde ele brilha. */
+  --primary:#2f56c4;
+  --primary-strong:#1b2a86;
+  --accent:#6cace4;
 
   --info:#7ea9c7;
   --info-text:#cfe6fa;
@@ -59,9 +62,11 @@
   --text-muted:#68717c;
   --on-primary:#ffffff;
 
-  --primary:#2a648c;
-  --primary-strong:#173f5c;
-  --accent:#24658f;
+  /* Azul Capricórnio direto da marca: #0033A0 como ação e #151F6D como o
+     fim escuro do gradiente. Branco sobre os dois passa folgado em contraste. */
+  --primary:#0033a0;
+  --primary-strong:#151f6d;
+  --accent:#1a4fa0;
 
   /* No tema claro a cor sólida e a de texto coincidem: ambas precisam
      ser escuras o bastante para o fundo claro. */

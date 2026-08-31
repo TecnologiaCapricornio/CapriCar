@@ -4,6 +4,7 @@ const { requirePermission } = require('../auth');
 const { encryptSecret, decryptSecret } = require('../secrets');
 const { isValidEmail } = require('../validation');
 const { ssoConfig } = require('../config');
+const { normalizeCostCenterAttribute } = require('../sso');
 const { sendTestMail } = require('../mailer');
 const {
   sweepEmailReminders,
@@ -51,6 +52,7 @@ router.get('/entra-sso', async (req, res) => {
       clientId:stored.clientId,
       redirectUri:stored.redirectUri || '',
       allowedDomains:stored.allowedDomains || '',
+      costCenterAttribute:stored.costCenterAttribute || '',
       clientSecretConfigured:!!stored.clientSecretEncrypted,
       enabled:!!(stored.tenantId && stored.clientId && stored.clientSecretEncrypted)
     });
@@ -61,6 +63,7 @@ router.get('/entra-sso', async (req, res) => {
     clientId:fallback.clientId,
     redirectUri:fallback.redirectUri,
     allowedDomains:'',
+    costCenterAttribute:'',
     clientSecretConfigured:!!fallback.clientSecret,
     enabled:fallback.enabled
   });
@@ -81,6 +84,12 @@ router.put('/entra-sso', async (req, res) => {
   if(!redirectUri || !isValidUrl(redirectUri)){
     return res.status(400).json({ error:'Informe uma URI de redirecionamento válida.' });
   }
+  const costCenterAttribute = normalizeCostCenterAttribute(req.body && req.body.costCenterAttribute);
+  if(req.body && String(req.body.costCenterAttribute || '').trim() && !costCenterAttribute){
+    return res.status(400).json({
+      error:'O atributo do centro de custo deve comecar com letra e conter apenas letras, numeros, ponto ou sublinhado.'
+    });
+  }
   if(allowedDomains.length > 500){
     return res.status(400).json({ error:'A lista de domínios permitidos é muito longa.' });
   }
@@ -95,10 +104,10 @@ router.put('/entra-sso', async (req, res) => {
     }
   }
 
-  await writeCollection('entraSso', { tenantId, clientId, redirectUri, allowedDomains, clientSecretEncrypted }, req.user.id,
+  await writeCollection('entraSso', { tenantId, clientId, redirectUri, allowedDomains, costCenterAttribute, clientSecretEncrypted }, req.user.id,
     `Entra ID atualizado: tenant, client id, URI de redirecionamento, domínios permitidos${clientSecret ? ', client secret' : ''}`);
   res.json({
-    tenantId, clientId, redirectUri, allowedDomains,
+    tenantId, clientId, redirectUri, allowedDomains, costCenterAttribute,
     clientSecretConfigured:!!clientSecretEncrypted,
     enabled:!!(tenantId && clientId && clientSecretEncrypted)
   });

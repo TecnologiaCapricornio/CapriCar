@@ -38,6 +38,7 @@ function normalizeSystemUser(account){
     username:String(account.username || '').trim().toLowerCase(),
     nome:String(account.nome || account.username || '').trim(),
     email:String(account.email || '').trim(),
+    centroCusto:String(account.centroCusto || '').trim(),
     role:account.role === 'admin' ? 'admin' : (account.role === 'facilities' ? 'facilities' : 'user'),
     active:account.active !== false,
     authProvider:account.authProvider === 'entra' ? 'entra' : 'local',

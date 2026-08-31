@@ -6,6 +6,7 @@ const entraClientIdInput = document.getElementById('entraClientId');
 const entraClientSecretInput = document.getElementById('entraClientSecret');
 const entraRedirectUriInput = document.getElementById('entraRedirectUri');
 const entraAllowedDomainsInput = document.getElementById('entraAllowedDomains');
+const entraCostCenterAttributeInput = document.getElementById('entraCostCenterAttribute');
 const entraSsoSummary = document.getElementById('entraSsoSummary');
 const entraSsoError = document.getElementById('entraSsoError');
 
@@ -74,6 +75,7 @@ async function loadEntraSsoForm(){
   entraClientIdInput.value = status.clientId || '';
   entraRedirectUriInput.value = status.redirectUri || '';
   entraAllowedDomainsInput.value = status.allowedDomains || '';
+  entraCostCenterAttributeInput.value = status.costCenterAttribute || '';
   entraClientSecretInput.value = '';
   entraClientSecretInput.placeholder = status.clientSecretConfigured
     ? 'Deixe em branco para manter o segredo atual'
@@ -149,6 +151,7 @@ entraSsoForm.addEventListener('submit', async function(e){
   const clientId = entraClientIdInput.value.trim();
   const redirectUri = entraRedirectUriInput.value.trim();
   const allowedDomains = entraAllowedDomainsInput.value.trim();
+  const costCenterAttribute = entraCostCenterAttributeInput.value.trim();
   const clientSecret = entraClientSecretInput.value.trim();
   if(!tenantId || !clientId || !redirectUri){
     entraSsoError.textContent = 'Preencha Tenant ID, Client ID e a URI de redirecionamento.';
@@ -162,7 +165,7 @@ entraSsoForm.addEventListener('submit', async function(e){
   try{
     await apiRequest('/api/settings/entra-sso', {
       method:'PUT',
-      body:{ tenantId, clientId, redirectUri, allowedDomains, clientSecret }
+      body:{ tenantId, clientId, redirectUri, allowedDomains, costCenterAttribute, clientSecret }
     });
     await loadEntraSsoForm();
     await showSiteAlert('Configuração do Entra ID salva com sucesso.', {

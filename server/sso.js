@@ -38,6 +38,7 @@ async function resolveSsoConfig(){
     clientId,
     clientSecret,
     redirectUri,
+    costCenterAttribute:String(stored.costCenterAttribute || '').trim(),
     enabled:!!(tenantId && clientId && clientSecret)
   };
 }
@@ -104,6 +105,21 @@ async function getAllowedEntraDomains(){
     .filter(Boolean);
 }
 
+// Nome do atributo do Entra ID que guarda o centro de custo. Restrito a
+// letras, números e ponto: o valor vai direto para o $select do Graph, e a
+// validação impede injetar outros parâmetros na querystring.
+const COST_CENTER_ATTRIBUTE_PATTERN = /^[A-Za-z][A-Za-z0-9_.]{0,63}$/;
+
+function normalizeCostCenterAttribute(value){
+  const attr = String(value || '').trim();
+  return COST_CENTER_ATTRIBUTE_PATTERN.test(attr) ? attr : '';
+}
+
+async function getCostCenterAttribute(){
+  const stored = await resolveSsoConfig();
+  return normalizeCostCenterAttribute(stored && stored.costCenterAttribute);
+}
+
 function isEmailDomainAllowed(email, allowedDomains){
   if(!allowedDomains || !allowedDomains.length) return true;
   const domain = String(email || '').split('@')[1];
@@ -139,6 +155,10 @@ async function resolveOrCreateSsoUser(claims){
   const objectId = claims.objectId;
   const upn = claims.upn || '';
   const displayName = claims.displayName || upn || 'Usuário Microsoft';
+  // Só chega preenchido pela importação em lote (o token de login não traz
+  // atributos de diretório). Em branco significa "não veio nesta chamada" e
+  // preserva o que já está gravado, em vez de apagar.
+  const costCenter = String(claims.costCenter || '').trim().slice(0, 60);
   if(!objectId) throw new Error('Claim "oid" ausente na resposta do Entra ID.');
 
   const allowedDomains = await getAllowedEntraDomains();
@@ -156,12 +176,16 @@ async function resolveOrCreateSsoUser(claims){
     );
     if(existing.rows[0]){
       const current = existing.rows[0];
-      if(current.display_name !== displayName || current.entra_upn !== upn || current.email !== upn){
+      const costCenterMudou = !!costCenter && current.cost_center !== costCenter;
+      if(current.display_name !== displayName || current.entra_upn !== upn ||
+         current.email !== upn || costCenterMudou){
         const updated = await client.query(
-          `UPDATE users SET display_name = $2, entra_upn = $3, email = $3
+          `UPDATE users
+              SET display_name = $2, entra_upn = $3, email = $3,
+                  cost_center = COALESCE(NULLIF($4, ''), cost_center)
             WHERE id = $1
           RETURNING *`,
-          [current.id, displayName, upn]
+          [current.id, displayName, upn, costCenter]
         );
         return { user:updated.rows[0], created:false, updated:true };
       }
@@ -175,10 +199,12 @@ async function resolveOrCreateSsoUser(claims){
          username, display_name, password_hash, role, active,
          entra_object_id, entra_upn, email, auth_provider,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_blocks,
-         can_view_reports, can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations
-       ) VALUES ($1, $2, $3, 'user', TRUE, $4, $5, $5, 'entra', FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
+         can_view_reports, can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations,
+         cost_center
+       ) VALUES ($1, $2, $3, 'user', TRUE, $4, $5, $5, 'entra', FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+         NULLIF($6, ''))
        RETURNING *`,
-      [username, displayName, passwordHash, objectId, upn]
+      [username, displayName, passwordHash, objectId, upn, costCenter]
     );
     return { user:inserted.rows[0], created:true, updated:false };
   });
@@ -200,8 +226,17 @@ async function fetchGraphUsersPage(url, token){
 async function importSsoUsers(){
   const token = await getGraphAppToken();
   const allowedDomains = await getAllowedEntraDomains();
+  const costCenterAttribute = await getCostCenterAttribute();
   const summary = { created:0, updated:0, skipped:0, errors:[] };
-  let url = 'https://graph.microsoft.com/v1.0/users?$select=id,userPrincipalName,displayName,accountEnabled&$top=100';
+
+  // O atributo do centro de custo é configurável porque cada tenant guarda
+  // esse dado num campo diferente (department, officeLocation, costCenter,
+  // ou uma extensão). Só entra no $select quando configurado - pedir um
+  // atributo inexistente faz o Graph recusar a página inteira.
+  const campos = ['id', 'userPrincipalName', 'displayName', 'accountEnabled'];
+  if(costCenterAttribute) campos.push(costCenterAttribute);
+  let url = 'https://graph.microsoft.com/v1.0/users?$select=' +
+    campos.join(',') + '&$top=100';
 
   while(url){
     const page = await fetchGraphUsersPage(url, token);
@@ -219,7 +254,8 @@ async function importSsoUsers(){
         const result = await resolveOrCreateSsoUser({
           objectId:row.id,
           upn:row.userPrincipalName,
-          displayName:row.displayName
+          displayName:row.displayName,
+          costCenter:costCenterAttribute ? row[costCenterAttribute] : ''
         });
         if(result.created) summary.created++;
         else if(result.updated) summary.updated++;
@@ -243,5 +279,7 @@ module.exports = {
   importSsoUsers,
   resolveSsoConfig,
   getAllowedEntraDomains,
+  getCostCenterAttribute,
+  normalizeCostCenterAttribute,
   isEmailDomainAllowed
 };

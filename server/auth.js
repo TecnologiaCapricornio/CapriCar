@@ -74,6 +74,7 @@ function publicUser(row){
     username:row.username,
     nome:row.display_name,
     email:row.email || '',
+    centroCusto:row.cost_center || '',
     role:row.role,
     active:row.active,
     authProvider:row.auth_provider || 'local',
