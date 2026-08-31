@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/base.css?v=20260825-2">
   <link rel="stylesheet" href="css/components.css?v=20260831-2">
   <link rel="stylesheet" href="css/calendar.css?v=20260826-3">
-  <link rel="stylesheet" href="css/admin.css?v=20260831-1">
+  <link rel="stylesheet" href="css/admin.css?v=20260831-2">
   <link rel="stylesheet" href="css/responsive.css?v=20260826-1">
   <link rel="stylesheet" href="css/themes.css?v=20260831-1">
 </head>
@@ -698,6 +698,8 @@
           </div>
 
           <div class="admin-section-panel hidden" id="admin-section-relatorios">
+            <section class="indicators" id="indicatorsPanel" aria-label="Indicadores da frota"></section>
+
             <div class="rides-filters report-filters">
               <div class="row">
                 <div class="field">
@@ -1626,7 +1628,8 @@
   <script src="js/management-integrations.js?v=20260831-1"></script>
   <script src="js/management-fleet.js?v=20260831-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
-  <script src="js/management-reports.js?v=20260826-4"></script>
+  <script src="js/management-indicators.js?v=20260831-1"></script>
+  <script src="js/management-reports.js?v=20260831-1"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
   <script src="js/driver-license.js?v=20260831-1"></script>

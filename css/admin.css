@@ -723,3 +723,94 @@
   }
 }
 
+
+/* ============ Indicadores da frota (aba Relatórios) ============ */
+.indicators{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin-bottom:22px;
+}
+
+.indicator-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:10px;
+}
+
+.indicator-card{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+
+.indicator-label{
+  font-size:var(--fs-2xs);
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+}
+
+.indicator-value{
+  font-size:1.5rem;
+  line-height:1.15;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+
+.indicator-detail{
+  font-size:var(--fs-2xs);
+  color:var(--text-muted);
+}
+
+.indicator-lists{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:12px;
+}
+
+.indicator-list{
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+
+.indicator-list h4{
+  margin:0 0 10px;
+  font-size:var(--fs-sm);
+  color:var(--text);
+}
+
+.indicator-list ol{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.indicator-list li{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  font-size:var(--fs-sm);
+  color:var(--text-muted);
+}
+
+.indicator-list li strong{
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+
+.indicator-list .indicator-empty{
+  color:var(--text-muted);
+  font-style:italic;
+}
