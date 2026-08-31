@@ -18,10 +18,20 @@ const LADOS = ['frente', 'verso'];
    Regras de vencimento (funções puras, testáveis sem banco)
    ========================================================= */
 
+// Normaliza para 'YYYY-MM-DD'. A coluna DATE volta do pg como objeto Date, e
+// String(date) daria "Tue Sep 29 2026 ..." - além de não ser ISO, o dia sai
+// deslocado quando o fuso do servidor está atrás de UTC. Por isso o Date é
+// convertido via toISOString(), nunca por coerção implícita.
+function toISODate(value){
+  if(!value) return '';
+  if(value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
 // Meia-noite UTC da data ISO. Usar UTC (e não o fuso do servidor) faz a conta
 // de dias ficar imune a horário de verão e a deploys em outra timezone.
 function utcMidnight(iso){
-  const [ano, mes, dia] = String(iso).slice(0, 10).split('-').map(Number);
+  const [ano, mes, dia] = toISODate(iso).split('-').map(Number);
   return Date.UTC(ano, mes - 1, dia);
 }
 
@@ -41,7 +51,7 @@ function licenseStatus(license, todayISO, warningDays = DEFAULT_WARNING_DAYS){
   if(!license || !license.numero || !license.validade){
     return { estado:'ausente', diasRestantes:null };
   }
-  const validade = String(license.validade).slice(0, 10);
+  const validade = toISODate(license.validade);
   if(!validDate(validade) || !validDate(todayISO)){
     return { estado:'ausente', diasRestantes:null };
   }
@@ -87,7 +97,7 @@ function licenseRowToObject(row, photos){
     id:row.id,
     numero:row.numero || '',
     categoria:row.categoria || '',
-    validade:row.validade ? String(row.validade.toISOString ? row.validade.toISOString().slice(0, 10) : row.validade).slice(0, 10) : '',
+    validade:toISODate(row.validade),
     fotos:LADOS.reduce((acc, lado) => {
       acc[lado] = (photos || []).some(photo => photo.lado === lado);
       return acc;
@@ -266,6 +276,7 @@ module.exports = {
   CATEGORIAS,
   LADOS,
   todayISO,
+  toISODate,
   licensePayload,
   licenseStatus,
   licenseStatusMessage,

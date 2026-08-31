@@ -126,8 +126,12 @@ async function resolveReservationManagers(client){
   return result.rows.map(row => String(row.id));
 }
 
+// Devolve true quando a notificação foi de fato gravada, e false quando o
+// ON CONFLICT a descartou por já existir. Quem só quer notificar pode ignorar
+// o retorno; quem conta quantas saíram (ex.: a varredura de CNH) precisa
+// dele para não contar duplicata como envio novo.
 async function insertNotification(client, notification){
-  await client.query(
+  const result = await client.query(
     `INSERT INTO notifications
        (user_id, notification_type, title, message, reservation_id, dedupe_key, metadata)
      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
@@ -138,6 +142,7 @@ async function insertNotification(client, notification){
       JSON.stringify(notification.metadata || {})
     ]
   );
+  return result.rowCount > 0;
 }
 
 async function notifyReservationCancellation(client, reservation, actor){
@@ -314,6 +319,11 @@ async function generateUserReminders(user){
 
 module.exports = {
   ensureNotificationsTable,
+  // Consumida por server/ride-watches.js e server/reminders.js. Ficou de fora
+  // desta lista quando o monitoramento de carona foi escrito, o que fazia o
+  // import chegar como undefined e derrubar a transação da reserva assim que
+  // alguma rota monitorada batesse. Coberto por tests/notifications.test.js.
+  insertNotification,
   generateUserReminders,
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,

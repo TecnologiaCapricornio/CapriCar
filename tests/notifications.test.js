@@ -169,3 +169,19 @@ test('editar a mesma reserva de novo não duplica a notificação', async () => 
   await notifyOperationReport(client, reservation, 'retirada', owner);
   assert.equal(client.inserted.length, 1);
 });
+
+// Regressão: insertNotification ficou fora do module.exports quando o
+// monitoramento de carona foi escrito. O import em server/ride-watches.js
+// chegava como undefined, e como notifyRideWatchMatches roda DENTRO da
+// transação da reserva, criar uma reserva que batesse com alguma rota
+// monitorada lançava TypeError e derrubava a reserva inteira.
+test('o módulo exporta as funções consumidas por outros módulos do servidor', () => {
+  const notifications = require('../server/notifications');
+  for(const nome of ['insertNotification', 'ensureNotificationsTable', 'reservationSummary']){
+    assert.equal(
+      typeof notifications[nome],
+      'function',
+      `server/notifications.js precisa exportar ${nome}`
+    );
+  }
+});

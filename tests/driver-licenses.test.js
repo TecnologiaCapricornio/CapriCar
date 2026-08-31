@@ -80,6 +80,26 @@ test('a virada do mês e do ano não desloca a contagem', () => {
   assert.equal(licenseStatus(cnh('2028-03-01'), '2028-02-28').diasRestantes, 2, 'ano bissexto');
 });
 
+// Regressão: a coluna DATE volta do pg como objeto Date, e a versão anterior
+// fazia String(date).slice(0,10) -> "Tue Sep 29", que não é data válida. A
+// varredura de vencimento tratava toda CNH como ausente e nunca avisava
+// ninguém. Os testes só passavam porque usavam string ISO.
+test('aceita validade como objeto Date, do jeito que o banco devolve', () => {
+  const comDate = { numero:'12345678900', categoria:'AB', validade:new Date('2026-09-30T00:00:00Z') };
+  const status = licenseStatus(comDate, HOJE);
+  assert.equal(status.estado, 'vencendo');
+  assert.equal(status.diasRestantes, 30);
+});
+
+test('validade como Date não desloca o dia por fuso horário', () => {
+  // Servidor em UTC-3: um Date de meia-noite UTC não pode virar o dia anterior.
+  const status = licenseStatus(
+    { numero:'12345678900', categoria:'AB', validade:new Date('2026-08-31T00:00:00Z') },
+    HOJE
+  );
+  assert.equal(status.diasRestantes, 0, 'deve ser hoje, não ontem');
+});
+
 test('cadastro em branco é aceito e significa remover a CNH', () => {
   assert.equal(validateLicenseInput({ numero:'', categoria:'', validade:'' }), null);
 });

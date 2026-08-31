@@ -5,7 +5,11 @@ const { encryptSecret, decryptSecret } = require('../secrets');
 const { isValidEmail } = require('../validation');
 const { ssoConfig } = require('../config');
 const { sendTestMail } = require('../mailer');
-const { sweepEmailReminders, getEmailReminderSettings } = require('../reminders');
+const {
+  sweepEmailReminders,
+  sweepDriverLicenseReminders,
+  getEmailReminderSettings
+} = require('../reminders');
 const { getCalendarSyncSettings, sendTestCalendarEvent } = require('../calendar-sync');
 
 const router = express.Router();
@@ -180,7 +184,10 @@ router.get('/email-reminders', async (req, res) => {
 
 router.put('/email-reminders', async (req, res) => {
   const body = req.body || {};
-  const types = ['reservationUpcoming', 'pickupOverdue', 'returnOverdue', 'passengerJoined', 'rideWatchMatch'];
+  const types = [
+    'reservationUpcoming', 'pickupOverdue', 'returnOverdue',
+    'passengerJoined', 'rideWatchMatch', 'cnhExpiring'
+  ];
   const next = {};
   for(const type of types){
     const item = body[type] || {};
@@ -202,7 +209,8 @@ router.put('/email-reminders', async (req, res) => {
 router.post('/email-reminders/run-now', async (req, res) => {
   try{
     const summary = await sweepEmailReminders();
-    res.json(summary);
+    const cnh = await sweepDriverLicenseReminders();
+    res.json({ ...summary, cnh });
   }catch(error){
     res.status(500).json({ error:'Falha ao executar a varredura de lembretes: ' + error.message });
   }

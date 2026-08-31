@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { cnhMilestoneFor, formatDateBR } = require('../server/reminders');
 const {
   pendingReminders,
   renderTemplate,
@@ -91,4 +92,38 @@ test('plateBadgeEmailHTML devolve string vazia sem placa e HTML em maiúsculas c
   assert.match(html, /GJF5D45/);
   assert.doesNotMatch(html, /gjf5d45/);
   assert.match(html, /<table/);
+});
+
+/* ===== Aviso de vencimento de CNH ===== */
+
+test('cada marco de vencimento da CNH avisa uma vez só', () => {
+  // 60 e 45 dias caem no mesmo marco: quem já foi avisado aos 60 não
+  // recebe de novo aos 45.
+  assert.equal(cnhMilestoneFor(60), '60');
+  assert.equal(cnhMilestoneFor(45), '60');
+  assert.equal(cnhMilestoneFor(31), '60');
+  // Ao cruzar 30 o marco muda e um aviso novo sai.
+  assert.equal(cnhMilestoneFor(30), '30');
+  assert.equal(cnhMilestoneFor(16), '30');
+  assert.equal(cnhMilestoneFor(15), '15');
+  assert.equal(cnhMilestoneFor(8), '15');
+  assert.equal(cnhMilestoneFor(7), '7');
+  assert.equal(cnhMilestoneFor(2), '7');
+  assert.equal(cnhMilestoneFor(1), '1');
+  assert.equal(cnhMilestoneFor(0), '0');
+});
+
+test('CNH vencida tem marco próprio, avisado uma vez', () => {
+  assert.equal(cnhMilestoneFor(-1), 'vencida');
+  assert.equal(cnhMilestoneFor(-90), 'vencida');
+});
+
+test('fora da janela de aviso não há marco', () => {
+  assert.equal(cnhMilestoneFor(61), null);
+  assert.equal(cnhMilestoneFor(400), null);
+});
+
+test('formatDateBR aceita string ISO e Date do banco', () => {
+  assert.equal(formatDateBR('2026-10-15'), '15/10/2026');
+  assert.equal(formatDateBR(new Date('2026-10-15T00:00:00Z')), '15/10/2026');
 });

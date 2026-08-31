@@ -1,4 +1,4 @@
-const { query } = require('./db');
+const { query, withTransaction } = require('./db');
 const { listAllReservations } = require('./reservations-store');
 const { sendMail } = require('./mailer');
 const { resolveVehicle } = require('./calendar-sync');
@@ -6,8 +6,23 @@ const {
   reservationStart,
   reservationEnd,
   reservationIsCompleted,
-  resolveReservationUsers
+  resolveReservationUsers,
+  ensureNotificationsTable,
+  insertNotification
 } = require('./notifications');
+const {
+  licenseStatus,
+  licenseStatusMessage,
+  todayISO,
+  toISODate
+} = require('./driver-licenses');
+
+// Data ISO (YYYY-MM-DD ou Date do pg) no formato brasileiro, para os e-mails.
+function formatDateBR(value){
+  const iso = String(value && value.toISOString ? value.toISOString() : value).slice(0, 10);
+  const [ano, mes, dia] = iso.split('-');
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : iso;
+}
 
 // Mesmo visual do badge de placa do portal (js/utils.js:plateBadgeHTML,
 // css/components.css .plate-badge) mas remontado com tabela e estilos
@@ -29,6 +44,21 @@ const REMINDER_TYPES = {
   pickupOverdue:{ dedupePrefix:'email:pickup-overdue' },
   returnOverdue:{ dedupePrefix:'email:return-overdue' }
 };
+
+// Marcos de aviso de vencimento da CNH, em dias restantes.
+// O aviso sai UMA vez por marco cruzado - não todo dia. Um e-mail diário
+// durante os 60 dias da janela seria 60 mensagens iguais por pessoa, que é
+// a receita para o aviso virar ruído e ser filtrado.
+const CNH_MILESTONES = [0, 1, 7, 15, 30, 60];
+
+// Marco a que um determinado "faltam N dias" pertence: o menor marco que
+// ainda é >= N. Assim 45 dias e 60 dias caem no mesmo marco (60) e só geram
+// um aviso; ao chegar em 30 o marco muda e um novo aviso sai.
+function cnhMilestoneFor(diasRestantes){
+  if(diasRestantes < 0) return 'vencida';
+  const marco = CNH_MILESTONES.find(m => m >= diasRestantes);
+  return marco === undefined ? null : String(marco);
+}
 
 const DEFAULT_TEMPLATES = {
   reservationUpcoming:{
@@ -317,6 +347,50 @@ const DEFAULT_TEMPLATES = {
     </table>
   </td></tr>
 </table>`
+  },
+  cnhExpiring:{
+    enabled:false,
+    subject:'🪪 Sua CNH {{situacaoCurta}} — renove para continuar dirigindo',
+    body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
+      <tr><td style="background-color:#fdf3e3;padding:24px 32px;border-radius:12px 12px 0 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:52px;height:52px;background-color:#f7e3c1;border-radius:26px;text-align:center;font-size:24px;line-height:52px;">🪪</td>
+          <td style="padding-left:14px;vertical-align:middle;">
+            <div style="color:#8a5a00;font-size:18px;font-weight:700;">Sua CNH {{situacaoCurta}}</div>
+            <div style="color:#a9843c;font-size:12px;margin-top:2px;">CapriCar</div>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:26px 32px 8px 32px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#3c4753;line-height:1.55;">Olá, {{nome}}. {{mensagem}}</p>
+      </td></tr>
+      <tr><td style="padding:0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eef1f5;border-radius:8px;">
+          <tr style="background-color:#fbfcfd;">
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;">Validade</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;">{{validade}}</td>
+          </tr>
+          <tr>
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;border-top:1px solid #eef1f5;">Categoria</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;border-top:1px solid #eef1f5;">{{categoria}}</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 32px 28px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="background-color:#fdf6ea;border-left:3px solid #e0b464;border-radius:4px;padding:12px 16px;font-size:13px;color:#7a5a1f;">
+            💡 Atualize os dados e as fotos da CNH em "Meu perfil" no CapriCar. Sem CNH válida não é possível reservar veículo como motorista — mas você continua podendo entrar em caronas como passageiro.
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="background-color:#fafbfc;padding:16px 32px;border-top:1px solid #f0f3f6;border-radius:0 0 12px 12px;">
+        <p style="margin:0;font-size:12px;color:#a7b0bc;">Você está recebendo isso porque tem uma CNH cadastrada no CapriCar.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`
   }
 };
 
@@ -456,6 +530,96 @@ async function sweepEmailReminders(){
   return summary;
 }
 
+// Varredura de vencimento de CNH. Diferente do sweep de reservas, este é
+// orientado a USUÁRIO - percorre as CNHs cadastradas, não as reservas.
+// Cria a notificação do sino e envia o e-mail, ambos governados pelo mesmo
+// marco, para o portal e a caixa de entrada nunca discordarem.
+async function sweepDriverLicenseReminders(){
+  const summary = { scanned:0, notified:0, sent:0, skipped:0, failed:0 };
+
+  const result = await query(
+    `SELECT l.id, l.user_id, l.numero, l.categoria, l.validade,
+            u.email, u.display_name
+       FROM driver_licenses l
+       JOIN users u ON u.id = l.user_id
+      WHERE l.validade IS NOT NULL
+        AND u.active = TRUE
+        AND u.deleted_at IS NULL`
+  );
+  if(!result.rows.length) return summary;
+
+  const settings = await getEmailReminderSettings();
+  const emailConfig = settings.cnhExpiring;
+  const hoje = todayISO();
+
+  for(const row of result.rows){
+    const license = { numero:row.numero, categoria:row.categoria, validade:row.validade };
+    const status = licenseStatus(license, hoje);
+    if(status.estado !== 'vencendo' && status.estado !== 'vencida'){ continue; }
+
+    summary.scanned++;
+    const marco = cnhMilestoneFor(status.diasRestantes);
+    if(!marco){ summary.skipped++; continue; }
+
+    const mensagem = licenseStatusMessage(status);
+    const situacaoCurta = status.estado === 'vencida' ? 'está vencida' : 'está próxima do vencimento';
+    // A validade entra na chave em ISO (e não pela coerção do objeto Date, que
+    // produziria "Wed Sep 30 2026 ... GMT-0300" e mudaria conforme o locale do
+    // servidor). Incluí-la faz o aviso recomeçar quando a CNH é renovada.
+    const validadeISO = toISODate(row.validade);
+    const dedupeKey = `cnh-expiring:${row.id}:${validadeISO}:${marco}`;
+
+    // Notificação no portal. O unique (user_id, dedupe_key) é quem garante o
+    // "uma vez por marco"; só contamos quando a linha entrou de fato.
+    try{
+      const criada = await withTransaction(async client => {
+        await ensureNotificationsTable(client);
+        return insertNotification(client, {
+          userId:String(row.user_id),
+          type:'cnh_expiring',
+          title:status.estado === 'vencida' ? 'Sua CNH está vencida' : 'Sua CNH está vencendo',
+          message:mensagem,
+          reservationId:null,
+          dedupeKey,
+          metadata:{ validade:validadeISO, diasRestantes:status.diasRestantes }
+        });
+      });
+      if(criada) summary.notified++;
+    }catch(error){
+      console.error('Falha ao notificar vencimento de CNH:', error.message);
+    }
+
+    // E-mail, se o tipo estiver habilitado em Integrações > Lembretes.
+    if(!emailConfig || !emailConfig.enabled){ summary.skipped++; continue; }
+    if(!row.email){ summary.skipped++; continue; }
+    if(await alreadySent(row.user_id, dedupeKey)){ summary.skipped++; continue; }
+
+    const tokens = {
+      nome:row.display_name,
+      mensagem,
+      situacaoCurta,
+      validade:formatDateBR(row.validade),
+      categoria:row.categoria || 'Não informada',
+      diasRestantes:String(status.diasRestantes)
+    };
+
+    try{
+      await sendMail({
+        to:row.email,
+        subject:renderTemplate(emailConfig.subject, tokens),
+        html:renderTemplate(emailConfig.body, tokens)
+      });
+      await recordOutcome(row.user_id, 'cnhExpiring', null, dedupeKey, 'sent', null);
+      summary.sent++;
+    }catch(error){
+      await recordOutcome(row.user_id, 'cnhExpiring', null, dedupeKey, 'failed', error.message);
+      summary.failed++;
+    }
+  }
+
+  return summary;
+}
+
 // Dispara na hora (não pelo sweep periódico) quando um passageiro entra
 // numa carona - avisa o motorista por e-mail, se esse tipo estiver
 // habilitado em Integrações > Lembretes. Nunca deve interromper o fluxo de
@@ -480,11 +644,15 @@ async function sendPassengerJoinedEmail(reservation, addedPassengers, driver){
 
 module.exports = {
   sweepEmailReminders,
+  sweepDriverLicenseReminders,
   getEmailReminderSettings,
   DEFAULT_TEMPLATES,
   pendingReminders,
+  cnhMilestoneFor,
+  CNH_MILESTONES,
   renderTemplate,
   reservationTokens,
+  formatDateBR,
   plateBadgeEmailHTML,
   sendPassengerJoinedEmail
 };
