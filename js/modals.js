@@ -27,7 +27,11 @@ function openJoinConfirmModal(id, origin){
 
   joinConfirmRoute.innerHTML = escapeHTML(reserva.partida) + ' → ' + escapeHTML(reserva.destino) + ' · ' +
     getVehicleDisplayHTML(reserva) + ' · ' + escapeHTML(formatDate(reserva.dataIda)) + ' a ' + escapeHTML(formatDate(reserva.dataVolta));
-  joinConfirmOccupants.innerHTML = renderOccupancyHTML(reserva);
+  // No modal de confirmação as etiquetas vêm logo depois da linha de rota e
+  // datas (joinConfirmRoute), mantendo a mesma ordem das telas de reserva.
+  joinConfirmOccupants.innerHTML =
+    '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
+    renderOccupancyHTML(reserva);
 
   joinConfirmModal.classList.remove('hidden');
 }

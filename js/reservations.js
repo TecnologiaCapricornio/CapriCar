@@ -342,10 +342,6 @@ function renderReservationItem(res, opts){
   const completed = isReservationCompleted(res);
   const canDelete = isCreator && !completed;
   const canLeave = !isCreator && !completed;
-  const ocupantes = getOcupantes(res);
-  const confirmados = getPassageirosConfirmados(res);
-  const capacidade = getVehicleCapacity(res);
-  const ocupacaoTexto = ocupantes + '/' + capacidade + ' ocupantes' + (confirmados > 0 ? ' (' + confirmados + ' já confirmados)' : '');
   const operacao = res.operacao || {};
   const canOperate = isCreator && !completed;
   const pickupAvailable = canRegisterPickupNow(res);
@@ -373,7 +369,7 @@ function renderReservationItem(res, opts){
       '</div>' +
       '<div class="reservation-card-chips">' +
         '<span class="role-badge ' + (isCreator ? 'creator' : 'passenger') + '">' + (isCreator ? 'Motorista' : 'Passageiro') + '</span>' +
-        '<span class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupacaoTexto + '</span></span>' +
+        renderOccupancyBadgesHTML(res) +
       '</div>' +
       '<details class="reservation-more-details">' +
         '<summary>Ver detalhes da reserva</summary>' +

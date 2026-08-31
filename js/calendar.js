@@ -848,7 +848,8 @@ function showDayDetails(iso, focusReservationId){
             '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
           '</div>' +
           '<div class="reservation-details reservation-period">' + renderReservationPeriod(reservation) + '</div>' +
-          '<div class="reservation-card-chips">' + roleBadge + '</div>' +
+          '<div class="reservation-card-chips">' + roleBadge +
+            renderOccupancyBadgesHTML(reservation) + '</div>' +
           '<details class="reservation-more-details">' +
             '<summary>Ver detalhes da reserva</summary>' +
             '<div class="reservation-more-content">' +

@@ -2029,10 +2029,12 @@
     background:var(--success-surface);
   }
 
-/* ============ Bloco de ocupação (ver renderOccupancyHTML) ============
-   Formato único de todas as telas de reserva: as duas etiquetas lado a
-   lado, o mapa de lugares, e os ocupantes logo abaixo — tudo num quadro
-   só. Todas as cores vêm dos tokens, então não há override de tema. */
+/* ============ Ocupação (ver renderOccupancyHTML) ============
+   O quadro traz o mapa de lugares e, logo abaixo, quem está no veículo.
+   As duas etiquetas (ocupantes e vagas) NÃO ficam aqui: elas vão na linha
+   .reservation-card-chips, logo depois do quadro de datas/horários, junto
+   do selo de Motorista/Passageiro. Todas as cores vêm dos tokens, então
+   não há override de tema. */
   .occupancy{
     display:flex;
     flex-direction:column;
@@ -2045,12 +2047,6 @@
     border:1px solid var(--border);
     border-radius:var(--radius-sm);
     background:var(--surface);
-  }
-
-  .occupancy-badges{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
   }
 
   .occupancy-tag{

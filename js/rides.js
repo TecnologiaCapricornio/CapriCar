@@ -34,19 +34,37 @@ function initialFrom(nome){
 }
 
 /* =========================================================
-   Bloco de ocupação — formato único usado em TODAS as telas de reserva
+   Ocupação — duas peças, montadas separadamente pelas telas
 
-   Reúne, num quadro só: as duas etiquetas lado a lado (ocupantes e vagas),
-   o mapa de lugares, e logo abaixo dele as etiquetas de quem já está no
-   veículo. Antes cada tela montava isso do seu jeito - havia quatro
-   formatos diferentes de etiqueta e o mapa vinha separado do bloco de
-   ocupantes, repetindo a contagem de lugares livres.
+   renderOccupancyBadgesHTML: as duas etiquetas (ocupantes e vagas), lado
+   a lado. Vão na linha de chips logo abaixo do quadro de datas/horários,
+   junto do selo de Motorista/Passageiro.
+
+   renderOccupancyHTML: o mapa de lugares com as etiquetas de quem está
+   no veículo logo abaixo, num quadro só. Fica no detalhamento da reserva.
+
+   Estavam juntas até aqui, mas a posição natural das etiquetas é ao lado
+   do selo de papel, e não dentro do quadro do mapa.
    ========================================================= */
-function renderOccupancyHTML(reserva, options){
-  const allowRemove = !!(options && options.allowRemove);
+function renderOccupancyBadgesHTML(reserva){
   const ocupantes = getOcupantes(reserva);
   const capacidade = getVehicleCapacity(reserva);
   const vagas = getVagasRestantes(reserva);
+
+  return (
+    '<span class="occupancy-tag">' + PEOPLE_ICON_SVG +
+      '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></span>' +
+    '<span class="occupancy-tag ' + (vagas > 0 ? 'occupancy-tag-free' : 'occupancy-tag-full') + '">' +
+      PEOPLE_ICON_SVG + '<span>' +
+      (vagas > 0
+        ? vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis')
+        : 'Sem vagas') +
+      '</span></span>'
+  );
+}
+
+function renderOccupancyHTML(reserva, options){
+  const allowRemove = !!(options && options.allowRemove);
   const passageiros = getPassageiros(reserva);
   const confirmados = getPassageirosConfirmados(reserva);
 
@@ -73,16 +91,6 @@ function renderOccupancyHTML(reserva, options){
 
   return (
     '<div class="occupancy">' +
-      '<div class="occupancy-badges">' +
-        '<span class="occupancy-tag">' + PEOPLE_ICON_SVG +
-          '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></span>' +
-        '<span class="occupancy-tag ' + (vagas > 0 ? 'occupancy-tag-free' : 'occupancy-tag-full') + '">' +
-          PEOPLE_ICON_SVG + '<span>' +
-          (vagas > 0
-            ? vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis')
-            : 'Sem vagas') +
-          '</span></span>' +
-      '</div>' +
       (typeof renderSeatMapHTML === 'function' ? renderSeatMapHTML(reserva) : '') +
       '<div class="occupancy-people">' +
         '<div class="occupants-chips">' + chipsHtml + '</div>' +
@@ -366,6 +374,7 @@ function renderRideCard(reserva){
       '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
       '<div class="ride-driver">Reservado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
+      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
       renderOccupancyHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +
@@ -601,6 +610,7 @@ function renderAvailableRideCard(reserva){
       '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
       '<div class="ride-driver">Criado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
+      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
       renderOccupancyHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +

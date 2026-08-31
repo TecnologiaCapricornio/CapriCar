@@ -260,7 +260,11 @@ function renderAdminOcupantesPanel(reserva){
     adminOcupantesPanel.innerHTML = '';
     return;
   }
-  adminOcupantesPanel.innerHTML = renderOccupancyHTML(reserva);
+  // O painel do modal não tem linha de período própria, então as etiquetas
+  // entram aqui mesmo, acima do mapa.
+  adminOcupantesPanel.innerHTML =
+    '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
+    renderOccupancyHTML(reserva);
 }
 
 // Abre o modal admin. Se reservaId for null, abre em modo criação (nome livre).
@@ -583,6 +587,7 @@ function renderAdminReservationItem(res){
         '</span>' +
       '</div>' +
       '<div class="reservation-details reservation-period">' + renderReservationPeriod(res) + '</div>' +
+      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(res) + '</div>' +
       '<div class="reservation-name">Solicitante: ' + escapeHtml(res.nome) + '</div>' +
       '<div class="reservation-business">' + escapeHTML(res.motivo || 'Motivo não informado') + '</div>' +
       renderOccupancyHTML(res) +
