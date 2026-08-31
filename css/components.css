@@ -479,11 +479,101 @@
     box-shadow:0 6px 14px rgba(11,28,45,.28);
   }
 
+/* ============ Tabela de variantes: avisos e selos ============
+   Um bloco por variante, com TODOS os valores vindos dos tokens
+   semânticos. Como os tokens já trocam sozinhos por tema, este arquivo
+   não tem - e não deve ganhar - nenhum override de tema claro para
+   estas classes. Se um aviso novo precisar de cor, ele ganha uma
+   variante aqui; nunca cor solta no ponto de uso.
+
+   .notice = bloco de aviso    .tag = selo inline
+   Variantes: info | warning | danger | success                       */
+
+  .notice{
+    padding:11px 13px;
+    border:1px solid;
+    border-left-width:4px;
+    border-radius:var(--radius-sm);
+    font-size:var(--fs-sm);
+    line-height:1.45;
+  }
+
+  .notice::before{
+    margin-right:3px;
+  }
+
+  .notice-info{
+    background:var(--info-surface);
+    border-color:var(--info-border);
+    color:var(--info-text);
+  }
+  .notice-info::before{content:"ℹ️";}
+
+  .notice-warning{
+    background:var(--warning-surface);
+    border-color:var(--warning-border);
+    color:var(--warning-text);
+    font-weight:600;
+  }
+  .notice-warning::before{content:"⚠️";}
+
+  .notice-danger{
+    background:var(--danger-surface);
+    border-color:var(--danger-border);
+    color:var(--danger-text);
+    font-weight:600;
+  }
+  .notice-danger::before{content:"⛔";}
+
+  .notice-success{
+    background:var(--success-surface);
+    border-color:var(--success-border);
+    color:var(--success-text);
+  }
+  .notice-success::before{content:"✅";}
+
+  .tag{
+    display:inline-block;
+    width:fit-content;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid;
+    font-size:var(--fs-xs);
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .tag-info{
+    background:var(--info-surface);
+    border-color:var(--info-border);
+    color:var(--info-text);
+  }
+
+  .tag-warning{
+    background:var(--warning-surface);
+    border-color:var(--warning-border);
+    color:var(--warning-text);
+  }
+
+  .tag-danger{
+    background:var(--danger-surface);
+    border-color:var(--danger-border);
+    color:var(--danger-text);
+  }
+
+  .tag-success{
+    background:var(--success-surface);
+    border-color:var(--success-border);
+    color:var(--success-text);
+  }
+
+  /* .form-hint é a variante informativa aplicada a dicas de formulário -
+     mantida como nome próprio porque já é usada em 12 lugares. */
   .form-hint{
-    background:rgba(64,150,224,0.14);
-    border:1px solid rgba(64,150,224,0.34);
-    border-left:4px solid #4098e0;
-    color:#cfe6fa;
+    background:var(--info-surface);
+    border:1px solid var(--info-border);
+    border-left:4px solid var(--info);
+    color:var(--info-text);
     font-size:var(--fs-sm);
     padding:10px 13px;
     border-radius:var(--radius-sm);
@@ -640,13 +730,15 @@
   .notification-item-copy small{color:var(--azul-claro);font-size:var(--fs-xs);}
   .notification-empty{padding:32px 18px;color:var(--texto-muted);text-align:center;font-size:var(--fs-sm);}
 
+  /* Mesma variante de atenção da tabela acima, com nome próprio por já
+     estar em uso em reservations.js / modals.js / admin.js. */
   .rodizio-warning{
     padding:11px 13px;
-    border:1px solid rgba(255,190,76,.5);
-    border-left:4px solid #ffbe4c;
+    border:1px solid var(--warning-border);
+    border-left:4px solid var(--warning);
     border-radius:var(--radius-sm);
-    background:rgba(255,174,45,.12);
-    color:#ffe0a3;
+    background:var(--warning-surface);
+    color:var(--warning-text);
     font-size:var(--fs-sm);
     font-weight:600;
     line-height:1.45;

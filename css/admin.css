@@ -615,13 +615,15 @@
   flex-shrink:0;
 }
 
+/* Equivale a .tag + .tag-warning (ver a tabela de variantes em
+   components.css); mantido com nome próprio por já ser usado em admin.js. */
 .operation-report-badge{
   width:fit-content;
   padding:4px 9px;
   border-radius:999px;
-  border:1px solid rgba(235,178,72,.42);
-  background:rgba(235,178,72,.15);
-  color:#f2c263;
+  border:1px solid var(--warning-border);
+  background:var(--warning-surface);
+  color:var(--warning-text);
   font-size:var(--fs-xs);
   font-weight:700;
   white-space:nowrap;
