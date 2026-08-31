@@ -27,7 +27,7 @@ function openJoinConfirmModal(id, origin){
 
   joinConfirmRoute.innerHTML = escapeHTML(reserva.partida) + ' → ' + escapeHTML(reserva.destino) + ' · ' +
     getVehicleDisplayHTML(reserva) + ' · ' + escapeHTML(formatDate(reserva.dataIda)) + ' a ' + escapeHTML(formatDate(reserva.dataVolta));
-  joinConfirmOccupants.innerHTML = renderOcupantesHTML(reserva);
+  joinConfirmOccupants.innerHTML = renderOccupancyHTML(reserva);
 
   joinConfirmModal.classList.remove('hidden');
 }

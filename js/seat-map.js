@@ -67,7 +67,6 @@ function renderSeatMapHTML(reserva){
   const layout = seatLayoutFor(tipo);
   const estados = seatStates(tipo, capacidade, ocupantes);
   const rows = buildSeatRows(tipo, capacidade);
-  const livres = estados.filter(e => e === 'livre').length;
 
   const fileiras = rows.map(fileira => {
     const lugares = fileira.map(indice => {
@@ -81,12 +80,11 @@ function renderSeatMapHTML(reserva){
     return '<div class="seat-row' + (layout.corredor ? ' seat-row-aisle' : '') + '">' + lugares + '</div>';
   }).join('');
 
+  // O cabeçalho traz só o tipo do veículo. A contagem de lugares livres fica
+  // na etiqueta de vagas que acompanha o mapa (ver renderOccupancyHTML em
+  // js/rides.js) - repetir aqui era a redundância que a tela tinha.
   return '<div class="seat-map" aria-label="Mapa de lugares do veículo">' +
-    '<div class="seat-map-head">' +
-      '<strong>' + escapeHTML(layout.rotulo) + '</strong>' +
-      '<small>' + livres + (livres === 1 ? ' lugar livre' : ' lugares livres') +
-        ' de ' + (capacidade - 1) + '</small>' +
-    '</div>' +
+    '<div class="seat-map-head"><strong>' + escapeHTML(layout.rotulo) + '</strong></div>' +
     fileiras +
     '</div>';
 }

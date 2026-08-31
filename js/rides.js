@@ -33,14 +33,22 @@ function initialFrom(nome){
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
-// Gera o HTML do bloco "Quem já está no carro" para uma reserva. Reutilizado nos
-// cards de carona (aba principal e "Caronas Disponíveis"), no Calendário e no
-// modal de confirmação de entrada. Nunca expõe email/senha — apenas nomes.
-function renderOcupantesHTML(reserva, options){
+/* =========================================================
+   Bloco de ocupação — formato único usado em TODAS as telas de reserva
+
+   Reúne, num quadro só: as duas etiquetas lado a lado (ocupantes e vagas),
+   o mapa de lugares, e logo abaixo dele as etiquetas de quem já está no
+   veículo. Antes cada tela montava isso do seu jeito - havia quatro
+   formatos diferentes de etiqueta e o mapa vinha separado do bloco de
+   ocupantes, repetindo a contagem de lugares livres.
+   ========================================================= */
+function renderOccupancyHTML(reserva, options){
   const allowRemove = !!(options && options.allowRemove);
+  const ocupantes = getOcupantes(reserva);
+  const capacidade = getVehicleCapacity(reserva);
+  const vagas = getVagasRestantes(reserva);
   const passageiros = getPassageiros(reserva);
   const confirmados = getPassageirosConfirmados(reserva);
-  const vagas = getVagasRestantes(reserva);
 
   let chipsHtml = '';
   passageiros.forEach(p => {
@@ -58,23 +66,28 @@ function renderOcupantesHTML(reserva, options){
       '</div>';
   });
 
-  let extraHtml = '';
-  if(confirmados > 0){
-    extraHtml = '<div class="occupants-unidentified">+ ' + confirmados + (confirmados === 1 ? ' passageiro não identificado' : ' passageiros não identificados') + '</div>';
-  }
-
-  let emptyHtml = '';
-  if(passageiros.length <= 1 && confirmados === 0){
-    emptyHtml = '<div class="occupants-empty">Nenhum passageiro ainda — você será o primeiro</div>';
-  }
+  const naoIdentificados = confirmados > 0
+    ? '<div class="occupants-unidentified">+ ' + confirmados +
+      (confirmados === 1 ? ' passageiro não identificado' : ' passageiros não identificados') + '</div>'
+    : '';
 
   return (
-    '<div class="occupants-block">' +
-      '<div class="occupants-title">Quem já está no veículo</div>' +
-      '<div class="occupants-chips">' + chipsHtml + '</div>' +
-      extraHtml +
-      emptyHtml +
-      '<div class="occupants-vagas">' + vagas + (vagas === 1 ? ' vaga restante' : ' vagas restantes') + '</div>' +
+    '<div class="occupancy">' +
+      '<div class="occupancy-badges">' +
+        '<span class="occupancy-tag">' + PEOPLE_ICON_SVG +
+          '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></span>' +
+        '<span class="occupancy-tag ' + (vagas > 0 ? 'occupancy-tag-free' : 'occupancy-tag-full') + '">' +
+          PEOPLE_ICON_SVG + '<span>' +
+          (vagas > 0
+            ? vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis')
+            : 'Sem vagas') +
+          '</span></span>' +
+      '</div>' +
+      (typeof renderSeatMapHTML === 'function' ? renderSeatMapHTML(reserva) : '') +
+      '<div class="occupancy-people">' +
+        '<div class="occupants-chips">' + chipsHtml + '</div>' +
+        naoIdentificados +
+      '</div>' +
     '</div>'
   );
 }
@@ -353,8 +366,7 @@ function renderRideCard(reserva){
       '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
       '<div class="ride-driver">Reservado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
-      '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + ' (' + ocupantes + '/' + capacidade + ')</span></div>' +
-      renderOcupantesHTML(reserva) +
+      renderOccupancyHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +
       '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>' +
@@ -589,10 +601,7 @@ function renderAvailableRideCard(reserva){
       '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
       '<div class="ride-driver">Criado por: ' + escapeHTML(reserva.nome) + '</div>' +
       '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
-      '<div class="ride-occupants-badge">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
-      '<div class="ride-seats">' + PEOPLE_ICON_SVG + '<span>' + vagas + (vagas === 1 ? ' vaga disponível' : ' vagas disponíveis') + '</span></div>' +
-      (typeof renderSeatMapHTML === 'function' ? renderSeatMapHTML(reserva) : '') +
-      renderOcupantesHTML(reserva) +
+      renderOccupancyHTML(reserva) +
     '</div>' +
     '<div class="ride-actions">' +
       '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>' +

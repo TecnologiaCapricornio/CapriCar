@@ -2028,3 +2028,83 @@
     border-color:var(--success-border);
     background:var(--success-surface);
   }
+
+/* ============ Bloco de ocupação (ver renderOccupancyHTML) ============
+   Formato único de todas as telas de reserva: as duas etiquetas lado a
+   lado, o mapa de lugares, e os ocupantes logo abaixo — tudo num quadro
+   só. Todas as cores vêm dos tokens, então não há override de tema. */
+  .occupancy{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+    width:fit-content;
+    max-width:100%;
+    margin:10px 0;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface);
+  }
+
+  .occupancy-badges{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  .occupancy-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 10px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .occupancy-tag svg{
+    width:14px;
+    height:14px;
+    flex-shrink:0;
+  }
+
+  .occupancy-tag-free{
+    border-color:var(--success-border);
+    background:var(--success-surface);
+    color:var(--success-text);
+  }
+
+  .occupancy-tag-full{
+    border-color:var(--warning-border);
+    background:var(--warning-surface);
+    color:var(--warning-text);
+  }
+
+  /* Separador sutil entre o mapa e as pessoas: são a mesma informação
+     (quem ocupa o quê), por isso ficam no mesmo quadro em vez de dois. */
+  .occupancy-people{
+    width:100%;
+    padding-top:10px;
+    border-top:1px solid var(--border);
+  }
+
+  .occupancy-people .occupants-chips{
+    margin-bottom:0;
+  }
+
+  .occupancy-people .occupants-unidentified{
+    margin-top:8px;
+  }
+
+  /* Dentro do bloco o mapa não precisa da própria moldura. */
+  .occupancy .seat-map{
+    margin:0;
+    padding:0;
+    border:0;
+    background:none;
+  }

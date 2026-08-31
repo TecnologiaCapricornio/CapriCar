@@ -260,7 +260,7 @@ function renderAdminOcupantesPanel(reserva){
     adminOcupantesPanel.innerHTML = '';
     return;
   }
-  adminOcupantesPanel.innerHTML = renderOcupantesHTML(reserva);
+  adminOcupantesPanel.innerHTML = renderOccupancyHTML(reserva);
 }
 
 // Abre o modal admin. Se reservaId for null, abre em modo criação (nome livre).
@@ -585,7 +585,7 @@ function renderAdminReservationItem(res){
       '<div class="reservation-details reservation-period">' + renderReservationPeriod(res) + '</div>' +
       '<div class="reservation-name">Solicitante: ' + escapeHtml(res.nome) + '</div>' +
       '<div class="reservation-business">' + escapeHTML(res.motivo || 'Motivo não informado') + '</div>' +
-      '<div class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
+      renderOccupancyHTML(res) +
       renderOperationDetails(res) +
     '</div>' +
     '<div class="reservation-actions">' +

@@ -380,7 +380,7 @@ function renderReservationItem(res, opts){
         '<div class="reservation-more-content">' +
           '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(res.nome) + '</div>' +
           '<div class="reservation-business"><strong>Motivo:</strong> ' + escapeHTML(res.motivo || 'Não informado') + '</div>' +
-          renderOcupantesHTML(res, { allowRemove:isCreator }) +
+          renderOccupancyHTML(res, { allowRemove:isCreator }) +
         '</div>' +
       '</details>' +
       renderOperationDetails(res) +
