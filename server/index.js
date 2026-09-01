@@ -12,7 +12,8 @@ const notificationRoutes = require('./routes/notifications');
 const reservationRoutes = require('./routes/reservations');
 const settingsRoutes = require('./routes/settings');
 const rideWatchRoutes = require('./routes/ride-watches');
-const { sweepEmailReminders } = require('./reminders');
+const profileRoutes = require('./routes/profile');
+const { sweepEmailReminders, sweepDriverLicenseReminders } = require('./reminders');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -63,6 +64,9 @@ app.use('/api/notifications', requireAuth, notificationRoutes);
 app.use('/api/reservations', requireAuth, reservationRoutes);
 app.use('/api/settings', requireAuth, settingsRoutes);
 app.use('/api/ride-watches', requireAuth, rideWatchRoutes);
+// Autosserviço do próprio usuário (CNH). Só requireAuth - diferente de
+// /api/users, que exige a permissão de gestão de usuários.
+app.use('/api/profile', requireAuth, profileRoutes);
 
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));
@@ -111,6 +115,17 @@ async function runReminderSweep(){
     }
   }catch(error){
     console.error('Falha na varredura de lembretes por e-mail:', error);
+  }
+
+  // Varredura separada: uma falha no aviso de CNH não pode impedir os
+  // lembretes de reserva (nem o contrário).
+  try{
+    const cnh = await sweepDriverLicenseReminders();
+    if(cnh.notified || cnh.sent || cnh.failed){
+      console.log('Avisos de vencimento de CNH:', cnh);
+    }
+  }catch(error){
+    console.error('Falha na varredura de vencimento de CNH:', error);
   }finally{
     sweepRunning = false;
   }

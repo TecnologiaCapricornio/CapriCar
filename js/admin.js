@@ -187,6 +187,10 @@ function validateAdminMobileReservationStep(step){
     if(!dataVolta){ setAdminFieldError('dataVolta', 'Informe a data de volta.'); valid = false; }
     if(!retirada){ setAdminFieldError('horarioRetirada', 'Selecione o horário de retirada.'); valid = false; }
     if(!devolucao){ setAdminFieldError('horarioDevolucao', 'Selecione o horário de devolução.'); valid = false; }
+    if(dataIda && retirada && isReservationPickupInPast(dataIda, retirada)){
+      setAdminFieldError('horarioRetirada', 'Este horário já passou. Escolha um horário futuro.');
+      valid = false;
+    }
     if(dataIda && dataVolta && dataVolta < dataIda){
       setAdminFieldError('dataVolta', 'A data de volta deve ser igual ou posterior à data de ida.');
       valid = false;
@@ -238,13 +242,17 @@ function validateAdminMobileReservationStep(step){
   return true;
 }
 
+function isAdminWizardActive(){
+  return isMobileReservationWizard() || reservationEditMode === 'self';
+}
+
 adminReservationBackBtn.addEventListener('click', function(){
-  if(!isMobileReservationWizard()) return;
+  if(!isAdminWizardActive()) return;
   showAdminMobileReservationStep(adminMobileReservationStep - 1, true);
 });
 
 adminReservationNextBtn.addEventListener('click', function(){
-  if(!isMobileReservationWizard()) return;
+  if(!isAdminWizardActive()) return;
   if(!validateAdminMobileReservationStep(adminMobileReservationStep)) return;
   showAdminMobileReservationStep(adminMobileReservationStep + 1, true);
 });
@@ -260,7 +268,11 @@ function renderAdminOcupantesPanel(reserva){
     adminOcupantesPanel.innerHTML = '';
     return;
   }
-  adminOcupantesPanel.innerHTML = renderOcupantesHTML(reserva);
+  // O painel do modal não tem linha de período própria, então as etiquetas
+  // entram aqui mesmo, acima do mapa.
+  adminOcupantesPanel.innerHTML =
+    '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
+    renderOccupancyHTML(reserva);
 }
 
 // Abre o modal admin. Se reservaId for null, abre em modo criação (nome livre).
@@ -269,6 +281,10 @@ function openAdminReservaModal(reservaId, mode){
   reservationEditMode = mode || 'admin';
   if(reservationEditMode !== 'self' && !canManageReservations()) return;
   clearAdminFieldErrors();
+  // Editar a própria reserva usa o mesmo assistente por etapas da criação,
+  // em qualquer tamanho de tela - diferente do painel do admin, que mostra
+  // todos os campos de uma vez no desktop para gerenciar várias reservas.
+  adminReservaForm.classList.toggle('self-edit-wizard', reservationEditMode === 'self');
 
   if(reservaId == null){
     adminReservaTitle.textContent = isAdmin() ? 'Nova reserva (como admin)' :
@@ -395,7 +411,7 @@ adminReservaForm.addEventListener('submit', async function(e){
     const pendingReturn = getPendingReturnReservation({ nome:nome });
     if(pendingReturn){
       setAdminError(pendingReturnReservationMessage(pendingReturn));
-      if(isMobileReservationWizard()) showAdminMobileReservationStep(1, true);
+      if(isAdminWizardActive()) showAdminMobileReservationStep(1, true);
       return;
     }
   }
@@ -406,6 +422,7 @@ adminReservaForm.addEventListener('submit', async function(e){
   if(!destino){ setAdminFieldError('destino', 'Selecione ou informe o destino.'); valid = false; }
   if(destino && partida && destino === partida){ setAdminFieldError('destino', 'O destino deve ser diferente da partida.'); valid = false; }
   if(!carro){ setAdminFieldError('carro', 'Selecione o veículo.'); valid = false; }
+  if(!motivo){ setAdminFieldError('motivo', 'Informe o motivo da viagem.'); valid = false; }
   if(!dataIda){ setAdminFieldError('dataIda', 'Informe a data de ida.'); valid = false; }
   if(!dataVolta){ setAdminFieldError('dataVolta', 'Informe a data de volta.'); valid = false; }
   if(dataIda && dataVolta && dataVolta < dataIda){ setAdminFieldError('dataVolta', 'A data de volta deve ser igual ou posterior à data de ida.'); valid = false; }
@@ -432,7 +449,7 @@ adminReservaForm.addEventListener('submit', async function(e){
   }
 
   if(!valid){
-    if(isMobileReservationWizard()){
+    if(isAdminWizardActive()){
       const stepOneHasError = ['Nome','Partida','Destino','Carro'].some(suffix =>
         document.getElementById('error-a' + suffix).textContent
       );
@@ -450,13 +467,13 @@ adminReservaForm.addEventListener('submit', async function(e){
   if(conflitos.length > 0){
     const msg = reservationConflictPrefix() + buildConflictMessage(conflitos);
     setAdminError(msg);
-    if(isMobileReservationWizard()) showAdminMobileReservationStep(2, true);
+    if(isAdminWizardActive()) showAdminMobileReservationStep(2, true);
     return;
   }
   const bloqueios = findVehicleBlocks(partida, carro, dataIda, dataVolta, null);
   if(bloqueios.length > 0){
     setAdminError('Veículo indisponível: ' + bloqueios.map(b => b.tipo + ' (' + formatDate(b.dataInicio) + ' a ' + formatDate(b.dataFim) + ')').join('; '));
-    if(isMobileReservationWizard()) showAdminMobileReservationStep(2, true);
+    if(isAdminWizardActive()) showAdminMobileReservationStep(2, true);
     return;
   }
 
@@ -583,9 +600,10 @@ function renderAdminReservationItem(res){
         '</span>' +
       '</div>' +
       '<div class="reservation-details reservation-period">' + renderReservationPeriod(res) + '</div>' +
+      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(res) + '</div>' +
       '<div class="reservation-name">Solicitante: ' + escapeHtml(res.nome) + '</div>' +
       '<div class="reservation-business">' + escapeHTML(res.motivo || 'Motivo não informado') + '</div>' +
-      '<div class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' + capacidade + ' ocupantes</span></div>' +
+      renderOccupancyHTML(res) +
       renderOperationDetails(res) +
     '</div>' +
     '<div class="reservation-actions">' +

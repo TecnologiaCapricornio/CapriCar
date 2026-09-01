@@ -40,7 +40,7 @@ function reservation(overrides){
     partida:'São Paulo',
     destino:'São Carlos',
     carro:'89',
-    motivo:'',
+    motivo:'Motivo de teste',
     dataIda:isoIn(2),
     dataVolta:isoIn(2),
     horarioRetirada:'08:00',
@@ -61,6 +61,10 @@ test('aceita cadastros e uma reserva válida', () => {
   assert.doesNotThrow(() => validateVehicles(vehicles, branches));
   assert.doesNotThrow(() => validateBlocks([], vehicles));
   assert.doesNotThrow(() => validateReservations([reservation()], context()));
+});
+
+test('motivo vazio continua aceito no servidor - o /sync revalida a coleção inteira, e reservas antigas de antes do campo virar obrigatório na tela não têm esse dado', () => {
+  assert.doesNotThrow(() => validateReservations([reservation({ motivo:'' })], context()));
 });
 
 test('recusa conflito de horário para o mesmo veículo', () => {

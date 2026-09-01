@@ -38,6 +38,7 @@ function normalizeSystemUser(account){
     username:String(account.username || '').trim().toLowerCase(),
     nome:String(account.nome || account.username || '').trim(),
     email:String(account.email || '').trim(),
+    centroCusto:String(account.centroCusto || '').trim(),
     role:account.role === 'admin' ? 'admin' : (account.role === 'facilities' ? 'facilities' : 'user'),
     active:account.active !== false,
     authProvider:account.authProvider === 'entra' ? 'entra' : 'local',
@@ -229,6 +230,7 @@ function showApp(user){
   renderMainCalendar();
   renderAvailableRides();
   initializeNotifications();
+  loadDriverLicense();
 }
 
 function showLogin(){
@@ -326,6 +328,9 @@ if(typeof window !== 'undefined' && typeof URLSearchParams !== 'undefined'){
 
 profileBtn.addEventListener('click', function(){
   profileModal.classList.remove('hidden');
+  // O seletor de data da CNH só pode ser criado depois de js/modals.js ter
+  // carregado, por isso a inicialização é sob demanda (ver js/driver-license.js).
+  if(typeof ensureCnhDatePicker === 'function') ensureCnhDatePicker();
 });
 
 profileCloseBtn.addEventListener('click', function(){
@@ -437,6 +442,15 @@ function switchTab(tabName){
         title:'Devolução pendente',
         type:'warning'
       });
+      tabName = 'minhas';
+    } else if(
+      typeof getLicenseState === 'function' && getLicenseState() !== null &&
+      typeof userCanDrive === 'function' && !userCanDrive()
+    ){
+      // Sem CNH válida a tela nem chega a abrir - mesmo padrão da devolução
+      // pendente logo acima, e não só um aviso com o formulário liberado
+      // por trás dele.
+      showCnhRequiredAlert();
       tabName = 'minhas';
     }
   }

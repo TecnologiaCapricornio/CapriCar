@@ -4,33 +4,91 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+
+# Cancela execuções antigas da mesma branch quando um push novo chega.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  verificacao:
     name: Lint e testes
     runs-on: ubuntu-latest
+
+    env:
+      # Valores descartáveis, válidos apenas dentro do job. A suíte principal
+      # não acessa banco - só `npm run test:integration` acessa, e ele roda no
+      # job separado abaixo.
+      NODE_ENV: test
+      SETTINGS_ENCRYPTION_KEY: ci-only-disposable-passphrase
+      SESSION_COOKIE_SECURE: 'false'
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Instalar pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          version: 9
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: '22'
+          cache: npm
 
       - name: Instalar dependências
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Lint
         run: npm run lint
 
-      - name: Testes unitários
+      - name: Testes
         run: npm test
+
+      - name: Conferir numeração das migrations
+        # Migration duplicada ou fora de ordem quebra o deploy silenciosamente:
+        # o runner aplica por ordem de nome, então dois arquivos com o mesmo
+        # prefixo tornam a ordem dependente do sistema de arquivos.
+        run: node scripts/check-migrations.js
+
+  integracao:
+    name: Integração com PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: capricar_ci
+          POSTGRES_USER: capricar
+          POSTGRES_PASSWORD: capricar-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U capricar -d capricar_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      SETTINGS_ENCRYPTION_KEY: ci-only-disposable-passphrase
+      SESSION_COOKIE_SECURE: 'false'
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: capricar
+      PGPASSWORD: capricar-ci-only
+      PGDATABASE: capricar_ci
+      CAPRICAR_TEST_ADMIN_PASSWORD: ci-only-admin-password
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Aplicar migrations
+        run: npm run db:migrate
+
+      - name: Testes de integração
+        run: npm run test:integration

@@ -4,8 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#10253f">
+  <!-- Azul institucional Capricórnio: pinta a barra do navegador no celular
+       e a moldura do app quando instalado. -->
+  <meta name="theme-color" content="#151f6d">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" href="assets/icone-capricornio.png?v=20260831-1">
+  <link rel="apple-touch-icon" href="assets/icone-capricornio.png?v=20260831-1">
   <script src="js/theme-init.js?v=20260824-1"></script>
   <title>CapriCar | Reserva de Veículos Corporativos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,13 +17,13 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/variables.css?v=20260729-2">
+  <link rel="stylesheet" href="css/variables.css?v=20260831-1">
   <link rel="stylesheet" href="css/base.css?v=20260825-2">
-  <link rel="stylesheet" href="css/components.css?v=20260826-7">
+  <link rel="stylesheet" href="css/components.css?v=20260831-8">
   <link rel="stylesheet" href="css/calendar.css?v=20260826-3">
-  <link rel="stylesheet" href="css/admin.css?v=20260826-5">
-  <link rel="stylesheet" href="css/responsive.css?v=20260826-1">
-  <link rel="stylesheet" href="css/themes.css?v=20260826-4">
+  <link rel="stylesheet" href="css/admin.css?v=20260831-5">
+  <link rel="stylesheet" href="css/responsive.css?v=20260831-1">
+  <link rel="stylesheet" href="css/themes.css?v=20260831-2">
 </head>
 
 <body>
@@ -39,7 +43,7 @@
       </svg>
     </button>
     <div class="login-card">
-      <img src="assets/logo.png" alt="CapriCar" class="login-logo">
+      <img src="assets/icone-capricornio.png?v=20260831-1" alt="CapriCar" class="login-logo">
       <h1>CapriCar</h1>
       <div class="login-sub">Gestão da frota corporativa</div>
       <form id="loginForm" novalidate>
@@ -73,7 +77,7 @@
 
     <header class="app-header">
       <div class="header-left">
-        <img src="assets/logo.png" alt="CapriCar" class="logo-img">
+        <img src="assets/icone-capricornio.png?v=20260831-1" alt="CapriCar" class="logo-img">
         <div class="header-title">
           <span class="brand">CapriCar</span>
           <span class="brand-sub">Reserva de Veículos Corporativos</span>
@@ -147,6 +151,11 @@
         <div class="card">
           <h2>Nova Reserva</h2>
           <div class="form-hint" id="solicitanteHint"></div>
+          <div class="notice notice-warning hidden" id="driverGateNotice">
+            Para reservar um veículo como motorista é preciso ter uma CNH válida
+            cadastrada. Abra <strong>Meu perfil</strong> para cadastrar a sua — sem
+            CNH você continua podendo entrar em caronas como passageiro.
+          </div>
           <form id="reservaForm" novalidate>
             <div class="mobile-reservation-progress" id="mobileReservationProgress" aria-label="Progresso da reserva">
               <span class="active" data-progress-step="1"><strong>1</strong> Trajeto</span>
@@ -190,7 +199,7 @@
             </div>
 
             <div class="field mobile-reservation-step" id="field-motivo" data-reservation-step="3">
-              <label for="motivo">Motivo da viagem</label>
+              <label for="motivo">Motivo da viagem<span class="required-marker">*</span></label>
               <textarea id="motivo" name="motivo" rows="3"
                 placeholder="Descreva brevemente o objetivo da viagem"></textarea>
               <div class="error-msg" id="error-motivo"></div>
@@ -561,6 +570,27 @@
                     <input type="number" id="vehicleCapacity" min="1" max="20" value="5">
                   </div>
                 </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="vehicleType">Tipo</label>
+                    <select id="vehicleType">
+                      <option value="carro">Carro</option>
+                      <option value="van">Van</option>
+                      <option value="onibus">Ônibus</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="vehicleCostCenter">Centro de custo (opcional)</label>
+                    <input type="text" id="vehicleCostCenter" maxlength="60" placeholder="Ex.: 1010"
+                      autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label>Propriedade</label>
+                    <label class="permission-option">
+                      <input type="checkbox" id="vehicleRented"> Veículo alugado
+                    </label>
+                  </div>
+                </div>
                 <button type="submit" class="submit-btn">Adicionar veículo</button>
               </form>
             </div>
@@ -672,6 +702,8 @@
           </div>
 
           <div class="admin-section-panel hidden" id="admin-section-relatorios">
+            <section class="indicators" id="indicatorsPanel" aria-label="Indicadores da frota"></section>
+
             <div class="rides-filters report-filters">
               <div class="row">
                 <div class="field">
@@ -821,6 +853,15 @@
                     qualquer domínio do tenant. Contas de e-mail fora desta lista não conseguem entrar nem ser
                     importadas do Entra ID.</div>
                 </div>
+                <div class="field">
+                  <label for="entraCostCenterAttribute">Atributo do centro de custo</label>
+                  <input type="text" id="entraCostCenterAttribute" autocomplete="off"
+                    placeholder="Ex.: department" maxlength="64">
+                  <div class="form-hint">Nome do atributo do Entra ID que guarda o centro de custo — normalmente
+                    <code>department</code>, mas pode ser <code>officeLocation</code>, <code>costCenter</code> ou uma
+                    extensão do seu tenant. Preenchido, a importação de usuários traz esse dado junto. Em branco, o
+                    centro de custo só é informado manualmente no cadastro.</div>
+                </div>
                 <div class="error-msg" id="entraSsoError"></div>
                 <button type="submit" class="submit-btn">Salvar configuração do Entra ID</button>
               </form>
@@ -921,6 +962,36 @@
                   <input type="text" id="reminderRideWatchMatchSubject" placeholder="Assunto do e-mail">
                   <textarea id="reminderRideWatchMatchBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
                 </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderCnhExpiringEnabled"> Aviso de
+                    CNH vencendo ou vencida</label>
+                  <input type="text" id="reminderCnhExpiringSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderCnhExpiringBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                  <div class="form-hint">
+                    Enviado 30, 15 e 1 dia antes do vencimento, e uma vez depois de vencida —
+                    quatro avisos no total, não diariamente. Tokens próprios deste aviso:
+                    <code>{{mensagem}}</code>, <code>{{situacaoCurta}}</code>,
+                    <code>{{validade}}</code>, <code>{{categoria}}</code>,
+                    <code>{{diasRestantes}}</code>.
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderPassengerRemovedEnabled"> Aviso
+                    a quem foi removido de uma carona</label>
+                  <input type="text" id="reminderPassengerRemovedSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderPassengerRemovedBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                </div>
+                <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderPassengerLeftEnabled"> Aviso ao
+                    motorista quando alguém sai da carona</label>
+                  <input type="text" id="reminderPassengerLeftSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderPassengerLeftBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                  <div class="form-hint">
+                    Tokens próprios destes dois avisos: <code>{{outraParte}}</code> (quem removeu, ou quem saiu),
+                    <code>{{motivo}}</code> com a mensagem escrita na hora, e <code>{{blocoMotivo}}</code>, que
+                    monta a citação já formatada e some sozinho quando ninguém escreveu nada.
+                  </div>
+                </div>
                 <div class="error-msg" id="emailRemindersError"></div>
                 <div class="user-form-actions">
                   <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
@@ -974,10 +1045,16 @@
                     <label for="userAccountPassword">Senha</label>
                     <input type="password" id="userAccountPassword" placeholder="Mínimo de 8 caracteres"
                       autocomplete="new-password">
-                    <div class="form-hint" id="userAccountPasswordHint">A senha é obrigatória no primeiro cadastro.
-                    </div>
                   </div>
                 </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="userAccountCostCenter">Centro de custo</label>
+                    <input type="text" id="userAccountCostCenter" maxlength="60" placeholder="Ex.: 1010"
+                      autocomplete="off">
+                  </div>
+                </div>
+                <div class="form-hint" id="userAccountPasswordHint">A senha é obrigatória no primeiro cadastro.</div>
                 <div class="field">
                   <label>Permissões adicionais</label>
                   <div class="permission-grid">
@@ -998,8 +1075,6 @@
                 </div>
                 <div class="error-msg" id="userAccountError"></div>
                 <div class="user-form-actions">
-                  <button type="button" class="secondary-btn hidden" id="userAccountCancelBtn">Cancelar
-                    edição</button>
                   <button type="submit" class="submit-btn" id="userAccountSubmitBtn">Criar usuário</button>
                 </div>
               </form>
@@ -1071,12 +1146,97 @@
   </div>
 
   <!-- ===================== Modal de Perfil ===================== -->
+  <!-- ============ Pré-visualização de e-mail de lembrete ============ -->
+  <div class="modal-overlay hidden" id="emailPreviewModal">
+    <div class="modal-card email-preview-card" role="dialog" aria-modal="true"
+      aria-labelledby="emailPreviewTitle">
+      <button type="button" class="modal-close" id="emailPreviewCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="emailPreviewTitle">Pré-visualização</h3>
+
+      <div class="email-preview-meta">
+        <span class="email-preview-meta-label">Assunto</span>
+        <strong id="emailPreviewSubject"></strong>
+      </div>
+
+      <div class="email-preview-toolbar" role="group" aria-label="Largura da pré-visualização">
+        <button type="button" class="secondary-btn active" data-preview-width="desktop">Computador</button>
+        <button type="button" class="secondary-btn" data-preview-width="mobile">Celular</button>
+      </div>
+
+      <!-- sandbox sem allow-scripts: o HTML do template é renderizado, mas
+           nenhum script dele executa dentro do portal. -->
+      <iframe id="emailPreviewFrame" class="email-preview-frame" sandbox
+        title="Pré-visualização do e-mail"></iframe>
+
+      <p class="email-preview-hint">
+        Mostra o conteúdo que está nos campos agora, mesmo sem ter salvo, com os
+        tokens preenchidos com dados de exemplo.
+      </p>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="profileModal">
-    <div class="modal-card">
+    <div class="modal-card profile-card">
       <button type="button" class="modal-close" id="profileCloseBtn">&times;</button>
       <div class="profile-avatar-lg" id="profileAvatarLg">--</div>
       <h3 id="profileName"></h3>
       <div class="form-hint" id="profileRole"></div>
+
+      <section class="profile-cnh">
+        <div class="profile-cnh-head">
+          <h4>Minha CNH</h4>
+          <span class="tag" id="cnhDriveBadge"></span>
+        </div>
+
+        <div id="cnhAlert" class="hidden"></div>
+
+        <form id="cnhForm" class="compact-form" novalidate>
+          <div class="row">
+            <div class="field">
+              <label for="cnhNumero">Número</label>
+              <input type="text" id="cnhNumero" inputmode="numeric" maxlength="11"
+                placeholder="Somente números" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="cnhCategoria">Categoria</label>
+              <select id="cnhCategoria">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+            <div class="field" id="field-cnhValidade">
+              <label for="cnhValidade">Validade</label>
+              <div class="date-input-wrapper" id="wrap-cnhValidade">
+                <input type="date" id="cnhValidade" readonly autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="cnhFrente">Foto da frente</label>
+              <input type="file" id="cnhFrente" accept="image/*">
+              <small class="cnh-photo-state" id="cnhFrenteEstado"></small>
+            </div>
+            <div class="field">
+              <label for="cnhVerso">Foto do verso</label>
+              <input type="file" id="cnhVerso" accept="image/*">
+              <small class="cnh-photo-state" id="cnhVersoEstado"></small>
+            </div>
+          </div>
+
+          <div class="form-hint">
+            As fotos ficam visíveis só para você e para quem administra usuários, e
+            nunca são publicadas em endereço aberto. Máximo de 1 MB cada.
+          </div>
+
+          <div class="error-msg" id="cnhError"></div>
+          <div class="user-form-actions">
+            <button type="button" class="secondary-btn" id="cnhRemoverBtn">Remover CNH</button>
+            <button type="submit" class="submit-btn">Salvar CNH</button>
+          </div>
+        </form>
+      </section>
+
       <button type="button" class="danger-btn" id="logoutBtn">Sair</button>
     </div>
   </div>
@@ -1089,7 +1249,7 @@
       <div class="quick-reserve-summary" id="quickReserveSummary"></div>
       <form id="quickReserveForm" novalidate>
         <div class="field" id="qfield-motivo">
-          <label for="qMotivo">Motivo da viagem</label>
+          <label for="qMotivo">Motivo da viagem<span class="required-marker">*</span></label>
           <textarea id="qMotivo" rows="2" placeholder="Objetivo da viagem"></textarea>
           <div class="error-msg" id="error-qMotivo"></div>
         </div>
@@ -1148,11 +1308,64 @@
     <div class="modal-card join-confirm-card">
       <button type="button" class="modal-close" id="joinConfirmCloseBtn">&times;</button>
       <h3>Confirmar entrada na carona</h3>
-      <div class="join-confirm-route" id="joinConfirmRoute"></div>
+      <div class="join-confirm-route quick-reserve-summary" id="joinConfirmRoute"></div>
       <div id="joinConfirmOccupants"></div>
       <div class="join-confirm-actions">
         <button type="button" class="join-confirm-cancel" id="joinConfirmCancelBtn">Cancelar</button>
         <button type="button" class="submit-btn" id="joinConfirmOkBtn">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Modal de Regras Básicas da Viagem ===================== -->
+  <div class="modal-overlay hidden" id="tripRulesModal">
+    <div class="modal-card trip-rules-card">
+      <button type="button" class="modal-close" id="tripRulesCloseBtn">&times;</button>
+      <h3>Regras Básicas para a Viagem</h3><br>
+      <div class="trip-rules-list">
+        <div class="trip-rule trip-rule-danger">
+          <span class="trip-rule-icon" data-rule-icon="alcohol"></span>
+          <div>
+            <h4>Nada de álcool antes de dirigir</h4>
+            <p>Quem for dirigir não pode beber. Nenhum motorista poderá assumir a direção sob efeito de álcool.</p>
+          </div>
+        </div>
+        <div class="trip-rule trip-rule-muted">
+          <span class="trip-rule-icon" data-rule-icon="smoking"></span>
+          <div>
+            <h4>Proibido fumar dentro do carro</h4>
+            <p>Para o conforto de todos, fumar só em paradas, em locais apropriados.</p>
+          </div>
+        </div>
+        <div class="trip-rule trip-rule-info">
+          <span class="trip-rule-icon" data-rule-icon="fuel"></span>
+          <div>
+            <h4>Devolver o carro abastecido</h4>
+            <p>Ao final da viagem ou ao trocar de motorista, o tanque deve estar no mesmo nível do início ou completamente cheio.</p>
+          </div>
+        </div>
+        <div class="trip-rule trip-rule-warning">
+          <span class="trip-rule-icon" data-rule-icon="respect"></span>
+          <div>
+            <h4>Respeito e organização</h4>
+            <p>Manter o carro limpo e pronto para o uso pelo próximo. Tratar à todos com educação e respeitar as leis de trânsito.</p>
+          </div>
+        </div>
+        <div class="trip-rule trip-rule-success">
+          <span class="trip-rule-icon" data-rule-icon="seatbelt"></span>
+          <div>
+            <h4>Cinto de segurança sempre</h4>
+            <p>Use o cinto mesmo em trajetos curtos dentro da cidade e mesmo no banco de trás - para todos os ocupantes, o tempo todo.</p>
+          </div>
+        </div>
+      </div>
+      <label class="trip-rules-agree">
+        <input type="checkbox" id="tripRulesCheckbox">
+        <span>Estou ciente e concordo com as regras da viagem.</span>
+      </label>
+      <div class="trip-rules-actions">
+        <button type="button" class="join-confirm-cancel" id="tripRulesCancelBtn">Cancelar</button>
+        <button type="button" class="submit-btn" id="tripRulesConfirmBtn" disabled>Confirmar</button>
       </div>
     </div>
   </div>
@@ -1208,7 +1421,7 @@
         </div>
 
         <div class="field mobile-admin-reservation-step" id="afield-motivo" data-admin-reservation-step="3">
-          <label for="aMotivo">Motivo da viagem</label>
+          <label for="aMotivo">Motivo da viagem<span class="required-marker">*</span></label>
           <textarea id="aMotivo" rows="3" placeholder="Objetivo da viagem"></textarea>
           <div class="error-msg" id="error-aMotivo"></div>
         </div>
@@ -1324,6 +1537,77 @@
   </div>
 
   <!-- ===================== Modal de Retirada / Devolução ===================== -->
+  <!-- ============ Edição de usuário ============
+       Campos próprios, separados dos de "Novo usuário": carregar um
+       registro existente no formulário de cadastro deixava ambíguo se o
+       envio criaria ou alteraria alguém. -->
+  <div class="modal-overlay hidden" id="userEditModal">
+    <div class="modal-card user-edit-card" role="dialog" aria-modal="true"
+      aria-labelledby="userEditTitle">
+      <button type="button" class="modal-close" id="userEditCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="userEditTitle">Editar usuário</h3>
+
+      <form id="userEditForm" class="compact-form" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="userEditName">Nome</label>
+            <input type="text" id="userEditName" placeholder="Nome do usuário" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="userEditUsername">Usuário de acesso</label>
+            <input type="text" id="userEditUsername" disabled>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="userEditEmail">E-mail</label>
+            <input type="email" id="userEditEmail" placeholder="nome@empresa.com" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="userEditPassword">Nova senha</label>
+            <input type="password" id="userEditPassword" placeholder="Deixe vazio para manter"
+              autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="userEditCostCenter">Centro de custo</label>
+            <input type="text" id="userEditCostCenter" maxlength="60" placeholder="Ex.: 1010" autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Fora da .row: o aviso vale para o cadastro inteiro, não só para o
+             campo de senha, então ocupa a largura toda do modal. -->
+        <div class="form-hint" id="userEditPasswordHint">Deixe a senha vazia para manter a atual.</div>
+
+        <div class="field">
+          <label>Permissões adicionais</label>
+          <div class="permission-grid">
+            <label class="permission-option"><input type="checkbox" id="editPermissionReservations">
+              Reservas</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionBranches"> Locais</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionBlocks"> Bloqueios</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionAudit"> Auditoria</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionRules"> Regras</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionIntegrations">
+              Integrações</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionUsers"> Usuários</label>
+          </div>
+        </div>
+
+        <div class="error-msg" id="userEditError"></div>
+        <div class="user-form-actions">
+          <button type="button" class="secondary-btn" id="userEditCancelBtn">Cancelar</button>
+          <button type="submit" class="submit-btn" id="userEditSubmitBtn">Salvar alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="userDeleteModal">
     <div class="modal-card user-delete-card" role="dialog" aria-modal="true" aria-labelledby="userDeleteTitle">
       <button type="button" class="modal-close" id="userDeleteCloseBtn" aria-label="Fechar">&times;</button>
@@ -1501,6 +1785,7 @@
       <p id="siteDialogMessage"></p>
       <div class="field hidden" id="siteDialogInputWrap">
         <input type="text" id="siteDialogInput" autocomplete="off">
+        <textarea id="siteDialogTextarea" class="hidden" rows="3"></textarea>
       </div>
       <div class="site-dialog-actions">
         <button type="button" class="secondary-btn hidden" id="siteDialogCancelBtn">Cancelar</button>
@@ -1510,27 +1795,36 @@
   </div>
 
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
-  <script src="js/config.js?v=20260826-1"></script>
+  <script src="js/config.js?v=20260831-1"></script>
   <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260826-4"></script>
-  <script src="js/dialogs.js?v=20260804-1"></script>
-  <script src="js/api.js?v=20260826-1"></script>
-  <script src="js/storage.js?v=20260826-4"></script>
+  <script src="js/utils.js?v=20260831-1"></script>
+  <script src="js/dialogs.js?v=20260831-2"></script>
+  <script src="js/api.js?v=20260831-1"></script>
+  <script src="js/storage.js?v=20260831-1"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
-  <script src="js/rides.js?v=20260826-5"></script>
-  <script src="js/reservations.js?v=20260826-4"></script>
-  <script src="js/calendar.js?v=20260826-3"></script>
-  <script src="js/modals.js?v=20260826-4"></script>
-  <script src="js/admin.js?v=20260826-5"></script>
+  <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
+  <script src="js/seat-map.js?v=20260831-2"></script>
+  <script src="js/rides.js?v=20260831-4"></script>
+  <script src="js/reservations.js?v=20260831-8"></script>
+  <script src="js/calendar.js?v=20260831-2"></script>
+  <script src="js/modals.js?v=20260831-4"></script>
+  <script src="js/admin.js?v=20260831-5"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
-  <script src="js/management-users.js?v=20260826-8"></script>
-  <script src="js/management-integrations.js?v=20260826-5"></script>
-  <script src="js/management-fleet.js?v=20260826-3"></script>
+  <script src="js/management-users.js?v=20260831-3"></script>
+  <script src="js/management-integrations.js?v=20260831-4"></script>
+  <!-- Depois de management-integrations.js: os botões são gerados a partir
+       do REMINDER_FIELDS declarado lá. -->
+  <script src="js/management-email-preview.js?v=20260831-3"></script>
+  <script src="js/management-fleet.js?v=20260831-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
-  <script src="js/management-reports.js?v=20260826-4"></script>
-  <script src="js/auth.js?v=20260826-4"></script>
+  <script src="js/management-indicators.js?v=20260831-1"></script>
+  <script src="js/management-reports.js?v=20260831-1"></script>
+  <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
+       auth.js, que chama loadDriverLicense() ao abrir o app. -->
+  <script src="js/driver-license.js?v=20260831-2"></script>
+  <script src="js/auth.js?v=20260831-4"></script>
   <script src="js/app.js?v=20260826-3"></script>
 
 </body>

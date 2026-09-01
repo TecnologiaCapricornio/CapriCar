@@ -12,6 +12,10 @@ function assert(condition, message){
 }
 
 const MAX_PHOTO_BYTES = 1024 * 1024;
+
+// Tipos de veículo aceitos (ver migration 022). 'carro' é o padrão dos
+// registros anteriores à coluna.
+const VEHICLE_TYPES = ['carro', 'van', 'onibus'];
 const IMAGE_SIGNATURES = {
   png:[[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
   jpeg:[[0xFF, 0xD8, 0xFF]],
@@ -150,6 +154,16 @@ function validateVehicles(value, branches, currentVehicles){
     assert(Number.isInteger(Number(vehicle.capacidade)) && Number(vehicle.capacidade) >= 1 && Number(vehicle.capacidade) <= 20,
       'A capacidade do veículo deve estar entre 1 e 20.');
     assert(typeof vehicle.ativo === 'boolean', 'O status do veículo é inválido.');
+    // Campos novos: ausentes em veículos cadastrados antes da migration 022,
+    // por isso são opcionais e caem no padrão em vez de recusar o registro.
+    if(vehicle.tipo !== undefined && vehicle.tipo !== null && vehicle.tipo !== ''){
+      assert(VEHICLE_TYPES.includes(String(vehicle.tipo)),
+        'O tipo do veículo deve ser carro, van ou ônibus.');
+    }
+    if(vehicle.alugado !== undefined && vehicle.alugado !== null){
+      assert(typeof vehicle.alugado === 'boolean', 'O campo "alugado" do veículo é inválido.');
+    }
+    if(vehicle.centroCusto) text(vehicle.centroCusto, 'o centro de custo do veículo', 60, false);
     const key = `${branch.toLowerCase()}|${code.toLowerCase()}`;
     assert(!keys.has(key), 'Já existe um veículo com essa placa.');
     keys.add(key);
@@ -259,6 +273,13 @@ function validateReservations(value, context){
     const branch = text(reservation.partida, 'o local de partida', 120);
     text(reservation.destino, 'o destino', 160);
     const car = text(reservation.carro, 'o veículo', 40);
+    // Opcional aqui de propósito, mesmo o cliente agora exigindo o campo: o
+    // /sync revalida a COLEÇÃO INTEIRA a cada chamada (next = todas as
+    // reservas atuais + as alteradas, não só a mudança em questão - ver
+    // server/routes/reservations.js). Reservas antigas, criadas quando o
+    // motivo ainda era opcional, não têm esse dado - torná-lo obrigatório
+    // aqui quebraria a sincronização de QUALQUER reserva sempre que uma
+    // reserva antiga sem motivo estivesse na base.
     text(reservation.motivo, 'o motivo da viagem', 2000, false);
     text(reservation.responsavel, 'o responsável', 120, false);
     assert(validDate(reservation.dataIda) && validDate(reservation.dataVolta), 'A data da reserva é inválida.');
@@ -398,5 +419,10 @@ module.exports = {
   validateBlocks,
   validateReservations,
   decodeImageDataUrl,
-  isValidEmail
+  isValidEmail,
+  VEHICLE_TYPES,
+  // Reaproveitados por server/driver-licenses.js - exportar evita que a
+  // validação de data e a de mensagem de erro sigam caminhos diferentes.
+  assert,
+  validDate
 };

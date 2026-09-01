@@ -126,8 +126,12 @@ async function resolveReservationManagers(client){
   return result.rows.map(row => String(row.id));
 }
 
+// Devolve true quando a notificação foi de fato gravada, e false quando o
+// ON CONFLICT a descartou por já existir. Quem só quer notificar pode ignorar
+// o retorno; quem conta quantas saíram (ex.: a varredura de CNH) precisa
+// dele para não contar duplicata como envio novo.
 async function insertNotification(client, notification){
-  await client.query(
+  const result = await client.query(
     `INSERT INTO notifications
        (user_id, notification_type, title, message, reservation_id, dedupe_key, metadata)
      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
@@ -138,6 +142,7 @@ async function insertNotification(client, notification){
       JSON.stringify(notification.metadata || {})
     ]
   );
+  return result.rowCount > 0;
 }
 
 async function notifyReservationCancellation(client, reservation, actor){
@@ -215,6 +220,98 @@ async function notifyReservationPassengerAdditions(client, previousReservation, 
   }
 
   return addedPassengers;
+}
+
+// Avisa quem ficou de fora quando um passageiro sai da lista. Cobre os dois
+// sentidos, que são mensagens diferentes:
+//   - o motorista (ou a gestão) removeu alguém  -> avisa quem foi removido
+//   - o próprio passageiro saiu da carona       -> avisa o motorista
+// `motivo` é a mensagem opcional escrita por quem executou a ação.
+// Devolve as tarefas de e-mail, para o envio ficar fora da transação.
+async function notifyReservationPassengerRemovals(client, previousReservation, reservation, actor, motivo){
+  const anteriores = Array.isArray(previousReservation && previousReservation.passageiros)
+    ? previousReservation.passageiros
+    : [];
+  if(!anteriores.length) return [];
+
+  const atuais = new Set(
+    (Array.isArray(reservation && reservation.passageiros) ? reservation.passageiros : [])
+      .map(passenger => String(passenger && passenger.usuarioId || ''))
+      .filter(Boolean)
+  );
+  const removidos = anteriores.filter(passenger => {
+    const userId = String(passenger && passenger.usuarioId || '');
+    return userId && !atuais.has(userId);
+  });
+  if(!removidos.length) return [];
+
+  // Só notifica contas que ainda existem e estão ativas.
+  const validos = await client.query(
+    `SELECT id, email, display_name FROM users
+      WHERE id = ANY($1::uuid[]) AND active = TRUE AND deleted_at IS NULL`,
+    [removidos.map(passenger => String(passenger.usuarioId))]
+  );
+  const porId = new Map(validos.rows.map(row => [String(row.id), row]));
+
+  await ensureNotificationsTable(client);
+  const summary = reservationSummary(reservation);
+  const driverId = String(reservation.criadorUsuarioId || '');
+  const textoMotivo = String(motivo || '').trim();
+  const sufixoMotivo = textoMotivo ? ` Mensagem de ${actor.nome}: "${textoMotivo}"` : '';
+  const tarefas = [];
+
+  for(const passenger of removidos){
+    const userId = String(passenger.usuarioId);
+    const conta = porId.get(userId);
+    if(!conta) continue;
+
+    if(userId === String(actor.id)){
+      // Saiu por conta própria: quem precisa saber é o motorista.
+      if(!driverId || driverId === userId) continue;
+      const motorista = await client.query(
+        `SELECT id, email, display_name FROM users
+          WHERE id = $1 AND active = TRUE AND deleted_at IS NULL`,
+        [driverId]
+      );
+      if(!motorista.rows[0]) continue;
+      await insertNotification(client, {
+        userId:driverId,
+        type:'passenger_left',
+        title:'Alguém saiu da sua carona',
+        message:`${conta.display_name} saiu de ${summary.route}, com saída prevista para ` +
+          `${summary.when || 'a data informada'}. A vaga voltou a ficar disponível.${sufixoMotivo}`,
+        reservationId:String(reservation.id || ''),
+        dedupeKey:`passenger-left:${reservation.id}:${userId}`,
+        metadata:{ route:summary.route, scheduledAt:summary.when, motivo:textoMotivo }
+      });
+      tarefas.push({
+        tipo:'passengerLeft',
+        destinatario:motorista.rows[0],
+        outraParte:conta.display_name,
+        motivo:textoMotivo
+      });
+    } else {
+      // Removido por outra pessoa: quem precisa saber é o próprio passageiro.
+      await insertNotification(client, {
+        userId,
+        type:'passenger_removed',
+        title:'Você saiu de uma carona',
+        message:`${actor.nome} removeu você de ${summary.route}, com saída prevista para ` +
+          `${summary.when || 'a data informada'}.${sufixoMotivo}`,
+        reservationId:String(reservation.id || ''),
+        dedupeKey:`passenger-removed:${reservation.id}:${userId}`,
+        metadata:{ route:summary.route, scheduledAt:summary.when, removedBy:actor.nome, motivo:textoMotivo }
+      });
+      tarefas.push({
+        tipo:'passengerRemoved',
+        destinatario:conta,
+        outraParte:actor.nome,
+        motivo:textoMotivo
+      });
+    }
+  }
+
+  return tarefas;
 }
 
 async function notifyOperationReport(client, reservation, phase, actor){
@@ -314,9 +411,15 @@ async function generateUserReminders(user){
 
 module.exports = {
   ensureNotificationsTable,
+  // Consumida por server/ride-watches.js e server/reminders.js. Ficou de fora
+  // desta lista quando o monitoramento de carona foi escrito, o que fazia o
+  // import chegar como undefined e derrubar a transação da reserva assim que
+  // alguma rota monitorada batesse. Coberto por tests/notifications.test.js.
+  insertNotification,
   generateUserReminders,
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
+  notifyReservationPassengerRemovals,
   notifyOperationReport,
   resolveReservationManagers,
   reminderTypesForReservation,

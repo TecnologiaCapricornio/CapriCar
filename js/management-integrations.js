@@ -6,6 +6,7 @@ const entraClientIdInput = document.getElementById('entraClientId');
 const entraClientSecretInput = document.getElementById('entraClientSecret');
 const entraRedirectUriInput = document.getElementById('entraRedirectUri');
 const entraAllowedDomainsInput = document.getElementById('entraAllowedDomains');
+const entraCostCenterAttributeInput = document.getElementById('entraCostCenterAttribute');
 const entraSsoSummary = document.getElementById('entraSsoSummary');
 const entraSsoError = document.getElementById('entraSsoError');
 
@@ -58,6 +59,21 @@ const REMINDER_FIELDS = {
     enabled:document.getElementById('reminderRideWatchMatchEnabled'),
     subject:document.getElementById('reminderRideWatchMatchSubject'),
     body:document.getElementById('reminderRideWatchMatchBody')
+  },
+  cnhExpiring:{
+    enabled:document.getElementById('reminderCnhExpiringEnabled'),
+    subject:document.getElementById('reminderCnhExpiringSubject'),
+    body:document.getElementById('reminderCnhExpiringBody')
+  },
+  passengerRemoved:{
+    enabled:document.getElementById('reminderPassengerRemovedEnabled'),
+    subject:document.getElementById('reminderPassengerRemovedSubject'),
+    body:document.getElementById('reminderPassengerRemovedBody')
+  },
+  passengerLeft:{
+    enabled:document.getElementById('reminderPassengerLeftEnabled'),
+    subject:document.getElementById('reminderPassengerLeftSubject'),
+    body:document.getElementById('reminderPassengerLeftBody')
   }
 };
 
@@ -69,6 +85,7 @@ async function loadEntraSsoForm(){
   entraClientIdInput.value = status.clientId || '';
   entraRedirectUriInput.value = status.redirectUri || '';
   entraAllowedDomainsInput.value = status.allowedDomains || '';
+  entraCostCenterAttributeInput.value = status.costCenterAttribute || '';
   entraClientSecretInput.value = '';
   entraClientSecretInput.placeholder = status.clientSecretConfigured
     ? 'Deixe em branco para manter o segredo atual'
@@ -122,6 +139,10 @@ async function loadCalendarSyncForm(){
 
 async function renderIntegrationsManagement(){
   if(!canManageIntegrations()) return;
+  // Botões "Visualizar e-mail" (ver js/management-email-preview.js). São
+  // criados a partir de REMINDER_FIELDS e a função é idempotente, então
+  // pode ser chamada a cada abertura da aba.
+  if(typeof setupEmailPreviewButtons === 'function') setupEmailPreviewButtons();
   try{
     await Promise.all([loadEntraSsoForm(), loadSmtpForm(), loadEmailRemindersForm(), loadCalendarSyncForm()]);
     integrationsLoaded = true;
@@ -140,6 +161,7 @@ entraSsoForm.addEventListener('submit', async function(e){
   const clientId = entraClientIdInput.value.trim();
   const redirectUri = entraRedirectUriInput.value.trim();
   const allowedDomains = entraAllowedDomainsInput.value.trim();
+  const costCenterAttribute = entraCostCenterAttributeInput.value.trim();
   const clientSecret = entraClientSecretInput.value.trim();
   if(!tenantId || !clientId || !redirectUri){
     entraSsoError.textContent = 'Preencha Tenant ID, Client ID e a URI de redirecionamento.';
@@ -153,7 +175,7 @@ entraSsoForm.addEventListener('submit', async function(e){
   try{
     await apiRequest('/api/settings/entra-sso', {
       method:'PUT',
-      body:{ tenantId, clientId, redirectUri, allowedDomains, clientSecret }
+      body:{ tenantId, clientId, redirectUri, allowedDomains, costCenterAttribute, clientSecret }
     });
     await loadEntraSsoForm();
     await showSiteAlert('Configuração do Entra ID salva com sucesso.', {

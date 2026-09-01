@@ -160,6 +160,10 @@ function validateMobileReservationStep(step){
     if(!dataVolta){ setError('dataVolta', 'Informe a data de volta.'); valid = false; }
     if(!retirada){ setError('horarioRetirada', 'Informe o horário de retirada.'); valid = false; }
     if(!devolucao){ setError('horarioDevolucao', 'Informe o horário de devolução.'); valid = false; }
+    if(dataIda && retirada && isReservationPickupInPast(dataIda, retirada)){
+      setError('horarioRetirada', 'Este horário já passou. Escolha um horário futuro.');
+      valid = false;
+    }
     if(dataIda && dataVolta && dataVolta < dataIda){
       setError('dataVolta', 'A data de volta deve ser igual ou posterior à data de ida.');
       valid = false;
@@ -342,10 +346,6 @@ function renderReservationItem(res, opts){
   const completed = isReservationCompleted(res);
   const canDelete = isCreator && !completed;
   const canLeave = !isCreator && !completed;
-  const ocupantes = getOcupantes(res);
-  const confirmados = getPassageirosConfirmados(res);
-  const capacidade = getVehicleCapacity(res);
-  const ocupacaoTexto = ocupantes + '/' + capacidade + ' ocupantes' + (confirmados > 0 ? ' (' + confirmados + ' já confirmados)' : '');
   const operacao = res.operacao || {};
   const canOperate = isCreator && !completed;
   const pickupAvailable = canRegisterPickupNow(res);
@@ -373,14 +373,14 @@ function renderReservationItem(res, opts){
       '</div>' +
       '<div class="reservation-card-chips">' +
         '<span class="role-badge ' + (isCreator ? 'creator' : 'passenger') + '">' + (isCreator ? 'Motorista' : 'Passageiro') + '</span>' +
-        '<span class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupacaoTexto + '</span></span>' +
+        renderOccupancyBadgesHTML(res) +
       '</div>' +
       '<details class="reservation-more-details">' +
         '<summary>Ver detalhes da reserva</summary>' +
         '<div class="reservation-more-content">' +
           '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(res.nome) + '</div>' +
           '<div class="reservation-business"><strong>Motivo:</strong> ' + escapeHTML(res.motivo || 'Não informado') + '</div>' +
-          renderOcupantesHTML(res, { allowRemove:isCreator }) +
+          renderOccupancyHTML(res, { allowRemove:isCreator }) +
         '</div>' +
       '</details>' +
       renderOperationDetails(res) +
@@ -452,11 +452,24 @@ function bindOccupantRemoveButtons(container){
       const reservationId = this.getAttribute('data-reservation-id');
       const userId = this.getAttribute('data-user-id');
       const passengerName = (this.getAttribute('aria-label') || '').replace(/^Remover /, '');
-      if(!await showSiteConfirm(
-        'Remover ' + passengerName + ' desta carona? A pessoa será removida da lista de passageiros.',
-        { title:'Remover passageiro', confirmText:'Sim, remover', type:'warning' }
-      )) return;
-      await removePassengerAsDriver(reservationId, userId);
+      // showSitePrompt devolve null se cancelou e '' se confirmou sem escrever
+      // nada - por isso a checagem é contra null, e não pela verdade do valor:
+      // a mensagem é opcional.
+      const motivo = await showSitePrompt(
+        '',
+        {
+          title:'Remover passageiro',
+          confirmText:'Sim, remover',
+          type:'warning',
+          multiline:true,
+          // O nome vem do cadastro, então é escapado antes de virar HTML.
+          messageHtml:'Remover <strong>' + escapeHTML(passengerName) + '</strong> desta carona?<br>' +
+            'O passageiro será avisado por notificação e e-mail.',
+          inputPlaceholder:'Mensagem para ' + passengerName + ' (opcional). Ex.: preciso do lugar para levar equipamento.'
+        }
+      );
+      if(motivo === null) return;
+      await removePassengerAsDriver(reservationId, userId, motivo);
       renderMyReservations();
     });
   });
@@ -521,7 +534,19 @@ function bindLeaveButtons(container){
       }
 
       const id = this.getAttribute('data-id');
-      const result = await removePassengerFromReservation(id, currentUser);
+      const motivo = await showSitePrompt(
+        'Sair desta carona? O motorista será avisado por notificação e e-mail.',
+        {
+          title:'Sair da carona',
+          confirmText:'Sim, sair',
+          type:'warning',
+          multiline:true,
+          inputPlaceholder:'Mensagem para o motorista (opcional). Ex.: consegui outra condução.'
+        }
+      );
+      if(motivo === null) return;
+
+      const result = await removePassengerFromReservation(id, currentUser, motivo);
       if(!result){
         renderMyReservations();
         return;
@@ -579,6 +604,11 @@ function validateForm(){
 
   if(partida && !carro){
     setError('carro', 'Selecione o carro do local de partida.');
+    valid = false;
+  }
+
+  if(!motivoInput.value.trim()){
+    setError('motivo', 'Informe o motivo da viagem.');
     valid = false;
   }
 
@@ -660,6 +690,21 @@ function buildConflictMessage(conflitos){
   return 'Horários ocupados: ' + partes.join('; ') + '.';
 }
 
+// Mostra ou esconde o aviso de CNH obrigatória e desabilita o envio.
+// Chamado por js/driver-license.js sempre que o estado da CNH muda.
+const driverGateNotice = document.getElementById('driverGateNotice');
+
+function refreshDriverGate(){
+  if(!driverGateNotice) return;
+  // Enquanto a CNH ainda não carregou, não bloqueia nada - evita travar o
+  // formulário por um instante logo depois do login.
+  const carregou = typeof getLicenseState === 'function' && getLicenseState() !== null;
+  const bloqueado = carregou && !userCanDrive();
+  driverGateNotice.classList.toggle('hidden', !bloqueado);
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if(submitBtn) submitBtn.disabled = bloqueado;
+}
+
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   confirmation.classList.remove('show');
@@ -667,6 +712,14 @@ form.addEventListener('submit', async function(e){
   const currentUser = getCurrentUser();
   if(!currentUser){
     showLogin();
+    return;
+  }
+
+  // Trava de motorista. A checagem também existe aqui, e não só no botão
+  // desabilitado, porque o estado da CNH pode ter mudado desde o carregamento
+  // da tela (ex.: venceu durante a sessão aberta).
+  if(typeof userCanDrive === 'function' && !userCanDrive()){
+    await showCnhRequiredAlert();
     return;
   }
 
@@ -691,6 +744,9 @@ form.addEventListener('submit', async function(e){
     else if(stepTwoHasError) showMobileReservationStep(2, true);
     return;
   }
+
+  const regrasAceitas = await openTripRulesModal();
+  if(!regrasAceitas) return;
 
   const reserva = {
     id: Date.now(),

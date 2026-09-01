@@ -450,12 +450,12 @@
   box-shadow:0 0 0 4px rgba(51,212,136,.12);
 }
 
-.operation-card{
+.modal-card.operation-card{
   max-width:460px;
   text-align:left;
 }
 
-.fleet-edit-card{
+.modal-card.fleet-edit-card{
   max-width:560px;
   text-align:left;
 }
@@ -500,8 +500,8 @@
   display:none;
 }
 
-.vehicle-delete-card,
-.user-delete-card{
+.modal-card.vehicle-delete-card,
+.modal-card.user-delete-card{
   max-width:520px;
   text-align:left;
 }
@@ -615,13 +615,15 @@
   flex-shrink:0;
 }
 
+/* Equivale a .tag + .tag-warning (ver a tabela de variantes em
+   components.css); mantido com nome próprio por já ser usado em admin.js. */
 .operation-report-badge{
   width:fit-content;
   padding:4px 9px;
   border-radius:999px;
-  border:1px solid rgba(235,178,72,.42);
-  background:rgba(235,178,72,.15);
-  color:#f2c263;
+  border:1px solid var(--warning-border);
+  background:var(--warning-surface);
+  color:var(--warning-text);
   font-size:var(--fs-xs);
   font-weight:700;
   white-space:nowrap;
@@ -721,3 +723,187 @@
   }
 }
 
+
+/* ============ Indicadores da frota (aba Relatórios) ============ */
+.indicators{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin-bottom:22px;
+}
+
+.indicator-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:10px;
+}
+
+.indicator-card{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+
+.indicator-label{
+  font-size:var(--fs-2xs);
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+}
+
+.indicator-value{
+  font-size:1.5rem;
+  line-height:1.15;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+
+.indicator-detail{
+  font-size:var(--fs-2xs);
+  color:var(--text-muted);
+}
+
+.indicator-lists{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:12px;
+}
+
+.indicator-list{
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+
+.indicator-list h4{
+  margin:0 0 10px;
+  font-size:var(--fs-sm);
+  color:var(--text);
+}
+
+.indicator-list ol{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.indicator-list li{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  font-size:var(--fs-sm);
+  color:var(--text-muted);
+}
+
+.indicator-list li strong{
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+
+.indicator-list .indicator-empty{
+  color:var(--text-muted);
+  font-style:italic;
+}
+
+/* ============ Pré-visualização de e-mail de lembrete ============ */
+.email-preview-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:6px;
+}
+
+.email-preview-btn{
+  width:auto;
+  font-size:var(--fs-sm);
+  padding:8px 14px;
+}
+
+.modal-card.email-preview-card{
+  max-width:760px;
+  width:min(760px, calc(100vw - 32px));
+  text-align:left;
+}
+
+.email-preview-meta{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:10px 13px;
+  margin-bottom:12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+
+.email-preview-meta-label{
+  font-size:var(--fs-2xs);
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  flex-shrink:0;
+}
+
+.email-preview-meta strong{
+  color:var(--text);
+  font-size:var(--fs-sm);
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+.email-preview-toolbar{
+  display:flex;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.email-preview-toolbar .secondary-btn{
+  width:auto;
+  font-size:var(--fs-sm);
+  padding:7px 14px;
+}
+
+.email-preview-toolbar .secondary-btn.active{
+  background:linear-gradient(135deg,var(--primary),var(--primary-strong));
+  border-color:transparent;
+  color:var(--on-primary);
+}
+
+/* Fundo claro fixo: é assim que o cliente de e-mail renderiza, e uma
+   prévia sobre o fundo escuro do portal seria enganosa. */
+.email-preview-frame{
+  display:block;
+  width:100%;
+  height:min(60vh, 520px);
+  margin:0 auto;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:#ffffff;
+  transition:width .2s ease;
+}
+
+.email-preview-hint{
+  margin:10px 0 0;
+  font-size:var(--fs-xs);
+  color:var(--text-muted);
+  line-height:1.5;
+}
+
+/* Modal de edição de usuário: mais largo que o padrão para a grade de
+   permissões caber em colunas, como no formulário de cadastro. */
+.modal-card.user-edit-card{
+  max-width:680px;
+  width:min(680px, calc(100vw - 32px));
+  text-align:left;
+}

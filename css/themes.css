@@ -1,37 +1,95 @@
-/* Temas neutros do CapriCar. Este arquivo é carregado por último. */
+/* Temas neutros do CapriCar. Este arquivo é carregado por último.
+
+   Só os tokens SEMÂNTICOS são redefinidos aqui - os aliases legados
+   (--azul-royal, --vermelho etc.) apontam para eles em variables.css
+   e acompanham a troca de tema sozinhos. Ver o cabeçalho daquele
+   arquivo para a explicação das duas camadas. */
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --azul-royal:#294d68;
-  --azul-royal-2:#4f7591;
-  --azul-claro:#7ea9c7;
+
   --bg-1:#191b1f;
   --bg-2:#24272c;
   --bg-3:#30343a;
-  --card-bg:rgba(35,38,43,.9);
-  --card-bg-solid:#26292e;
-  --card-border:rgba(231,235,239,.13);
-  --texto:#f2f3f5;
-  --texto-muted:#adb3bb;
-  --vermelho:#e2606d;
-  --verde:#2fb87d;
+  --surface:rgba(35,38,43,.9);
+  --surface-solid:#26292e;
+  --border:rgba(231,235,239,.13);
+
+  --text:#f2f3f5;
+  --text-muted:#adb3bb;
+  --on-primary:#ffffff;
+
+  /* Azul Capricórnio (#151F6D / #0033A0) clareado o suficiente para o botão
+     se destacar do fundo escuro mantendo texto branco legível por cima.
+     O #6CACE4 da marca é o acento de texto/ícone, onde ele brilha. */
+  --primary:#2f56c4;
+  --primary-strong:#1b2a86;
+  --accent:#6cace4;
+
+  --info:#7ea9c7;
+  --info-text:#cfe6fa;
+  --info-surface:rgba(126,169,199,.15);
+  --info-border:rgba(126,169,199,.42);
+
+  --success:#2fb87d;
+  --success-text:#8ee9bd;
+  --success-surface:rgba(47,184,125,.14);
+  --success-border:rgba(47,184,125,.40);
+
+  --warning:#ebb248;
+  --warning-text:#f2c263;
+  --warning-surface:rgba(235,178,72,.15);
+  --warning-border:rgba(235,178,72,.42);
+
+  --danger:#e2606d;
+  --danger-text:#ffb3ba;
+  --danger-surface:rgba(226,96,109,.14);
+  --danger-border:rgba(226,96,109,.42);
+
   --sombra:0 16px 36px rgba(0,0,0,.26);
 }
 
 :root[data-theme="light"]{
   color-scheme:light;
-  --azul-royal:#173f5c;
-  --azul-royal-2:#2a648c;
-  --azul-claro:#24658f;
+
   --bg-1:#f3f4f6;
   --bg-2:#e8ebef;
   --bg-3:#dce1e6;
-  --card-bg:rgba(255,255,255,.94);
-  --card-bg-solid:#ffffff;
-  --card-border:rgba(29,40,52,.14);
-  --texto:#20262d;
-  --texto-muted:#68717c;
-  --vermelho:#c83f50;
-  --verde:#087546;
+  --surface:rgba(255,255,255,.94);
+  --surface-solid:#ffffff;
+  --border:rgba(29,40,52,.14);
+
+  --text:#20262d;
+  --text-muted:#68717c;
+  --on-primary:#ffffff;
+
+  /* Azul Capricórnio direto da marca: #0033A0 como ação e #151F6D como o
+     fim escuro do gradiente. Branco sobre os dois passa folgado em contraste. */
+  --primary:#0033a0;
+  --primary-strong:#151f6d;
+  --accent:#1a4fa0;
+
+  /* No tema claro a cor sólida e a de texto coincidem: ambas precisam
+     ser escuras o bastante para o fundo claro. */
+  --info:#1c4770;
+  --info-text:#1c4770;
+  --info-surface:rgba(37,116,197,.09);
+  --info-border:rgba(37,116,197,.30);
+
+  --success:#087546;
+  --success-text:#065c37;
+  --success-surface:rgba(8,117,70,.10);
+  --success-border:rgba(8,117,70,.30);
+
+  --warning:#8a5a00;
+  --warning-text:#704200;
+  --warning-surface:rgba(190,140,20,.13);
+  --warning-border:rgba(190,140,20,.38);
+
+  --danger:#c83f50;
+  --danger-text:#a32639;
+  --danger-surface:rgba(200,63,80,.10);
+  --danger-border:rgba(200,63,80,.32);
+
   --sombra:0 14px 35px rgba(32,43,55,.12);
 }
 
@@ -259,12 +317,6 @@ html[data-theme="light"] .site-dialog-card.site-dialog-danger{
 
 html[data-theme="light"] .site-dialog-card.site-dialog-success{
   background:#f5fcf9;
-}
-
-html[data-theme="light"] .operation-report-badge{
-  border-color:#e3bf76;
-  background:#fff7e5;
-  color:#9a6410;
 }
 
 html[data-theme="light"] .site-dialog-icon.warning{
@@ -498,13 +550,6 @@ html[data-theme="light"] .range-picker-trigger:not(.has-selection) .range-picker
   color:#707c87;
 }
 
-html[data-theme="light"] .rodizio-warning{
-  background:#fff3d5;
-  border-color:#d69725;
-  border-left-color:#b97000;
-  color:#704200;
-}
-
 html[data-theme="light"] .range-calendar-day.unavailable{
   color:#b42335;
 }
@@ -570,13 +615,6 @@ html[data-theme="light"] .quick-reserve-summary{
   background:rgba(78,134,173,.08);
   border-color:rgba(78,134,173,.2);
   color:#40596b;
-}
-
-html[data-theme="light"] .form-hint{
-  background:rgba(37,116,197,.09);
-  border-color:rgba(37,116,197,.3);
-  border-left-color:#2574c5;
-  color:#1c4770;
 }
 
 html[data-theme="light"] .modal-overlay{

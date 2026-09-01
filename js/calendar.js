@@ -849,16 +849,14 @@ function showDayDetails(iso, focusReservationId){
           '</div>' +
           '<div class="reservation-details reservation-period">' + renderReservationPeriod(reservation) + '</div>' +
           '<div class="reservation-card-chips">' + roleBadge +
-            '<span class="reservation-occupants">' + PEOPLE_ICON_SVG + '<span>' + ocupantes + '/' +
-              getVehicleCapacity(reservation) + ' ocupantes</span></span>' +
-          '</div>' +
+            renderOccupancyBadgesHTML(reservation) + '</div>' +
           '<details class="reservation-more-details">' +
             '<summary>Ver detalhes da reserva</summary>' +
             '<div class="reservation-more-content">' +
               '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(reservation.nome) + '</div>' +
               '<div class="reservation-business"><strong>Motivo:</strong> ' +
                 escapeHTML(reservation.motivo || 'Não informado') + '</div>' +
-              renderOcupantesHTML(reservation) +
+              renderOccupancyHTML(reservation) +
             '</div>' +
           '</details>' +
         '</div>' +

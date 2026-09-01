@@ -4,6 +4,7 @@ const { hashPassword, createSessionToken } = require('../security');
 const { publicUser, requirePermission } = require('../auth');
 const { isValidEmail } = require('../validation');
 const { importSsoUsers, resolveSsoConfig } = require('../sso');
+const { getLicensesForUsers, licenseStatus, todayISO } = require('../driver-licenses');
 
 const router = express.Router();
 router.use(requirePermission('users'));
@@ -13,7 +14,7 @@ const USER_SELECT = `
          can_manage_reservations, can_manage_branches, can_manage_fleet,
          can_manage_blocks, can_view_reports, can_view_audit,
          can_manage_rules, can_manage_users, can_manage_integrations,
-         created_at, updated_at
+         cost_center, created_at, updated_at
     FROM users
    WHERE deleted_at IS NULL`;
 
@@ -165,7 +166,23 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
 
 router.get('/', async (req, res) => {
   const result = await query(USER_SELECT + " ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name");
-  res.json({ users:result.rows.map(publicUser) });
+
+  // Uma consulta só para todas as CNHs, e não uma por usuário - a lista de
+  // usuários é paginada no cliente, então o N+1 apareceria em cheio aqui.
+  const licenses = await getLicensesForUsers(result.rows.map(row => row.id));
+  const hoje = todayISO();
+
+  res.json({
+    users:result.rows.map(row => {
+      const user = publicUser(row);
+      const cnh = licenses.get(String(row.id)) || null;
+      const status = licenseStatus(cnh, hoje);
+      user.cnh = cnh;
+      user.cnhStatus = status.estado;
+      user.cnhDiasRestantes = status.diasRestantes;
+      return user;
+    })
+  });
 });
 
 router.post('/sso-import', async (req, res) => {
@@ -295,6 +312,7 @@ router.post('/', async (req, res) => {
   const displayName = String(req.body && req.body.nome || '').trim();
   const email = String(req.body && req.body.email || '').trim();
   const password = String(req.body && req.body.password || '');
+  const costCenter = String(req.body && req.body.centroCusto || '').trim().slice(0, 60);
   const permissions = normalizePermissions(req.body && req.body.permissions);
   if(!/^[a-z0-9._-]{3,40}$/.test(username)){
     return res.status(400).json({ error:'Usuário inválido.' });
@@ -313,13 +331,15 @@ router.post('/', async (req, res) => {
       `INSERT INTO users (
          username, display_name, email, password_hash, role, active,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_blocks, can_view_reports,
-         can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations
-       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations,
+         cost_center
+       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULLIF($14, ''))
        RETURNING *`,
       [
         username, displayName, email || null, passwordHash,
         permissions.reservations, permissions.branches, permissions.fleet, permissions.blocks, permissions.reports,
-        permissions.audit, permissions.rules, permissions.users, permissions.integrations
+        permissions.audit, permissions.rules, permissions.users, permissions.integrations,
+        costCenter
       ]
     );
     await audit(client, req.user.id, 'created', inserted.rows[0].id, { username });
@@ -332,6 +352,10 @@ router.patch('/:id', async (req, res) => {
   const displayName = String(req.body && req.body.nome || '').trim();
   const emailWasSent = !!(req.body && typeof req.body.email === 'string');
   const requestedEmail = emailWasSent ? String(req.body.email).trim() : '';
+  const costCenterWasSent = !!(req.body && typeof req.body.centroCusto === 'string');
+  const requestedCostCenter = costCenterWasSent
+    ? String(req.body.centroCusto).trim().slice(0, 60)
+    : '';
   const password = String(req.body && req.body.password || '');
   const active = req.body && typeof req.body.active === 'boolean' ? req.body.active : undefined;
   const permissionsWereSent = !!(
@@ -368,6 +392,9 @@ router.patch('/:id', async (req, res) => {
     const email = current.auth_provider === 'entra'
       ? current.email
       : (emailWasSent ? (requestedEmail || null) : current.email);
+    // Campo opcional: só sobrescreve quando veio no corpo, para um PATCH
+    // parcial (ex.: só permissões) não apagar o centro de custo.
+    const costCenter = costCenterWasSent ? (requestedCostCenter || null) : current.cost_center;
     const permissions = permissionsWereSent ? requestedPermissions : {
       reservations:current.can_manage_reservations,
       branches:current.can_manage_branches,
@@ -393,7 +420,8 @@ router.patch('/:id', async (req, res) => {
               can_view_audit = CASE WHEN role = 'admin' THEN TRUE ELSE $11 END,
               can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $12 END,
               can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $13 END,
-              can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $14 END
+              can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $14 END,
+              cost_center = $15
         WHERE id = $1
         RETURNING *`,
       [
@@ -406,7 +434,8 @@ router.patch('/:id', async (req, res) => {
         isAdminAccount || permissions.audit,
         isAdminAccount || permissions.rules,
         isAdminAccount || permissions.users,
-        isAdminAccount || permissions.integrations
+        isAdminAccount || permissions.integrations,
+        costCenter
       ]
     );
     await audit(client, req.user.id, 'updated', current.id, {

@@ -1,6 +1,13 @@
 const crypto = require('node:crypto');
 const { query, withTransaction } = require('./db');
-const { decodeImageDataUrl } = require('./validation');
+const { decodeImageDataUrl, VEHICLE_TYPES } = require('./validation');
+
+// Veículos cadastrados antes da migration 022 não têm tipo; a coluna tem
+// CHECK, então um valor vazio quebraria o espelho - por isso o padrão.
+function vehicleType(vehicle){
+  const tipo = String(vehicle.tipo || vehicle.vehicle_type || '').trim();
+  return VEHICLE_TYPES.includes(tipo) ? tipo : 'carro';
+}
 const { savePhotoFile } = require('./photo-storage');
 
 function normalizeName(value){
@@ -158,22 +165,28 @@ async function ensureVehicle(client, branchId, vehicle){
       `UPDATE vehicles
           SET legacy_id = COALESCE(legacy_id, NULLIF($1, '')), branch_id = $2, code = $3,
               plate = NULLIF($4, ''), brand = $5, model = $6, capacity = $7,
-              active = $8
+              active = $8, vehicle_type = $10, rented = $11,
+              cost_center = NULLIF($12, '')
         WHERE id = $9`,
       [legacyId, branchId, code, plate, names.brand, names.model,
         Math.max(1, Math.min(20, Number(vehicle.capacidade || vehicle.capacity) || 5)),
-        vehicle.ativo !== false && vehicle.active !== false, existing.rows[0].id]
+        vehicle.ativo !== false && vehicle.active !== false, existing.rows[0].id,
+        vehicleType(vehicle), vehicle.alugado === true,
+        String(vehicle.centroCusto || '').trim()]
     );
     return existing.rows[0].id;
   }
   const inserted = await client.query(
     `INSERT INTO vehicles
-       (legacy_id, branch_id, code, plate, brand, model, capacity, active)
-     VALUES (NULLIF($1, ''), $2, $3, NULLIF($4, ''), $5, $6, $7, $8)
+       (legacy_id, branch_id, code, plate, brand, model, capacity, active,
+        vehicle_type, rented, cost_center)
+     VALUES (NULLIF($1, ''), $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9, $10, NULLIF($11, ''))
      RETURNING id`,
     [legacyId, branchId, code, plate, names.brand, names.model,
       Math.max(1, Math.min(20, Number(vehicle.capacidade || vehicle.capacity) || 5)),
-      vehicle.ativo !== false && vehicle.active !== false]
+      vehicle.ativo !== false && vehicle.active !== false,
+      vehicleType(vehicle), vehicle.alugado === true,
+      String(vehicle.centroCusto || '').trim()]
   );
   return inserted.rows[0].id;
 }

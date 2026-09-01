@@ -479,11 +479,101 @@
     box-shadow:0 6px 14px rgba(11,28,45,.28);
   }
 
+/* ============ Tabela de variantes: avisos e selos ============
+   Um bloco por variante, com TODOS os valores vindos dos tokens
+   semânticos. Como os tokens já trocam sozinhos por tema, este arquivo
+   não tem - e não deve ganhar - nenhum override de tema claro para
+   estas classes. Se um aviso novo precisar de cor, ele ganha uma
+   variante aqui; nunca cor solta no ponto de uso.
+
+   .notice = bloco de aviso    .tag = selo inline
+   Variantes: info | warning | danger | success                       */
+
+  .notice{
+    padding:11px 13px;
+    border:1px solid;
+    border-left-width:4px;
+    border-radius:var(--radius-sm);
+    font-size:var(--fs-sm);
+    line-height:1.45;
+  }
+
+  .notice::before{
+    margin-right:3px;
+  }
+
+  .notice-info{
+    background:var(--info-surface);
+    border-color:var(--info-border);
+    color:var(--info-text);
+  }
+  .notice-info::before{content:"ℹ️";}
+
+  .notice-warning{
+    background:var(--warning-surface);
+    border-color:var(--warning-border);
+    color:var(--warning-text);
+    font-weight:600;
+  }
+  .notice-warning::before{content:"⚠️";}
+
+  .notice-danger{
+    background:var(--danger-surface);
+    border-color:var(--danger-border);
+    color:var(--danger-text);
+    font-weight:600;
+  }
+  .notice-danger::before{content:"⛔";}
+
+  .notice-success{
+    background:var(--success-surface);
+    border-color:var(--success-border);
+    color:var(--success-text);
+  }
+  .notice-success::before{content:"✅";}
+
+  .tag{
+    display:inline-block;
+    width:fit-content;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid;
+    font-size:var(--fs-xs);
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .tag-info{
+    background:var(--info-surface);
+    border-color:var(--info-border);
+    color:var(--info-text);
+  }
+
+  .tag-warning{
+    background:var(--warning-surface);
+    border-color:var(--warning-border);
+    color:var(--warning-text);
+  }
+
+  .tag-danger{
+    background:var(--danger-surface);
+    border-color:var(--danger-border);
+    color:var(--danger-text);
+  }
+
+  .tag-success{
+    background:var(--success-surface);
+    border-color:var(--success-border);
+    color:var(--success-text);
+  }
+
+  /* .form-hint é a variante informativa aplicada a dicas de formulário -
+     mantida como nome próprio porque já é usada em 12 lugares. */
   .form-hint{
-    background:rgba(64,150,224,0.14);
-    border:1px solid rgba(64,150,224,0.34);
-    border-left:4px solid #4098e0;
-    color:#cfe6fa;
+    background:var(--info-surface);
+    border:1px solid var(--info-border);
+    border-left:4px solid var(--info);
+    color:var(--info-text);
     font-size:var(--fs-sm);
     padding:10px 13px;
     border-radius:var(--radius-sm);
@@ -640,13 +730,15 @@
   .notification-item-copy small{color:var(--azul-claro);font-size:var(--fs-xs);}
   .notification-empty{padding:32px 18px;color:var(--texto-muted);text-align:center;font-size:var(--fs-sm);}
 
+  /* Mesma variante de atenção da tabela acima, com nome próprio por já
+     estar em uso em reservations.js / modals.js / admin.js. */
   .rodizio-warning{
     padding:11px 13px;
-    border:1px solid rgba(255,190,76,.5);
-    border-left:4px solid #ffbe4c;
+    border:1px solid var(--warning-border);
+    border-left:4px solid var(--warning);
     border-radius:var(--radius-sm);
-    background:rgba(255,174,45,.12);
-    color:#ffe0a3;
+    background:var(--warning-surface);
+    color:var(--warning-text);
     font-size:var(--fs-sm);
     font-weight:600;
     line-height:1.45;
@@ -1464,7 +1556,7 @@
   }
 
   /* ---- Modal de confirmação para entrar na carona ---- */
-  .join-confirm-card{
+  .modal-card.join-confirm-card{
     max-width:380px;
     text-align:left;
   }
@@ -1658,10 +1750,15 @@
   }
 
   .join-confirm-route{
-    text-align:center;
-    color:var(--texto-muted);
-    font-size:var(--fs-sm);
-    margin:-4px 0 16px;
+    margin-top:-4px;
+  }
+
+  /* O cartão de confirmação é bem mais estreito que os cards de listagem
+     (.reservation-item) de onde .reservation-period foi herdado - manter as
+     duas colunas (Ida | Volta) lado a lado aqui espreme "data" e "hora" até
+     o ícone colidir com o texto. Empilhar verticalmente evita isso. */
+  .join-confirm-route .reservation-period{
+    grid-template-columns:1fr;
   }
 
   .join-confirm-actions{
@@ -1670,15 +1767,34 @@
     margin-top:16px;
   }
 
-  .join-confirm-actions button{
+  .join-confirm-actions button,
+  .trip-rules-actions button{
     flex:1;
+  }
+
+  /* Normaliza altura/espaçamento entre .join-confirm-cancel e .submit-btn -
+     sem isso cada um herda o padding/margem do próprio componente-base
+     (button.submit-btn tem margin-top e padding maiores) e os dois botões
+     de uma mesma linha ficam com tamanhos diferentes. Mesmo padrão já usado
+     em .site-dialog-actions/.user-form-actions/.fleet-edit-actions. */
+  .join-confirm-actions .submit-btn,
+  .join-confirm-actions .join-confirm-cancel,
+  .trip-rules-actions .submit-btn,
+  .trip-rules-actions .join-confirm-cancel{
+    height:48px;
+    margin:0;
+    padding:0 12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1.2;
+    white-space:nowrap;
   }
 
   .join-confirm-cancel{
     background:rgba(169,189,209,0.12);
     color:var(--texto);
     border:1px solid rgba(210,228,245,0.2);
-    padding:12px 18px;
     font-size:var(--fs-base);
     font-weight:700;
     border-radius:var(--radius-sm);
@@ -1689,6 +1805,132 @@
   .join-confirm-cancel:hover{
     filter:brightness(1.2);
     transform:translateY(-1px);
+  }
+
+  /* ---- Modal de Regras Básicas da Viagem ---- */
+  .modal-card.trip-rules-card{
+    max-width:460px;
+    text-align:left;
+  }
+
+  .trip-rules-card h3{
+    text-align:center;
+    margin:0 0 16px;
+  }
+
+  .trip-rules-list{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin-bottom:18px;
+  }
+
+  .trip-rule{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  }
+
+  .trip-rule-icon{
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    border:1px solid transparent;
+    border-radius:12px;
+  }
+
+  .trip-rule-icon svg{
+    width:20px;
+    height:20px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .trip-rule-danger .trip-rule-icon{
+    border-color:var(--danger-border);
+    background:var(--danger-surface);
+    color:var(--danger-text);
+  }
+
+  .trip-rule-info .trip-rule-icon{
+    border-color:var(--info-border);
+    background:var(--info-surface);
+    color:var(--info-text);
+  }
+
+  .trip-rule-warning .trip-rule-icon{
+    border-color:var(--warning-border);
+    background:var(--warning-surface);
+    color:var(--warning-text);
+  }
+
+  .trip-rule-success .trip-rule-icon{
+    border-color:var(--success-border);
+    background:var(--success-surface);
+    color:var(--success-text);
+  }
+
+  .trip-rule-muted .trip-rule-icon{
+    border-color:var(--card-border);
+    background:rgba(169,189,209,0.12);
+    color:var(--texto-muted);
+  }
+
+  .trip-rule h4{
+    margin:0 0 2px;
+    font-size:var(--fs-sm);
+    color:var(--texto);
+    font-weight:700;
+  }
+
+  .trip-rule p{
+    margin:0;
+    font-size:var(--fs-xs);
+    color:var(--texto-muted);
+    line-height:1.45;
+  }
+
+  .trip-rules-agree{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding-top:14px;
+    margin-top:2px;
+    border-top:1px solid var(--card-border);
+    font-size:var(--fs-sm);
+    color:var(--texto);
+    cursor:pointer;
+  }
+
+  .trip-rules-agree input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    margin-top:2px;
+    flex:0 0 auto;
+    accent-color:var(--primary);
+    cursor:pointer;
+  }
+
+  .trip-rules-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+
+  .trip-rules-actions .submit-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
+  .trip-rules-actions .submit-btn:disabled:hover{
+    filter:none;
+    transform:none;
+    box-shadow:none;
   }
 
   .reserve-day-btn{
@@ -1813,4 +2055,202 @@
     color:var(--texto-muted);
     font-size:var(--fs-sm);
     padding-bottom:calc(30px + env(safe-area-inset-bottom, 0px));
+  }
+
+/* ============ CNH no "Meu perfil" ============ */
+  .modal-card.profile-card{
+    max-width:640px;
+    text-align:left;
+  }
+
+  .profile-card > h3,
+  .profile-card > .profile-avatar-lg{
+    text-align:center;
+  }
+
+  .profile-card > h3{
+    margin-bottom:10px;
+  }
+
+  .profile-cnh{
+    margin:20px 0;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  .profile-cnh-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .profile-cnh-head h4{
+    margin:0;
+    font-size:var(--fs-md);
+    color:var(--text);
+  }
+
+  .cnh-photo-state{
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+  }
+
+  .cnh-photo-state.cnh-photo-ok{
+    color:var(--success-text);
+  }
+
+  .cnh-photo-state a{
+    color:var(--accent);
+  }
+
+/* ============ Mapa de lugares (ver js/seat-map.js) ============
+   O desenho vem do tipo e da capacidade do veículo, então van e ônibus
+   funcionam sem CSS novo. */
+  .seat-map{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    align-items:center;
+    width:fit-content;
+    margin:10px 0;
+    padding:10px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,.03);
+  }
+
+  .seat-map-head{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin-bottom:3px;
+  }
+
+  .seat-map-head strong{
+    font-size:var(--fs-xs);
+    color:var(--text);
+  }
+
+  .seat-map-head small{
+    font-size:var(--fs-2xs);
+    color:var(--text-muted);
+  }
+
+  .seat-row{
+    display:flex;
+    gap:5px;
+  }
+
+  /* Van e ônibus têm corredor central: separa a primeira coluna do resto. */
+  .seat-row-aisle > .seat:first-child{
+    margin-right:12px;
+  }
+
+  .seat{
+    display:grid;
+    place-items:center;
+    width:24px;
+    height:24px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.05);
+    font-size:11px;
+    line-height:1;
+  }
+
+  .seat-motorista{
+    border-color:var(--info-border);
+    background:var(--info-surface);
+  }
+
+  .seat-ocupado{
+    border-color:var(--danger-border);
+    background:var(--danger-surface);
+    color:var(--danger-text);
+  }
+
+  .seat-livre{
+    border-color:var(--success-border);
+    background:var(--success-surface);
+  }
+
+/* ============ Ocupação (ver renderOccupancyHTML) ============
+   O quadro traz o mapa de lugares e, logo abaixo, quem está no veículo.
+   As duas etiquetas (ocupantes e vagas) NÃO ficam aqui: elas vão na linha
+   .reservation-card-chips, logo depois do quadro de datas/horários, junto
+   do selo de Motorista/Passageiro. Todas as cores vêm dos tokens, então
+   não há override de tema. */
+  .occupancy{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+    width:fit-content;
+    max-width:100%;
+    margin:10px 0;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface);
+  }
+
+  .occupancy-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 10px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .occupancy-tag svg{
+    width:14px;
+    height:14px;
+    flex-shrink:0;
+  }
+
+  .occupancy-tag-free{
+    border-color:var(--success-border);
+    background:var(--success-surface);
+    color:var(--success-text);
+  }
+
+  .occupancy-tag-full{
+    border-color:var(--warning-border);
+    background:var(--warning-surface);
+    color:var(--warning-text);
+  }
+
+  /* Separador sutil entre o mapa e as pessoas: são a mesma informação
+     (quem ocupa o quê), por isso ficam no mesmo quadro em vez de dois. */
+  .occupancy-people{
+    width:100%;
+    padding-top:10px;
+    border-top:1px solid var(--border);
+  }
+
+  .occupancy-people .occupants-chips{
+    margin-bottom:0;
+  }
+
+  .occupancy-people .occupants-unidentified{
+    margin-top:8px;
+  }
+
+  /* Dentro do bloco o mapa não precisa da própria moldura. */
+  .occupancy .seat-map{
+    margin:0;
+    padding:0;
+    border:0;
+    background:none;
   }

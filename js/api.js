@@ -76,15 +76,21 @@ function deleteVehiclePermanently(vehicleId, justification){
   return operation;
 }
 
-function syncReservations(previous, next){
+function syncReservations(previous, next, options){
   if(!databaseHydrated) return Promise.resolve({ localOnly:true, reservations:next });
+  const opts = options || {};
   const before = new Map((Array.isArray(previous) ? previous : []).map(item => [String(item.id), item]));
   const after = new Map((Array.isArray(next) ? next : []).map(item => [String(item.id), item]));
   const changes = [];
   for(const [id, reservation] of after){
     const old = before.get(id);
     if(!old || JSON.stringify(old) !== JSON.stringify(reservation)){
-      changes.push({ type:'upsert', reservation });
+      const change = { type:'upsert', reservation };
+      // Mensagem opcional da remoção, anexada só à reserva afetada.
+      if(opts.motivoRemocao && String(opts.reservationId) === id){
+        change.motivoRemocao = opts.motivoRemocao;
+      }
+      changes.push(change);
     }
   }
   for(const id of before.keys()){

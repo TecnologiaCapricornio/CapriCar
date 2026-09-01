@@ -91,6 +91,21 @@ function renderReservationPeriod(reservation){
     renderReservationMoment(reservation.dataVolta, reservation.horarioDevolucao, 'Volta');
 }
 
+// Bloco padrão de resumo de reserva (rota / veículo+placa / datas), em
+// linhas separadas e alinhadas à esquerda - mesmo formato usado nos cards de
+// "Minhas Reservas", "Caronas" e no calendário. Reaproveitar aqui evita cada
+// modal de confirmação inventar sua própria versão "achatada" com " · ".
+function renderReservationSummaryHTML(reservation, options){
+  const opts = options || {};
+  let html =
+    '<div class="reservation-route">' + escapeHTML(reservation.partida) + ' &rarr; ' + escapeHTML(reservation.destino) + '</div>' +
+    '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reservation) + '</div>';
+  if(opts.showDates !== false && reservation.dataIda){
+    html += '<div class="reservation-details reservation-period">' + renderReservationPeriod(reservation) + '</div>';
+  }
+  return html;
+}
+
 function eachDateISOInRange(startISO, endISO, callback){
   if(!startISO || !endISO) return;
   const [sy, sm, sd] = startISO.split('-').map(Number);
@@ -595,14 +610,18 @@ function initializeTimePickers(){
 
 function getAvailableReservationTimeOptions(partida, carro, dataIda, dataVolta, selectedPickup, excludeId){
   const horarios = gerarHorarios();
+  // Horários de retirada já passados saem da lista assim que a data de ida é
+  // conhecida, mesmo que os demais campos (carro, data de volta) ainda não
+  // tenham sido preenchidos - senão a lista fica sem filtro nenhum enquanto
+  // o usuário está no meio do preenchimento.
+  const pickupBase = dataIda ? horarios.filter(h => !isReservationPickupInPast(dataIda, h)) : horarios;
   if(!partida || !carro || !dataIda || !dataVolta || dataVolta < dataIda){
-    return { pickup:horarios, return:horarios };
+    return { pickup:pickupBase, return:horarios };
   }
 
   const validCombinations = [];
-  horarios.forEach(pickup => {
+  pickupBase.forEach(pickup => {
     if(selectedPickup && pickup !== selectedPickup) return;
-    if(isReservationPickupInPast(dataIda, pickup)) return;
     horarios.forEach(returnTime => {
       if(dataIda === dataVolta && returnTime <= pickup) return;
       const conflicts = findConflictingReservations(

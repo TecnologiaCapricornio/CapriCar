@@ -205,6 +205,9 @@ function reservationKm(reserva){
 }
 
 function renderReports(){
+  // Indicadores no topo da mesma aba (ver js/management-indicators.js).
+  if(typeof renderIndicators === 'function') renderIndicators();
+
   if(!canViewReports()) return;
   refreshBranchSelectors();
   const list = getFilteredReportReservations();

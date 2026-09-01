@@ -75,6 +75,11 @@ module.exports = [
     languageOptions:{ sourceType:'commonjs', ecmaVersion:2022, globals:nodeGlobals }
   },
   {
+    // Utilitários de linha de comando (ex.: conferência de migrations no CI).
+    files:['scripts/**/*.js'],
+    languageOptions:{ sourceType:'commonjs', ecmaVersion:2022, globals:nodeGlobals }
+  },
+  {
     ignores:['node_modules/**', 'backups/**', 'server/uploads/**', 'output/**']
   }
 ];

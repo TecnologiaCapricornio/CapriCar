@@ -4,15 +4,12 @@
    Usuários e permissões
    ========================================================= */
 const userAccountForm = document.getElementById('userAccountForm');
-const userAccountFormTitle = document.getElementById('userAccountFormTitle');
 const userAccountNameInput = document.getElementById('userAccountName');
 const userAccountUsernameInput = document.getElementById('userAccountUsername');
 const userAccountEmailInput = document.getElementById('userAccountEmail');
 const userAccountPasswordInput = document.getElementById('userAccountPassword');
-const userAccountPasswordHint = document.getElementById('userAccountPasswordHint');
+const userAccountCostCenterInput = document.getElementById('userAccountCostCenter');
 const userAccountError = document.getElementById('userAccountError');
-const userAccountSubmitBtn = document.getElementById('userAccountSubmitBtn');
-const userAccountCancelBtn = document.getElementById('userAccountCancelBtn');
 const userAccountsList = document.getElementById('userAccountsList');
 const userAccountsSearch = document.getElementById('userAccountsSearch');
 const userAccountsPermissionFilter = document.getElementById('userAccountsPermissionFilter');
@@ -57,7 +54,6 @@ const bulkPermissionInputs = {
   users:document.getElementById('bulkPermissionUsers'),
   integrations:document.getElementById('bulkPermissionIntegrations')
 };
-let userAccountEditingId = null;
 let userDeleteId = null;
 let userDeleteMode = 'single'; // 'single' | 'bulk'
 let userSearchTerm = '';
@@ -109,20 +105,12 @@ function bulkSummaryMessage(summary, verb){
   return message + '.';
 }
 
+// O formulário de "Novo usuário" cria e só cria - a edição vive no modal
+// (ver openUserEditModal). Antes os dois compartilhavam os mesmos campos, e
+// ficava ambíguo se o envio ia criar alguém ou alterar quem estava carregado.
 function resetUserAccountForm(){
-  userAccountEditingId = null;
   userAccountForm.reset();
-  userAccountNameInput.disabled = false;
-  userAccountUsernameInput.disabled = false;
-  userAccountEmailInput.disabled = false;
-  userAccountPasswordInput.disabled = false;
-  Object.values(userPermissionInputs).forEach(input => { input.disabled = false; });
-  userAccountFormTitle.textContent = 'Novo usuário';
-  userAccountPasswordHint.textContent = 'A senha é obrigatória no primeiro cadastro.';
-  userAccountSubmitBtn.textContent = 'Criar usuário';
-  userAccountCancelBtn.classList.add('hidden');
   userAccountError.textContent = '';
-  if(typeof setFieldRequiredMarker === 'function') setFieldRequiredMarker('userAccountPassword', true);
 }
 
 function closeUserDeleteModal(){
@@ -180,6 +168,23 @@ function sortedAccounts(){
     if(b.role === 'admin') return 1;
     return a.nome.localeCompare(b.nome, 'pt-BR');
   });
+}
+
+// Selo de CNH no card do usuário. O estado vem calculado do servidor
+// (users.js -> cnhStatus), para a lista e o portal nunca divergirem.
+const CNH_BADGE = {
+  valida:{ classe:'tag-success', texto:'CNH válida' },
+  vencendo:{ classe:'tag-warning', texto:'CNH vencendo' },
+  vencida:{ classe:'tag-danger', texto:'CNH vencida' }
+};
+
+function cnhBadge(account){
+  const info = CNH_BADGE[account.cnhStatus];
+  if(!info) return '';
+  const detalhe = account.cnh && account.cnh.validade
+    ? ' title="Validade: ' + escapeHTML(formatDate(account.cnh.validade)) + '"'
+    : '';
+  return '<span class="tag ' + info.classe + '"' + detalhe + '>' + info.texto + '</span>';
 }
 
 function filteredAccounts(){
@@ -265,7 +270,7 @@ function renderUserManagement(){
             ? ' · <span class="user-auth-icon" role="img" aria-label="Conta Microsoft (Entra ID)" title="Conta Microsoft (Entra ID)">' + MS_LOGO_SVG + '</span>'
             : '') +
         '</small>' +
-        '<div class="user-permissions">' + permissionBadges(account) + '</div>' +
+        '<div class="user-permissions">' + cnhBadge(account) + permissionBadges(account) + '</div>' +
       '</div>' +
       '<div class="management-actions">' +
         (account.role !== 'admin' || isAdmin()
@@ -291,32 +296,7 @@ function renderUserManagement(){
 
   userAccountsList.querySelectorAll('.user-edit-btn').forEach(btn => {
     btn.addEventListener('click', function(){
-      if(!canManageUsers()) return;
-      const account = getSystemUsers().find(item => String(item.id) === String(this.getAttribute('data-id')));
-      if(!account || (account.role === 'admin' && !isAdmin())) return;
-      const isEntra = account.authProvider === 'entra';
-      userAccountEditingId = account.id;
-      userAccountNameInput.value = account.nome;
-      userAccountUsernameInput.value = account.username;
-      userAccountUsernameInput.disabled = true;
-      userAccountNameInput.disabled = isEntra;
-      userAccountEmailInput.value = account.email || '';
-      userAccountEmailInput.disabled = isEntra;
-      userAccountPasswordInput.value = '';
-      userAccountPasswordInput.disabled = isEntra;
-      Object.keys(userPermissionInputs).forEach(key => {
-        userPermissionInputs[key].checked = account.role === 'admin' || account.permissions[key] === true;
-        userPermissionInputs[key].disabled = account.role === 'admin';
-      });
-      userAccountFormTitle.textContent = 'Editar usuário';
-      userAccountPasswordHint.textContent = isEntra
-        ? 'Conta gerenciada pelo Microsoft Entra ID — nome, e-mail, usuário e senha não podem ser alterados aqui.'
-        : 'Deixe a senha vazia para manter a atual.';
-      if(typeof setFieldRequiredMarker === 'function') setFieldRequiredMarker('userAccountPassword', false);
-      userAccountSubmitBtn.textContent = 'Salvar alterações';
-      userAccountCancelBtn.classList.remove('hidden');
-      userAccountError.textContent = '';
-      userAccountNameInput.focus();
+      openUserEditModal(this.getAttribute('data-id'));
     });
   });
 
@@ -338,7 +318,7 @@ function renderUserManagement(){
         const index = accounts.findIndex(item => String(item.id) === String(account.id));
         accounts[index] = normalizeSystemUser(result.user);
         saveSystemUsers(accounts);
-        if(userAccountEditingId === account.id) resetUserAccountForm();
+        if(String(userEditingId) === String(account.id)) closeUserEditModal();
         renderUserManagement();
       }catch(error){
         userAccountError.textContent = error.message;
@@ -415,7 +395,7 @@ userDeleteForm.addEventListener('submit', async function(e){
         body:{ userIds:Array.from(selectedUserIds), justification }
       });
       await hydrateDatabaseState();
-      if(selectedUserIds.has(String(userAccountEditingId))) resetUserAccountForm();
+      if(selectedUserIds.has(String(userEditingId))) closeUserEditModal();
       selectedUserIds.clear();
       closeUserDeleteModal();
       renderUserManagement();
@@ -429,7 +409,7 @@ userDeleteForm.addEventListener('submit', async function(e){
         body:{ justification }
       });
       await hydrateDatabaseState();
-      if(String(userAccountEditingId) === String(userDeleteId)) resetUserAccountForm();
+      if(String(userEditingId) === String(userDeleteId)) closeUserEditModal();
       closeUserDeleteModal();
       renderUserManagement();
     }
@@ -532,19 +512,16 @@ userBulkPermissionsForm.addEventListener('submit', async function(e){
   }
 });
 
-userAccountCancelBtn.addEventListener('click', resetUserAccountForm);
 
 userAccountForm.addEventListener('submit', async function(e){
   e.preventDefault();
   if(!canManageUsers()) return;
   userAccountError.textContent = '';
   const accounts = getSystemUsers();
-  const editing = accounts.find(account => String(account.id) === String(userAccountEditingId));
-  const isEntraEdit = !!(editing && editing.authProvider === 'entra');
-  const nome = isEntraEdit ? editing.nome : userAccountNameInput.value.trim();
+  const nome = userAccountNameInput.value.trim();
   const username = userAccountUsernameInput.value.trim().toLowerCase();
-  const email = isEntraEdit ? (editing.email || '') : userAccountEmailInput.value.trim();
-  const password = isEntraEdit ? '' : userAccountPasswordInput.value.trim();
+  const email = userAccountEmailInput.value.trim();
+  const password = userAccountPasswordInput.value.trim();
 
   if(!nome){
     userAccountError.textContent = 'Informe o nome do usuário.';
@@ -554,40 +531,180 @@ userAccountForm.addEventListener('submit', async function(e){
     userAccountError.textContent = 'Informe um e-mail válido.';
     return;
   }
-  if(!editing && !/^[a-z0-9._-]{3,40}$/.test(username)){
+  if(!/^[a-z0-9._-]{3,40}$/.test(username)){
     userAccountError.textContent = 'Use de 3 a 40 caracteres no usuário: letras minúsculas, números, ponto, hífen ou sublinhado.';
     return;
   }
-  if(!editing && accounts.some(account => account.username === username)){
+  if(accounts.some(account => account.username === username)){
     userAccountError.textContent = 'Já existe uma conta com esse usuário.';
     return;
   }
-  if(!editing && password.length < 8){
+  if(password.length < 8){
     userAccountError.textContent = 'A senha deve ter pelo menos 8 caracteres.';
-    return;
-  }
-  if(editing && !isEntraEdit && password && password.length < 8){
-    userAccountError.textContent = 'A nova senha deve ter pelo menos 8 caracteres.';
     return;
   }
 
   try{
-    if(editing){
+    const result = await apiRequest('/api/users', {
+      method:'POST',
+      body:{
+        username:username,
+        nome:nome,
+        email:email,
+        password:password,
+        centroCusto:userAccountCostCenterInput.value.trim(),
+        permissions:selectedUserPermissions()
+      }
+    });
+    accounts.push(normalizeSystemUser(result.user));
+    saveSystemUsers(accounts);
+    resetUserAccountForm();
+    renderUserManagement();
+  }catch(error){
+    userAccountError.textContent = error.message;
+  }
+});
+
+/* =========================================================
+   Modal de edição de usuário
+   ========================================================= */
+const userEditModal = document.getElementById('userEditModal');
+const userEditForm = document.getElementById('userEditForm');
+const userEditTitle = document.getElementById('userEditTitle');
+const userEditNameInput = document.getElementById('userEditName');
+const userEditUsernameInput = document.getElementById('userEditUsername');
+const userEditEmailInput = document.getElementById('userEditEmail');
+const userEditPasswordInput = document.getElementById('userEditPassword');
+const userEditCostCenterInput = document.getElementById('userEditCostCenter');
+const userEditPasswordHint = document.getElementById('userEditPasswordHint');
+const userEditError = document.getElementById('userEditError');
+const userEditCloseBtn = document.getElementById('userEditCloseBtn');
+const userEditCancelBtn = document.getElementById('userEditCancelBtn');
+
+const userEditPermissionInputs = {
+  reservations:document.getElementById('editPermissionReservations'),
+  branches:document.getElementById('editPermissionBranches'),
+  fleet:document.getElementById('editPermissionFleet'),
+  blocks:document.getElementById('editPermissionBlocks'),
+  audit:document.getElementById('editPermissionAudit'),
+  reports:document.getElementById('editPermissionReports'),
+  rules:document.getElementById('editPermissionRules'),
+  integrations:document.getElementById('editPermissionIntegrations'),
+  users:document.getElementById('editPermissionUsers')
+};
+
+let userEditingId = null;
+
+function selectedUserEditPermissions(){
+  const permissions = {};
+  Object.keys(userEditPermissionInputs).forEach(key => {
+    permissions[key] = userEditPermissionInputs[key].checked;
+  });
+  return permissions;
+}
+
+function closeUserEditModal(){
+  userEditingId = null;
+  userEditModal.classList.add('hidden');
+  userEditForm.reset();
+  userEditError.textContent = '';
+}
+
+function openUserEditModal(accountId){
+  if(!canManageUsers()) return;
+  const account = getSystemUsers().find(item => String(item.id) === String(accountId));
+  if(!account || (account.role === 'admin' && !isAdmin())) return;
+
+  // Conta vinda do Entra ID: nome, e-mail e senha são governados lá, então
+  // aqui só as permissões podem mudar.
+  const isEntra = account.authProvider === 'entra';
+
+  userEditingId = account.id;
+  userEditTitle.textContent = 'Editar ' + account.nome;
+  userEditNameInput.value = account.nome;
+  userEditNameInput.disabled = isEntra;
+  userEditUsernameInput.value = account.username;
+  userEditEmailInput.value = account.email || '';
+  userEditEmailInput.disabled = isEntra;
+  userEditPasswordInput.value = '';
+  userEditPasswordInput.disabled = isEntra;
+  userEditCostCenterInput.value = account.centroCusto || '';
+  userEditPasswordHint.textContent = isEntra
+    ? 'Conta gerenciada pelo Microsoft Entra ID — nome, e-mail, usuário e senha não podem ser alterados aqui.'
+    : 'Deixe a senha vazia para manter a atual.';
+
+  // Admin tem tudo por definição, e não por marcação - por isso as caixas
+  // aparecem marcadas e travadas.
+  Object.keys(userEditPermissionInputs).forEach(key => {
+    userEditPermissionInputs[key].checked = account.role === 'admin' || account.permissions[key] === true;
+    userEditPermissionInputs[key].disabled = account.role === 'admin';
+  });
+
+  userEditError.textContent = '';
+  userEditModal.classList.remove('hidden');
+  if(!isEntra) userEditNameInput.focus();
+}
+
+if(userEditCloseBtn) userEditCloseBtn.addEventListener('click', closeUserEditModal);
+if(userEditCancelBtn) userEditCancelBtn.addEventListener('click', closeUserEditModal);
+
+if(userEditModal){
+  userEditModal.addEventListener('click', function(event){
+    if(event.target === userEditModal) closeUserEditModal();
+  });
+}
+
+if(userEditForm){
+  userEditForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!canManageUsers()) return;
+    userEditError.textContent = '';
+
+    const accounts = getSystemUsers();
+    const editing = accounts.find(account => String(account.id) === String(userEditingId));
+    if(!editing){
+      userEditError.textContent = 'Usuário não encontrado. Feche e abra a edição novamente.';
+      return;
+    }
+
+    const isEntra = editing.authProvider === 'entra';
+    const nome = isEntra ? editing.nome : userEditNameInput.value.trim();
+    const email = isEntra ? (editing.email || '') : userEditEmailInput.value.trim();
+    const password = isEntra ? '' : userEditPasswordInput.value.trim();
+
+    if(!nome){
+      userEditError.textContent = 'Informe o nome do usuário.';
+      return;
+    }
+    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      userEditError.textContent = 'Informe um e-mail válido.';
+      return;
+    }
+    if(password && password.length < 8){
+      userEditError.textContent = 'A nova senha deve ter pelo menos 8 caracteres.';
+      return;
+    }
+
+    try{
       const body = {
         nome:nome,
         email:email,
-        permissions:editing.role === 'admin'
-          ? editing.permissions
-          : selectedUserPermissions()
+        centroCusto:userEditCostCenterInput.value.trim(),
+        permissions:editing.role === 'admin' ? editing.permissions : selectedUserEditPermissions()
       };
-      if(!isEntraEdit && password) body.password = password;
+      if(!isEntra && password) body.password = password;
+
       const result = await apiRequest('/api/users/' + encodeURIComponent(editing.id), {
         method:'PATCH',
         body:body
       });
+
       const index = accounts.findIndex(account => String(account.id) === String(editing.id));
       accounts[index] = normalizeSystemUser(result.user);
       saveSystemUsers(accounts);
+
+      // Editar a si mesmo precisa refletir no cabeçalho e nas permissões da
+      // sessão em curso, senão a tela fica mostrando o estado antigo.
       const current = getCurrentUser();
       if(current && String(current.id) === String(editing.id)){
         const refreshed = accountToSession(result.user);
@@ -598,26 +715,14 @@ userAccountForm.addEventListener('submit', async function(e){
         profileAvatarLg.textContent = initials(refreshed.nome);
         configureManagementPanel();
       }
-    } else {
-      const result = await apiRequest('/api/users', {
-        method:'POST',
-        body:{
-          username:username,
-          nome:nome,
-          email:email,
-          password:password,
-          permissions:selectedUserPermissions()
-        }
-      });
-      accounts.push(normalizeSystemUser(result.user));
-      saveSystemUsers(accounts);
+
+      closeUserEditModal();
+      renderUserManagement();
+    }catch(error){
+      userEditError.textContent = error.message;
     }
-    resetUserAccountForm();
-    renderUserManagement();
-  }catch(error){
-    userAccountError.textContent = error.message;
-  }
-});
+  });
+}
 
 const ssoImportBtn = document.getElementById('ssoImportBtn');
 

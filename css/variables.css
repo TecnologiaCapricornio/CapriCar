@@ -1,18 +1,81 @@
-/* Variáveis de tema do CapriCar */
+/* =========================================================
+   Tokens do CapriCar
+
+   Duas camadas, nesta ordem de precedência:
+
+   1. TOKENS SEMÂNTICOS  - nomeados pela FUNÇÃO que exercem
+      (--primary, --danger, --surface). São a fonte da verdade
+      e o que todo código novo deve usar.
+
+   2. ALIASES LEGADOS    - os nomes antigos de COR (--azul-royal,
+      --vermelho) reapontados para os semânticos. Existem só para
+      não quebrar os ~170 usos espalhados pelo CSS atual; não use
+      em código novo.
+
+   Nomear pela função é o que impede a volta dos bugs de contraste:
+   um token chamado --danger tem que funcionar nos dois temas por
+   definição, enquanto --vermelho não obriga a nada.
+
+   Os valores aqui são o tema escuro (padrão). css/themes.css
+   redefine os semânticos por tema - os aliases seguem junto
+   automaticamente, sem precisar ser redeclarados lá.
+   ========================================================= */
 :root{
-    --azul-royal:#1e3a5a;
-    --azul-royal-2:#3a6a95;
-    --azul-claro:#6fa8d8;
+    /* ---- Marca Capricórnio ---- */
+    --brand-deep:#151f6d;
+    --brand:#0033a0;
+    --brand-soft:#6cace4;
+    --brand-signal:#ff6a13;
+
+    /* ---- Superfícies e traços ---- */
     --bg-1:#101f30;
     --bg-2:#1a3050;
     --bg-3:#1e3a5a;
-    --card-bg:rgba(20,38,60,0.55);
-    --card-bg-solid:#1a2f48;
-    --card-border:rgba(210,228,245,0.12);
-    --texto:#f0f4f9;
-    --texto-muted:#a9bdd1;
-    --vermelho:#ef5b6a;
-    --verde:#33d488;
+    --surface:rgba(20,38,60,0.55);
+    --surface-solid:#1a2f48;
+    --border:rgba(210,228,245,0.12);
+
+    /* ---- Texto ---- */
+    --text:#f0f4f9;
+    --text-muted:#a9bdd1;
+    --on-primary:#ffffff;
+
+    /* ---- Ação primária ----
+       --primary e --primary-strong são FUNDO de botão (texto branco
+       por cima), então precisam ser escuros nos dois temas.
+       --accent é cor de TEXTO/ÍCONE de destaque, e inverte por tema. */
+    --primary:#3a6a95;
+    --primary-strong:#1e3a5a;
+    --accent:#6fa8d8;
+
+    /* ---- Estados semânticos ----
+       Quatro tokens por estado, e a distinção entre os dois primeiros
+       importa: --x é a cor SÓLIDA (ícone, bolinha, preenchimento), que
+       aparece sobre o fundo da página; --x-text é a cor do TEXTO quando
+       ele está sobre --x-surface. No tema escuro as duas divergem, porque
+       um verde que funciona como ícone fica ilegível como texto sobre
+       fundo tingido. É o que alimenta a tabela de variantes de aviso. */
+    --info:#6fa8d8;
+    --info-text:#cfe6fa;
+    --info-surface:rgba(64,150,224,0.14);
+    --info-border:rgba(64,150,224,0.42);
+
+    --success:#33d488;
+    --success-text:#8ee9bd;
+    --success-surface:rgba(47,184,125,0.14);
+    --success-border:rgba(47,184,125,0.40);
+
+    --warning:#ebb248;
+    --warning-text:#ffe0a3;
+    --warning-surface:rgba(235,178,72,0.15);
+    --warning-border:rgba(235,178,72,0.42);
+
+    --danger:#ef5b6a;
+    --danger-text:#ffb3ba;
+    --danger-surface:rgba(226,96,109,0.14);
+    --danger-border:rgba(226,96,109,0.42);
+
+    /* ---- Forma ---- */
     --sombra: 0 20px 45px rgba(6,14,24,0.5);
     --radius-lg:20px;
     --radius-md:14px;
@@ -28,4 +91,16 @@
     --fs-lg:1.25rem;
     --fs-xl:1.4rem;
     --fs-2xl:2rem;
+
+    /* ---- Aliases legados (não usar em código novo) ---- */
+    --azul-royal:var(--primary-strong);
+    --azul-royal-2:var(--primary);
+    --azul-claro:var(--accent);
+    --card-bg:var(--surface);
+    --card-bg-solid:var(--surface-solid);
+    --card-border:var(--border);
+    --texto:var(--text);
+    --texto-muted:var(--text-muted);
+    --vermelho:var(--danger);
+    --verde:var(--success);
   }

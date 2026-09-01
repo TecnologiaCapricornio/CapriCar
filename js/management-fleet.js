@@ -12,6 +12,9 @@ const vehiclePlateInput = document.getElementById('vehiclePlate');
 const vehicleBrandInput = document.getElementById('vehicleBrand');
 const vehicleModelInput = document.getElementById('vehicleModel');
 const vehicleCapacityInput = document.getElementById('vehicleCapacity');
+const vehicleTypeSelect = document.getElementById('vehicleType');
+const vehicleRentedInput = document.getElementById('vehicleRented');
+const vehicleCostCenterInput = document.getElementById('vehicleCostCenter');
 const vehiclesList = document.getElementById('vehiclesList');
 const fleetEditModal = document.getElementById('fleetEditModal');
 const fleetEditForm = document.getElementById('fleetEditForm');
@@ -532,6 +535,9 @@ if(vehicleForm){
       marca: marca,
       modelo: modelo,
       capacidade: capacidade,
+      tipo: vehicleTypeSelect ? vehicleTypeSelect.value : 'carro',
+      alugado: vehicleRentedInput ? vehicleRentedInput.checked : false,
+      centroCusto: vehicleCostCenterInput ? vehicleCostCenterInput.value.trim() : '',
       ativo: true
     };
     list.push(vehicle);
@@ -550,6 +556,7 @@ if(vehicleForm){
       local + ' · ' + vehicle.marca + ' ' + vehicle.modelo + ' · ' + placa);
     vehicleForm.reset();
     vehicleCapacityInput.value = '5';
+    if(vehicleTypeSelect) vehicleTypeSelect.value = 'carro';
     renderFleetManagement();
     renderCarSelector();
     renderMainCalendar();
