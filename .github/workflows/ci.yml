@@ -98,5 +98,27 @@ jobs:
       - name: Aplicar migrations
         run: pnpm run db:migrate
 
+      - name: Iniciar servidor
+        # Em segundo plano: o teste de integração (tests/api-integration.test.js)
+        # fala com http://127.0.0.1:3000 por HTTP, não sobe o servidor sozinho.
+        run: nohup pnpm start > server.log 2>&1 &
+
+      - name: Aguardar servidor responder
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000 > /dev/null; then
+              echo "Servidor pronto."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Servidor não respondeu a tempo."
+          cat server.log
+          exit 1
+
       - name: Testes de integração
         run: pnpm run test:integration
+
+      - name: Logs do servidor (se algo falhar antes daqui)
+        if: failure()
+        run: cat server.log
