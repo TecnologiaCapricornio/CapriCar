@@ -244,7 +244,10 @@ router.post('/sync', async (req, res) => {
         calendarSyncTasks.push({
           type:'upsert',
           legacyId:saved.legacyId,
-          reservation:change.reservation,
+          // numeroReserva não vem em change.reservation (é atribuído só ao
+          // persistir) - sem isso o evento no Outlook fica sem "#N ·" no
+          // assunto e no corpo.
+          reservation:{ ...change.reservation, numeroReserva:saved.reservationNumber },
           previousGraphEventId
         });
       }

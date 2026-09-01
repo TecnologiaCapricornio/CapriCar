@@ -103,7 +103,10 @@ function buildEventPayload(reservation, attendees) {
     start: { dateTime: `${reservation.dataIda}T${reservation.horarioRetirada}:00`, timeZone: 'America/Sao_Paulo' },
     end: { dateTime: `${reservation.dataVolta}T${reservation.horarioDevolucao}:00`, timeZone: 'America/Sao_Paulo' },
     location: { displayName: destino },
-    attendees: Array.isArray(attendees) ? attendees : []
+    attendees: Array.isArray(attendees) ? attendees : [],
+    // A reserva do carro não deve travar a agenda de quem convida para uma
+    // reunião de verdade nesse período - o evento é só um lembrete visual.
+    showAs: 'free'
   };
 }
 
