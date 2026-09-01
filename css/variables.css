@@ -21,11 +21,18 @@
    automaticamente, sem precisar ser redeclarados lá.
    ========================================================= */
 :root{
-    /* ---- Marca Capricórnio ---- */
-    --brand-deep:#151f6d;
-    --brand:#0033a0;
-    --brand-soft:#6cace4;
+    /* ---- Marca Capricórnio ----
+       Calibrado a partir do navy real da logo em capricornio.com.br
+       (#001A52, amostrado por pixel direto da imagem, mesmo matiz 221°
+       do azul que já usávamos - só mais escuro). --brand-accent é o
+       rosa/magenta (#CC3366) usado no site oficial em toda navegação
+       e CTAs; reservado aqui para uso pontual futuro, ainda sem
+       aplicação em nenhum componente. */
+    --brand-deep:#00133d;
+    --brand:#001a52;
+    --brand-soft:#6c92e4;
     --brand-signal:#ff6a13;
+    --brand-accent:#cc3366;
 
     /* ---- Superfícies e traços ---- */
     --bg-1:#101f30;

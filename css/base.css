@@ -1,6 +1,20 @@
 /* Reset, tipografia, login e elementos de formulário compartilhados */
 *{box-sizing:border-box;}
 
+/* Quem ativou "reduzir movimento" no sistema não deve ver as animações de
+   abrir/fechar modal, hover com translateY, etc. - encurta tudo para
+   praticamente instantâneo em vez de desligar (evita saltos bruscos de
+   estado inicial/final em elementos que dependem da transição pra
+   posicionar). */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
   html{
     min-height:100%;
     background:#07182a;
@@ -23,7 +37,7 @@
   }
 
   h1,h2,h3{
-    font-family:'Poppins','Inter',sans-serif;
+    font-family:'Plus Jakarta Sans','Inter',sans-serif;
   }
 
   ::selection{background:rgba(111,168,216,0.35);}
@@ -147,6 +161,18 @@
     letter-spacing:0.2px;
   }
 
+  /* Mesma "caixa" visual de um input, só que sem interação - usado nas
+     telas de "Visualizar" (dados que não podem ser editados por ali). */
+  .field-value{
+    padding:11px 15px;
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,0.04);
+    border:1.5px solid rgba(255,255,255,0.10);
+    font-size:0.95rem;
+    color:var(--texto);
+    min-height:1.3em;
+  }
+
   .required-marker{
     margin-left:4px;
     color:#ff7887;
@@ -194,6 +220,24 @@
     border-color:var(--azul-claro);
     box-shadow:0 0 0 4px rgba(111,168,216,0.18);
     background:rgba(255,255,255,0.08);
+  }
+
+  textarea:focus{
+    outline:none;
+    border-color:var(--azul-claro);
+    box-shadow:0 0 0 4px rgba(111,168,216,0.18);
+    background:rgba(255,255,255,0.08);
+  }
+
+  /* Anel de foco global para navegação por teclado - cobre botões, abas,
+     chips e qualquer outro elemento interativo sem estado de foco próprio
+     (inputs/selects/textarea já têm o deles, mais acima). :focus-visible em
+     vez de :focus evita o anel aparecer em cliques de mouse. */
+  button:focus-visible,
+  a:focus-visible,
+  [tabindex]:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   select::placeholder, input::placeholder{

@@ -15,15 +15,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/variables.css?v=20260831-1">
-  <link rel="stylesheet" href="css/base.css?v=20260825-2">
-  <link rel="stylesheet" href="css/components.css?v=20260831-8">
-  <link rel="stylesheet" href="css/calendar.css?v=20260826-3">
+  <link rel="stylesheet" href="css/variables.css?v=20260901-1">
+  <link rel="stylesheet" href="css/base.css?v=20260901-3">
+  <link rel="stylesheet" href="css/components.css?v=20260901-9">
+  <link rel="stylesheet" href="css/calendar.css?v=20260901-1">
   <link rel="stylesheet" href="css/admin.css?v=20260831-5">
   <link rel="stylesheet" href="css/responsive.css?v=20260831-1">
-  <link rel="stylesheet" href="css/themes.css?v=20260831-2">
+  <link rel="stylesheet" href="css/themes.css?v=20260901-5">
 </head>
 
 <body>
@@ -49,13 +49,13 @@
       <form id="loginForm" novalidate>
         <div class="field" id="field-loginNome">
           <label for="loginNome">Usuário</label>
-          <input type="text" id="loginNome" placeholder="Digite seu usuário">
-          <div class="error-msg" id="error-loginNome"></div>
+          <input type="text" id="loginNome" placeholder="Digite seu usuário" aria-describedby="error-loginNome">
+          <div class="error-msg" role="alert" id="error-loginNome"></div>
         </div>
         <div class="field" id="field-loginEmail">
           <label for="loginEmail">Senha</label>
-          <input type="password" id="loginEmail" placeholder="Digite sua senha">
-          <div class="error-msg" id="error-loginEmail"></div>
+          <input type="password" id="loginEmail" placeholder="Digite sua senha" aria-describedby="error-loginEmail">
+          <div class="error-msg" role="alert" id="error-loginEmail"></div>
         </div>
         <button type="submit" class="submit-btn">Entrar</button>
       </form>
@@ -166,18 +166,18 @@
             <div class="row mobile-reservation-step" data-reservation-step="1">
               <div class="field" id="field-partida">
                 <label for="partida">Local de Partida</label>
-                <select id="partida" name="partida">
+                <select id="partida" name="partida" aria-describedby="error-partida">
                   <option value="">Selecione...</option>
                   <option value="São Paulo">São Paulo</option>
                   <option value="São Carlos">São Carlos</option>
                   <option value="Bragança Paulista">Bragança Paulista</option>
                 </select>
-                <div class="error-msg" id="error-partida"></div>
+                <div class="error-msg" role="alert" id="error-partida"></div>
               </div>
 
               <div class="field" id="field-destino">
                 <label for="destino">Destino</label>
-                <select id="destino" name="destino">
+                <select id="destino" name="destino" aria-describedby="error-destino">
                   <option value="">Selecione...</option>
                   <option value="São Paulo">São Paulo</option>
                   <option value="São Carlos">São Carlos</option>
@@ -186,23 +186,23 @@
                 </select>
                 <input type="text" id="destinoOutro" name="destinoOutro" class="hidden" placeholder="Digite o destino"
                   autocomplete="off">
-                <div class="error-msg" id="error-destino"></div>
+                <div class="error-msg" role="alert" id="error-destino"></div>
               </div>
             </div>
 
             <div class="field hidden mobile-reservation-step" id="field-carro" data-reservation-step="1">
               <label for="carro">Veículo</label>
-              <select id="carro" name="carro">
+              <select id="carro" name="carro" aria-describedby="error-carro">
                 <option value="">Selecione...</option>
               </select>
-              <div class="error-msg" id="error-carro"></div>
+              <div class="error-msg" role="alert" id="error-carro"></div>
             </div>
 
             <div class="field mobile-reservation-step" id="field-motivo" data-reservation-step="3">
               <label for="motivo">Motivo da viagem<span class="required-marker">*</span></label>
               <textarea id="motivo" name="motivo" rows="3"
-                placeholder="Descreva brevemente o objetivo da viagem"></textarea>
-              <div class="error-msg" id="error-motivo"></div>
+                placeholder="Descreva brevemente o objetivo da viagem" aria-describedby="error-motivo"></textarea>
+              <div class="error-msg" role="alert" id="error-motivo"></div>
             </div>
 
             <div class="mobile-reservation-step" data-reservation-step="2">
@@ -210,32 +210,32 @@
                 <div class="field" id="field-dataIda">
                   <label for="dataIda">Data de Ida</label>
                   <div class="date-input-wrapper" id="wrap-dataIda">
-                    <input type="date" id="dataIda" name="dataIda" readonly autocomplete="off">
+                    <input type="date" id="dataIda" name="dataIda" readonly autocomplete="off" aria-describedby="error-dataIda">
                   </div>
-                  <div class="error-msg" id="error-dataIda"></div>
+                  <div class="error-msg" role="alert" id="error-dataIda"></div>
                 </div>
                 <div class="field" id="field-horarioRetirada">
                   <label for="horarioRetirada">Horário de Retirada</label>
                   <select id="horarioRetirada" name="horarioRetirada">
                     <option value="">Selecione...</option>
                   </select>
-                  <div class="error-msg" id="error-horarioRetirada"></div>
+                  <div class="error-msg" role="alert" id="error-horarioRetirada"></div>
                 </div>
               </div>
               <div class="row">
                 <div class="field" id="field-dataVolta">
                   <label for="dataVolta">Data de Volta</label>
                   <div class="date-input-wrapper" id="wrap-dataVolta">
-                    <input type="date" id="dataVolta" name="dataVolta" readonly autocomplete="off">
+                    <input type="date" id="dataVolta" name="dataVolta" readonly autocomplete="off" aria-describedby="error-dataVolta">
                   </div>
-                  <div class="error-msg" id="error-dataVolta"></div>
+                  <div class="error-msg" role="alert" id="error-dataVolta"></div>
                 </div>
                 <div class="field" id="field-horarioDevolucao">
                   <label for="horarioDevolucao">Horário de Devolução</label>
                   <select id="horarioDevolucao" name="horarioDevolucao">
                     <option value="">Selecione...</option>
                   </select>
-                  <div class="error-msg" id="error-horarioDevolucao"></div>
+                  <div class="error-msg" role="alert" id="error-horarioDevolucao"></div>
                 </div>
               </div>
             </div>
@@ -245,8 +245,9 @@
 
             <div class="field mobile-reservation-step" id="field-passageirosConfirmados" data-reservation-step="3">
               <label>Passageiros que vão com você</label>
-              <div id="passageirosListContainer"></div>
-              <div class="error-msg" id="error-passageirosConfirmados"></div>
+              <p class="field-hint">Clique num lugar livre do mapa para adicionar, ou no nome de um passageiro para editar/remover.</p>
+              <div id="passageirosOccupancyWidget"></div>
+              <div class="error-msg" role="alert" id="error-passageirosConfirmados"></div>
             </div>
 
             <div class="mobile-wizard-actions">
@@ -445,7 +446,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="error-msg" id="rideWatchError"></div>
+                <div class="error-msg" role="alert" id="rideWatchError"></div>
                 <button type="submit" class="submit-btn">Criar monitoramento</button>
               </form>
               <div id="rideWatchList" class="ride-watch-list"></div>
@@ -815,7 +816,7 @@
                   <label for="rulePickupAdvanceMinutes">Antecedência permitida para retirada (minutos)</label>
                   <input type="number" id="rulePickupAdvanceMinutes" min="0" max="1440" step="1" required>
                 </div>
-                <div class="error-msg" id="rulesError"></div>
+                <div class="error-msg" role="alert" id="rulesError"></div>
                 <button type="submit" class="submit-btn">Salvar regras</button>
               </form>
             </div>
@@ -862,7 +863,7 @@
                     extensão do seu tenant. Preenchido, a importação de usuários traz esse dado junto. Em branco, o
                     centro de custo só é informado manualmente no cadastro.</div>
                 </div>
-                <div class="error-msg" id="entraSsoError"></div>
+                <div class="error-msg" role="alert" id="entraSsoError"></div>
                 <button type="submit" class="submit-btn">Salvar configuração do Entra ID</button>
               </form>
             </div>
@@ -908,7 +909,7 @@
                     <input type="email" id="smtpFromAddress" autocomplete="off" required>
                   </div>
                 </div>
-                <div class="error-msg" id="smtpError"></div>
+                <div class="error-msg" role="alert" id="smtpError"></div>
                 <button type="submit" class="submit-btn">Salvar configuração de e-mail</button>
               </form>
               <div class="row">
@@ -920,7 +921,7 @@
               <div class="user-form-actions">
                 <button type="button" class="secondary-btn" id="smtpTestBtn">Testar conexão</button>
               </div>
-              <div class="error-msg" id="smtpTestError"></div>
+              <div class="error-msg" role="alert" id="smtpTestError"></div>
             </div>
             &nbsp;
             <div class="admin-subcard">
@@ -992,7 +993,7 @@
                     monta a citação já formatada e some sozinho quando ninguém escreveu nada.
                   </div>
                 </div>
-                <div class="error-msg" id="emailRemindersError"></div>
+                <div class="error-msg" role="alert" id="emailRemindersError"></div>
                 <div class="user-form-actions">
                   <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
                     agora</button>
@@ -1012,13 +1013,13 @@
                   <label class="permission-option"><input type="checkbox" id="calendarSyncEnabled"> Criar evento no
                     calendário do Outlook ao confirmar uma reserva</label>
                 </div>
-                <div class="error-msg" id="calendarSyncError"></div>
+                <div class="error-msg" role="alert" id="calendarSyncError"></div>
                 <div class="user-form-actions">
                   <button type="button" class="secondary-btn" id="calendarSyncTestBtn">Testar sincronização</button>
                   <button type="submit" class="submit-btn">Salvar</button>
                 </div>
               </form>
-              <div class="error-msg" id="calendarSyncTestError"></div>
+              <div class="error-msg" role="alert" id="calendarSyncTestError"></div>
             </div>
           </div>
 
@@ -1073,7 +1074,7 @@
                   <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar
                     veículos.</div>
                 </div>
-                <div class="error-msg" id="userAccountError"></div>
+                <div class="error-msg" role="alert" id="userAccountError"></div>
                 <div class="user-form-actions">
                   <button type="submit" class="submit-btn" id="userAccountSubmitBtn">Criar usuário</button>
                 </div>
@@ -1177,7 +1178,7 @@
 
   <div class="modal-overlay hidden" id="profileModal">
     <div class="modal-card profile-card">
-      <button type="button" class="modal-close" id="profileCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="profileCloseBtn" aria-label="Fechar">&times;</button>
       <div class="profile-avatar-lg" id="profileAvatarLg">--</div>
       <h3 id="profileName"></h3>
       <div class="form-hint" id="profileRole"></div>
@@ -1229,7 +1230,7 @@
             nunca são publicadas em endereço aberto. Máximo de 1 MB cada.
           </div>
 
-          <div class="error-msg" id="cnhError"></div>
+          <div class="error-msg" role="alert" id="cnhError"></div>
           <div class="user-form-actions">
             <button type="button" class="secondary-btn" id="cnhRemoverBtn">Remover CNH</button>
             <button type="submit" class="submit-btn">Salvar CNH</button>
@@ -1244,23 +1245,23 @@
   <!-- ===================== Modal de Reserva Rápida (via Calendário) ===================== -->
   <div class="modal-overlay hidden" id="quickReserveModal">
     <div class="modal-card quick-reserve-card">
-      <button type="button" class="modal-close" id="quickReserveCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="quickReserveCloseBtn" aria-label="Fechar">&times;</button>
       <h3>Reservar este veículo</h3>
       <div class="quick-reserve-summary" id="quickReserveSummary"></div>
       <form id="quickReserveForm" novalidate>
         <div class="field" id="qfield-motivo">
           <label for="qMotivo">Motivo da viagem<span class="required-marker">*</span></label>
-          <textarea id="qMotivo" rows="2" placeholder="Objetivo da viagem"></textarea>
-          <div class="error-msg" id="error-qMotivo"></div>
+          <textarea id="qMotivo" rows="2" placeholder="Objetivo da viagem" aria-describedby="error-qMotivo"></textarea>
+          <div class="error-msg" role="alert" id="error-qMotivo"></div>
         </div>
         <div class="row">
           <div class="field" id="qfield-destino">
             <label for="qDestino">Destino</label>
-            <select id="qDestino" name="qDestino">
+            <select id="qDestino" name="qDestino" aria-describedby="error-qDestino">
               <option value="">Selecione...</option>
             </select>
             <input type="text" id="qDestinoOutro" class="hidden" placeholder="Digite o destino" autocomplete="off">
-            <div class="error-msg" id="error-qDestino"></div>
+            <div class="error-msg" role="alert" id="error-qDestino"></div>
           </div>
 
           <div class="field" id="qfield-horarioRetirada">
@@ -1268,7 +1269,7 @@
             <select id="qHorarioRetirada">
               <option value="">Selecione...</option>
             </select>
-            <div class="error-msg" id="error-qHorarioRetirada"></div>
+            <div class="error-msg" role="alert" id="error-qHorarioRetirada"></div>
           </div>
         </div>
 
@@ -1276,9 +1277,9 @@
           <div class="field" id="qfield-dataVolta">
             <label for="qDataVolta">Data de Volta</label>
             <div class="date-input-wrapper" id="wrap-qDataVolta">
-              <input type="date" id="qDataVolta" readonly autocomplete="off">
+              <input type="date" id="qDataVolta" readonly autocomplete="off" aria-describedby="error-qDataVolta">
             </div>
-            <div class="error-msg" id="error-qDataVolta"></div>
+            <div class="error-msg" role="alert" id="error-qDataVolta"></div>
           </div>
 
           <div class="field" id="qfield-horarioDevolucao">
@@ -1286,7 +1287,7 @@
             <select id="qHorarioDevolucao">
               <option value="">Selecione...</option>
             </select>
-            <div class="error-msg" id="error-qHorarioDevolucao"></div>
+            <div class="error-msg" role="alert" id="error-qHorarioDevolucao"></div>
           </div>
         </div>
 
@@ -1294,8 +1295,9 @@
 
         <div class="field" id="qfield-passageirosConfirmados">
           <label>Passageiros que vão com você</label>
-          <div id="qPassageirosListContainer"></div>
-          <div class="error-msg" id="error-qPassageirosConfirmados"></div>
+          <p class="field-hint">Clique num lugar livre do mapa para adicionar, ou no nome de um passageiro para editar/remover.</p>
+          <div id="qPassageirosOccupancyWidget"></div>
+          <div class="error-msg" role="alert" id="error-qPassageirosConfirmados"></div>
         </div>
 
         <button type="submit" class="submit-btn">Confirmar Reserva</button>
@@ -1306,7 +1308,7 @@
   <!-- ===================== Modal de Confirmação para Entrar na Carona ===================== -->
   <div class="modal-overlay hidden" id="joinConfirmModal">
     <div class="modal-card join-confirm-card">
-      <button type="button" class="modal-close" id="joinConfirmCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="joinConfirmCloseBtn" aria-label="Fechar">&times;</button>
       <h3>Confirmar entrada na carona</h3>
       <div class="join-confirm-route quick-reserve-summary" id="joinConfirmRoute"></div>
       <div id="joinConfirmOccupants"></div>
@@ -1320,7 +1322,7 @@
   <!-- ===================== Modal de Regras Básicas da Viagem ===================== -->
   <div class="modal-overlay hidden" id="tripRulesModal">
     <div class="modal-card trip-rules-card">
-      <button type="button" class="modal-close" id="tripRulesCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="tripRulesCloseBtn" aria-label="Fechar">&times;</button>
       <h3>Regras Básicas para a Viagem</h3><br>
       <div class="trip-rules-list">
         <div class="trip-rule trip-rule-danger">
@@ -1373,9 +1375,9 @@
   <!-- ===================== Modal de Reserva (Admin: criar/editar) ===================== -->
   <div class="modal-overlay hidden" id="adminReservaModal">
     <div class="modal-card quick-reserve-card admin-reserve-card">
-      <button type="button" class="modal-close" id="adminReservaCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="adminReservaCloseBtn" aria-label="Fechar">&times;</button>
       <h3 id="adminReservaTitle">Editar reserva</h3>
-      <div class="error-msg admin-reserve-error" id="adminReservaError"></div>
+      <div class="error-msg admin-reserve-error" role="alert" id="adminReservaError"></div>
       <form id="adminReservaForm" novalidate>
         <div class="mobile-reservation-progress" id="adminReservationProgress" aria-label="Progresso da edição">
           <span class="active" data-admin-progress-step="1"><strong>1</strong> Trajeto</span>
@@ -1385,45 +1387,45 @@
 
         <div class="field mobile-admin-reservation-step" id="afield-nome" data-admin-reservation-step="1">
           <label for="aNome">Nome do responsável</label>
-          <input type="text" id="aNome" placeholder="Nome do responsável" autocomplete="off">
-          <div class="error-msg" id="error-aNome"></div>
+          <input type="text" id="aNome" placeholder="Nome do responsável" autocomplete="off" aria-describedby="error-aNome">
+          <div class="error-msg" role="alert" id="error-aNome"></div>
         </div>
 
         <div class="row mobile-admin-reservation-step" data-admin-reservation-step="1">
           <div class="field" id="afield-partida">
             <label for="aPartida">Local de Partida</label>
-            <select id="aPartida">
+            <select id="aPartida" aria-describedby="error-aPartida">
               <option value="">Selecione...</option>
               <option value="São Paulo">São Paulo</option>
               <option value="São Carlos">São Carlos</option>
               <option value="Bragança Paulista">Bragança Paulista</option>
             </select>
-            <div class="error-msg" id="error-aPartida"></div>
+            <div class="error-msg" role="alert" id="error-aPartida"></div>
           </div>
 
           <div class="field" id="afield-destino">
             <label for="aDestino">Destino</label>
-            <select id="aDestino">
+            <select id="aDestino" aria-describedby="error-aDestino">
               <option value="">Selecione...</option>
             </select>
             <input type="text" id="aDestinoOutro" class="hidden admin-destination-other" placeholder="Digite o destino"
               autocomplete="off">
-            <div class="error-msg" id="error-aDestino"></div>
+            <div class="error-msg" role="alert" id="error-aDestino"></div>
           </div>
         </div>
 
         <div class="field mobile-admin-reservation-step" id="afield-carro" data-admin-reservation-step="1">
           <label for="aCarro">Veículo</label>
-          <select id="aCarro">
+          <select id="aCarro" aria-describedby="error-aCarro">
             <option value="">Selecione...</option>
           </select>
-          <div class="error-msg" id="error-aCarro"></div>
+          <div class="error-msg" role="alert" id="error-aCarro"></div>
         </div>
 
         <div class="field mobile-admin-reservation-step" id="afield-motivo" data-admin-reservation-step="3">
           <label for="aMotivo">Motivo da viagem<span class="required-marker">*</span></label>
-          <textarea id="aMotivo" rows="3" placeholder="Objetivo da viagem"></textarea>
-          <div class="error-msg" id="error-aMotivo"></div>
+          <textarea id="aMotivo" rows="3" placeholder="Objetivo da viagem" aria-describedby="error-aMotivo"></textarea>
+          <div class="error-msg" role="alert" id="error-aMotivo"></div>
         </div>
 
         <div class="mobile-admin-reservation-step" data-admin-reservation-step="2">
@@ -1431,32 +1433,32 @@
             <div class="field" id="afield-dataIda">
               <label for="aDataIda">Data de Ida</label>
               <div class="date-input-wrapper" id="wrap-aDataIda">
-                <input type="date" id="aDataIda" readonly autocomplete="off">
+                <input type="date" id="aDataIda" readonly autocomplete="off" aria-describedby="error-aDataIda">
               </div>
-              <div class="error-msg" id="error-aDataIda"></div>
+              <div class="error-msg" role="alert" id="error-aDataIda"></div>
             </div>
             <div class="field" id="afield-horarioRetirada">
               <label for="aHorarioRetirada">Horário de Retirada</label>
               <select id="aHorarioRetirada">
                 <option value="">Selecione...</option>
               </select>
-              <div class="error-msg" id="error-aHorarioRetirada"></div>
+              <div class="error-msg" role="alert" id="error-aHorarioRetirada"></div>
             </div>
           </div>
           <div class="row">
             <div class="field" id="afield-dataVolta">
               <label for="aDataVolta">Data de Volta</label>
               <div class="date-input-wrapper" id="wrap-aDataVolta">
-                <input type="date" id="aDataVolta" readonly autocomplete="off">
+                <input type="date" id="aDataVolta" readonly autocomplete="off" aria-describedby="error-aDataVolta">
               </div>
-              <div class="error-msg" id="error-aDataVolta"></div>
+              <div class="error-msg" role="alert" id="error-aDataVolta"></div>
             </div>
             <div class="field" id="afield-horarioDevolucao">
               <label for="aHorarioDevolucao">Horário de Devolução</label>
               <select id="aHorarioDevolucao">
                 <option value="">Selecione...</option>
               </select>
-              <div class="error-msg" id="error-aHorarioDevolucao"></div>
+              <div class="error-msg" role="alert" id="error-aHorarioDevolucao"></div>
             </div>
           </div>
         </div>
@@ -1467,16 +1469,15 @@
         <div class="field mobile-admin-reservation-step" id="afield-passageirosConfirmados"
           data-admin-reservation-step="3">
           <label>Passageiros que vão com você</label>
-          <div id="aPassageirosListContainer"></div>
-          <div class="error-msg" id="error-aPassageirosConfirmados"></div>
+          <p class="field-hint">Clique num lugar livre do mapa para adicionar, ou no nome de um passageiro para editar/remover.</p>
+          <div id="aOccupancyWidget"></div>
+          <div class="error-msg" role="alert" id="error-aPassageirosConfirmados"></div>
           <div class="passenger-list-hint hidden" id="aLegadoAvisoBox">
             <span id="aLegadoAvisoTexto"></span>
             <button type="button" class="passenger-add-btn admin-convert-legacy-btn" id="aConverterLegadoBtn">Converter
               em nomes</button>
           </div>
         </div>
-
-        <div class="mobile-admin-reservation-step" id="adminOcupantesPanel" data-admin-reservation-step="3"></div>
 
         <div class="mobile-wizard-actions admin-mobile-wizard-actions">
           <button type="button" class="secondary-btn" id="adminReservationBackBtn">Voltar</button>
@@ -1491,7 +1492,7 @@
   <!-- ===================== Modal de Edição de Veículo ===================== -->
   <div class="modal-overlay hidden" id="fleetEditModal">
     <div class="modal-card fleet-edit-card">
-      <button type="button" class="modal-close" id="fleetEditCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="fleetEditCloseBtn" aria-label="Fechar">&times;</button>
       <h3 id="fleetEditTitle">Editar cadastro</h3>
       <p id="fleetEditSubtitle">Atualize as informações e salve as alterações.</p>
       <form id="fleetEditForm" novalidate>
@@ -1527,7 +1528,7 @@
             </div>
           </div>
         </div>
-        <div class="error-msg fleet-edit-error" id="fleetEditError"></div>
+        <div class="error-msg fleet-edit-error" role="alert" id="fleetEditError"></div>
         <div class="fleet-edit-actions">
           <button type="button" class="secondary-btn" id="fleetEditCancelBtn">Cancelar</button>
           <button type="submit" class="submit-btn">Salvar alterações</button>
@@ -1599,12 +1600,88 @@
           </div>
         </div>
 
-        <div class="error-msg" id="userEditError"></div>
+        <div class="error-msg" role="alert" id="userEditError"></div>
         <div class="user-form-actions">
           <button type="button" class="secondary-btn" id="userEditCancelBtn">Cancelar</button>
           <button type="submit" class="submit-btn" id="userEditSubmitBtn">Salvar alterações</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="userViewModal">
+    <div class="modal-card user-edit-card" role="dialog" aria-modal="true" aria-labelledby="userViewTitle">
+      <button type="button" class="modal-close" id="userViewCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="userViewTitle">Usuário</h3>
+
+      <div class="row">
+        <div class="field">
+          <label>Usuário de acesso</label>
+          <div class="field-value" id="userViewUsername"></div>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <div class="field-value" id="userViewStatus"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>E-mail</label>
+          <div class="field-value" id="userViewEmail"></div>
+        </div>
+        <div class="field">
+          <label>Tipo de conta</label>
+          <div class="field-value" id="userViewAuthProvider"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Centro de custo</label>
+          <div class="field-value" id="userViewCostCenter"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Permissões</label>
+        <div class="user-permissions" id="userViewPermissions"></div>
+      </div>
+
+      <section class="profile-cnh">
+        <div class="profile-cnh-head">
+          <h4>CNH</h4>
+          <span class="tag" id="userViewCnhBadge"></span>
+        </div>
+        <div class="row" id="userViewCnhDetails">
+          <div class="field">
+            <label>Número</label>
+            <div class="field-value" id="userViewCnhNumero"></div>
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <div class="field-value" id="userViewCnhCategoria"></div>
+          </div>
+          <div class="field">
+            <label>Validade</label>
+            <div class="field-value" id="userViewCnhValidade"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Foto da frente</label>
+            <small class="cnh-photo-state" id="userViewCnhFrente"></small>
+          </div>
+          <div class="field">
+            <label>Foto do verso</label>
+            <small class="cnh-photo-state" id="userViewCnhVerso"></small>
+          </div>
+        </div>
+      </section>
+
+      <div class="user-form-actions">
+        <button type="button" class="secondary-btn" id="userViewFooterCloseBtn">Fechar</button>
+      </div>
     </div>
   </div>
 
@@ -1625,7 +1702,7 @@
             placeholder="Ex.: desligamento, fim do contrato ou conta criada incorretamente" required></textarea>
           <div class="form-hint">A justificativa e o administrador responsável ficarão salvos na auditoria.</div>
         </div>
-        <div class="error-msg user-delete-error" id="userDeleteError"></div>
+        <div class="error-msg user-delete-error" role="alert" id="userDeleteError"></div>
         <div class="fleet-edit-actions">
           <button type="button" class="secondary-btn" id="userDeleteCancelBtn">Cancelar</button>
           <button type="submit" class="danger-btn" id="userDeleteSubmitBtn">Excluir definitivamente</button>
@@ -1659,7 +1736,7 @@
             <label class="permission-option"><input type="checkbox" id="bulkPermissionUsers"> Usuários</label>
           </div>
         </div>
-        <div class="error-msg" id="userBulkPermissionsError"></div>
+        <div class="error-msg" role="alert" id="userBulkPermissionsError"></div>
         <div class="fleet-edit-actions">
           <button type="button" class="secondary-btn" id="userBulkPermissionsCancelBtn">Cancelar</button>
           <button type="submit" class="submit-btn" id="userBulkPermissionsSubmitBtn">Aplicar a todos</button>
@@ -1686,7 +1763,7 @@
             required></textarea>
           <div class="form-hint">A justificativa, o usuário e os dados do veículo ficarão salvos na auditoria.</div>
         </div>
-        <div class="error-msg vehicle-delete-error" id="vehicleDeleteError"></div>
+        <div class="error-msg vehicle-delete-error" role="alert" id="vehicleDeleteError"></div>
         <div class="fleet-edit-actions">
           <button type="button" class="secondary-btn" id="vehicleDeleteCancelBtn">Cancelar</button>
           <button type="submit" class="danger-btn" id="vehicleDeleteSubmitBtn">Excluir definitivamente</button>
@@ -1697,7 +1774,7 @@
 
   <div class="modal-overlay hidden" id="operationModal">
     <div class="modal-card operation-card">
-      <button type="button" class="modal-close" id="operationCloseBtn">&times;</button>
+      <button type="button" class="modal-close" id="operationCloseBtn" aria-label="Fechar">&times;</button>
       <h3 id="operationTitle">Registrar retirada</h3>
       <div class="quick-reserve-summary" id="operationSummary"></div>
       <form id="operationForm">
@@ -1725,7 +1802,7 @@
           <input type="file" id="operationPhotos" accept="image/*" multiple>
           <div class="form-hint" id="operationPhotoHint"></div>
         </div>
-        <div class="error-msg" id="operationError"></div>
+        <div class="error-msg" role="alert" id="operationError"></div>
         <button type="submit" class="submit-btn">Salvar registro</button>
       </form>
     </div>
@@ -1748,7 +1825,7 @@
             placeholder="Ex.: encerramento da unidade ou cadastro criado incorretamente" required></textarea>
           <div class="form-hint">A justificativa, o usuário e os dados do local ficarão salvos na auditoria.</div>
         </div>
-        <div class="error-msg vehicle-delete-error" id="branchDeleteError"></div>
+        <div class="error-msg vehicle-delete-error" role="alert" id="branchDeleteError"></div>
         <div class="fleet-edit-actions">
           <button type="button" class="secondary-btn" id="branchDeleteCancelBtn">Cancelar</button>
           <button type="submit" class="danger-btn" id="branchDeleteSubmitBtn">Excluir definitivamente</button>
@@ -1797,22 +1874,22 @@
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
   <script src="js/config.js?v=20260831-1"></script>
   <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260831-1"></script>
+  <script src="js/utils.js?v=20260901-2"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
   <script src="js/api.js?v=20260831-1"></script>
   <script src="js/storage.js?v=20260831-1"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
   <script src="js/seat-map.js?v=20260831-2"></script>
-  <script src="js/rides.js?v=20260831-4"></script>
-  <script src="js/reservations.js?v=20260831-8"></script>
+  <script src="js/rides.js?v=20260901-2"></script>
+  <script src="js/reservations.js?v=20260901-2"></script>
   <script src="js/calendar.js?v=20260831-2"></script>
-  <script src="js/modals.js?v=20260831-4"></script>
-  <script src="js/admin.js?v=20260831-5"></script>
+  <script src="js/modals.js?v=20260901-5"></script>
+  <script src="js/admin.js?v=20260901-2"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
-  <script src="js/management-users.js?v=20260831-3"></script>
+  <script src="js/management-users.js?v=20260901-1"></script>
   <script src="js/management-integrations.js?v=20260831-4"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
@@ -1824,7 +1901,7 @@
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
   <script src="js/driver-license.js?v=20260831-2"></script>
-  <script src="js/auth.js?v=20260831-4"></script>
+  <script src="js/auth.js?v=20260901-1"></script>
   <script src="js/app.js?v=20260826-3"></script>
 
 </body>

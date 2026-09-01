@@ -18,12 +18,14 @@
   --text-muted:#adb3bb;
   --on-primary:#ffffff;
 
-  /* Azul Capricórnio (#151F6D / #0033A0) clareado o suficiente para o botão
-     se destacar do fundo escuro mantendo texto branco legível por cima.
-     O #6CACE4 da marca é o acento de texto/ícone, onde ele brilha. */
-  --primary:#2f56c4;
-  --primary-strong:#1b2a86;
-  --accent:#6cace4;
+  /* Azul Capricórnio (#00133D / #001A52, navy real da logo) clareado o
+     suficiente para o botão se destacar do fundo escuro mantendo texto
+     branco legível por cima - mesmo matiz da marca, só mais claro/saturado
+     para funcionar em fundo escuro. O acento de texto/ícone segue o
+     mesmo matiz. */
+  --primary:#2f5ec4;
+  --primary-strong:#1b3d86;
+  --accent:#6c92e4;
 
   --info:#7ea9c7;
   --info-text:#cfe6fa;
@@ -59,14 +61,19 @@
   --border:rgba(29,40,52,.14);
 
   --text:#20262d;
-  --text-muted:#68717c;
+  /* #68717c batia 4.50:1 sobre --bg-1 (#f3f4f6) - exatamente no limite da AA
+     (4.5:1), sem nenhuma margem. Escurecido para folgar a margem sem mudar
+     a percepção do tom (5.37:1 sobre --bg-1, 5.91:1 sobre branco). */
+  --text-muted:#5c6570;
   --on-primary:#ffffff;
 
-  /* Azul Capricórnio direto da marca: #0033A0 como ação e #151F6D como o
-     fim escuro do gradiente. Branco sobre os dois passa folgado em contraste. */
-  --primary:#0033a0;
-  --primary-strong:#151f6d;
-  --accent:#1a4fa0;
+  /* Azul Capricórnio direto da marca: #001A52 (navy exato da logo, amostrado
+     por pixel em capricornio.com.br) como ação e #00133D como o fim escuro
+     do gradiente. Branco sobre os dois passa folgadíssimo em contraste
+     (16.5:1 e mais). */
+  --primary:#001a52;
+  --primary-strong:#00133d;
+  --accent:#1a45a0;
 
   /* No tema claro a cor sólida e a de texto coincidem: ambas precisam
      ser escuras o bastante para o fundo claro. */
@@ -383,14 +390,15 @@ html[data-theme="light"] textarea::placeholder{
 }
 
 html[data-theme="light"] .reservation-item,
+html[data-theme="light"] .ride-card,
 html[data-theme="light"] .admin-subcard,
 html[data-theme="light"] .management-item,
 html[data-theme="light"] .audit-item,
 html[data-theme="light"] .day-detail-item,
 html[data-theme="light"] .occupants-block,
+html[data-theme="light"] .occupancy,
 html[data-theme="light"] .reservation-period,
-html[data-theme="light"] .ride-card .reservation-period,
-html[data-theme="light"] .ride-card .reservation-period > .reservation-moment{
+html[data-theme="light"] .reservation-period > .reservation-moment{
   background:#f7f8fa;
   border-color:rgba(31,45,58,.12);
 }
@@ -426,11 +434,6 @@ html[data-theme="light"] .reservation-id-badge{
   background:#dcebf5;
   border-color:#a9c7dc;
   color:#214f6e;
-}
-
-html[data-theme="light"] .ride-card{
-  background:linear-gradient(135deg,rgba(29,151,99,.09),rgba(78,134,173,.07));
-  border-color:rgba(29,151,99,.28);
 }
 
 html[data-theme="light"] .occupant-chip,

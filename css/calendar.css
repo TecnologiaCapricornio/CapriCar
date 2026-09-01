@@ -622,12 +622,14 @@
   }
 
 /* ---- Popup de seleção de data (bloqueio de datas ocupadas) ---- */
+  /* position:fixed com top/left calculados em js/modals.js (positionPopup) -
+     flutua solto do body, então nunca fica preso à altura/rolagem de um
+     modal. z-index acima de .modal-overlay (200) pra aparecer por cima de
+     um modal aberto. */
   .date-popup{
     display:none;
-    position:absolute;
-    top:calc(100% + 6px);
-    left:0;
-    z-index:60;
+    position:fixed;
+    z-index:300;
     background:#1a2f48;
     border:1px solid var(--card-border);
     border-radius:var(--radius-md);
@@ -1517,11 +1519,6 @@
   border-radius:18px;
   background:linear-gradient(145deg,rgba(26,47,72,.99),rgba(15,31,50,.99));
   box-shadow:0 18px 42px rgba(4,12,22,.45);
-}
-
-.row .field:last-child .date-popup.range-style-date-popup{
-  right:0;
-  left:auto;
 }
 
 .range-style-date-popup .single-date-topline{

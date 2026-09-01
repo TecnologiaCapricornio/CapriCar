@@ -282,6 +282,234 @@ function createPassengerListWidget(containerId, options){
   };
 }
 
+// Widget de ocupação editável direto no mapa de lugares - substitui, no modal
+// admin, a dupla "lista de campos de nome" + "mapa somente leitura" que existia
+// antes (redundante: as duas peças mostravam a mesma informação ao mesmo tempo).
+// Aqui o mapa É o formulário: lugar livre clicado = adicionar passageiro; nome
+// clicado = editar; botão × na etiqueta = remover. getContext() é chamado a
+// cada render para ler nome do responsável/partida/carro atuais do formulário
+// externo, então o chamador só precisa acionar refresh() quando esses campos
+// mudarem (a própria lista de passageiros já se redesenha sozinha).
+function createInteractiveOccupancyWidget(containerId, options){
+  const opts = options || {};
+  const maxPassageiros = opts.maxPassageiros || (CAPACIDADE_MAXIMA - 1);
+  const getContext = opts.getContext || function(){ return { nome:'', partida:'', carro:'' }; };
+  const container = document.getElementById(containerId);
+
+  let passengers = []; // [{ nome, usuarioId, _editing }]
+  let focusNextInput = false;
+
+  function buildSyntheticReserva(){
+    const ctx = getContext() || {};
+    return {
+      nome: ctx.nome || '',
+      partida: ctx.partida || '',
+      carro: ctx.carro || '',
+      passageiros: [{ nome: ctx.nome || '' }].concat(
+        passengers.map(p => ({ nome:p.nome, usuarioId:p.usuarioId }))
+      ),
+      passageirosConfirmados: 0
+    };
+  }
+
+  function commitEdit(entry, index, input){
+    const nome = input.value.trim();
+    if(!nome){
+      passengers.splice(index, 1);
+    } else {
+      entry.nome = nome;
+      entry.usuarioId = input.dataset.userId || '';
+      delete entry._editing;
+    }
+    render();
+  }
+
+  function buildDriverChip(nome){
+    const chip = document.createElement('div');
+    chip.className = 'occupant-chip is-driver';
+    chip.innerHTML =
+      '<span class="occupant-avatar">' + escapeHtml(initialFrom(nome)) + '</span>' +
+      '<span>' + escapeHtml(nome || '—') + '</span>' +
+      '<span class="occupant-role">Motorista</span>';
+    return chip;
+  }
+
+  function buildViewChip(entry, index){
+    const chip = document.createElement('div');
+    chip.className = 'occupant-chip';
+    const avatar = document.createElement('span');
+    avatar.className = 'occupant-avatar';
+    avatar.textContent = initialFrom(entry.nome);
+    const nameBtn = document.createElement('button');
+    nameBtn.type = 'button';
+    nameBtn.className = 'occupant-name-btn';
+    nameBtn.textContent = entry.nome;
+    nameBtn.title = 'Editar passageiro';
+    nameBtn.addEventListener('click', function(){
+      entry._editing = true;
+      focusNextInput = true;
+      render();
+    });
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'occupant-remove-btn';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.title = 'Remover passageiro';
+    removeBtn.setAttribute('aria-label', 'Remover ' + entry.nome);
+    removeBtn.addEventListener('click', function(){
+      passengers.splice(index, 1);
+      render();
+    });
+    chip.appendChild(avatar);
+    chip.appendChild(nameBtn);
+    chip.appendChild(removeBtn);
+    return chip;
+  }
+
+  function buildEditChip(entry, index){
+    const chip = document.createElement('div');
+    chip.className = 'occupant-chip occupant-chip-editing';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Busque um usuário ou digite o nome do visitante';
+    input.autocomplete = 'off';
+    input.value = entry.nome || '';
+    input.dataset.userId = entry.usuarioId || '';
+    const inputWrap = attachPersonAutocomplete(input, {
+      onChange:function(user){
+        entry.usuarioId = user ? String(user.id) : '';
+      }
+    }).element;
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        input.blur();
+      } else if(e.key === 'Escape'){
+        e.preventDefault();
+        if(!entry.nome){
+          passengers.splice(index, 1);
+        } else {
+          delete entry._editing;
+        }
+        render();
+      }
+    });
+    // Atraso maior que o do autocomplete (100ms) para o clique numa sugestão
+    // preencher o campo antes deste blur decidir se confirma ou remove a linha.
+    input.addEventListener('blur', function(){
+      setTimeout(function(){ commitEdit(entry, index, input); }, 120);
+    });
+    chip.appendChild(inputWrap);
+    if(focusNextInput){
+      focusNextInput = false;
+      setTimeout(function(){ input.focus(); }, 0);
+    }
+    return chip;
+  }
+
+  function buildAddChip(){
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'occupant-chip occupant-chip-add';
+    chip.textContent = '+ Adicionar passageiro';
+    chip.addEventListener('click', addPassenger);
+    return chip;
+  }
+
+  function addPassenger(){
+    if(passengers.length >= maxPassageiros) return;
+    passengers.push({ nome:'', usuarioId:'', _editing:true });
+    focusNextInput = true;
+    render();
+  }
+
+  function render(){
+    const reserva = buildSyntheticReserva();
+    const vagas = getVagasRestantes(reserva);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'occupancy occupancy-interactive';
+
+    const tagsRow = document.createElement('div');
+    tagsRow.className = 'reservation-card-chips';
+    tagsRow.innerHTML = renderOccupancyBadgesHTML(reserva);
+    wrap.appendChild(tagsRow);
+
+    const seatMapWrap = document.createElement('div');
+    seatMapWrap.innerHTML = typeof renderSeatMapHTML === 'function' ? renderSeatMapHTML(reserva) : '';
+    seatMapWrap.querySelectorAll('.seat-livre').forEach(function(seatEl){
+      seatEl.classList.add('seat-clickable');
+      seatEl.textContent = '+';
+      seatEl.title = 'Adicionar passageiro';
+      seatEl.setAttribute('role', 'button');
+      seatEl.setAttribute('aria-label', 'Adicionar passageiro');
+      seatEl.tabIndex = 0;
+      seatEl.addEventListener('click', addPassenger);
+      seatEl.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          addPassenger();
+        }
+      });
+    });
+    wrap.appendChild(seatMapWrap.firstElementChild || seatMapWrap);
+
+    const peopleWrap = document.createElement('div');
+    peopleWrap.className = 'occupancy-people';
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'occupants-chips';
+    chipsRow.appendChild(buildDriverChip(reserva.nome));
+    passengers.forEach(function(entry, index){
+      chipsRow.appendChild(entry._editing ? buildEditChip(entry, index) : buildViewChip(entry, index));
+    });
+    if(vagas > 0 && passengers.length < maxPassageiros){
+      chipsRow.appendChild(buildAddChip());
+    }
+    peopleWrap.appendChild(chipsRow);
+    wrap.appendChild(peopleWrap);
+
+    container.innerHTML = '';
+    container.appendChild(wrap);
+  }
+
+  function getPassengers(){
+    return passengers
+      .filter(function(p){ return String(p.nome || '').trim(); })
+      .map(function(p){ return { nome:p.nome, usuarioId:p.usuarioId || '' }; });
+  }
+
+  function setPassengers(list){
+    passengers = (list || []).map(function(p){
+      return p && typeof p === 'object'
+        ? { nome:String(p.nome || ''), usuarioId:String(p.usuarioId || '') }
+        : { nome:String(p || ''), usuarioId:'' };
+    });
+    render();
+  }
+
+  function addEmptyEntries(n){
+    for(let i = 0; i < n && passengers.length < maxPassageiros; i++){
+      passengers.push({ nome:'', usuarioId:'', _editing:true });
+    }
+    render();
+  }
+
+  function clear(){
+    passengers = [];
+    render();
+  }
+
+  render();
+
+  return {
+    getPassengers:getPassengers,
+    setPassengers:setPassengers,
+    addEmptyEntries:addEmptyEntries,
+    clear:clear,
+    refresh:render
+  };
+}
+
 // Valida a lista de nomes de passageiros de um formulário.
 // Retorna { ok:true, passageiros:[...] } ou { ok:false, message: '...' }.
 function validarListaPassageiros(nomeCriador, nomes, maxPassageiros){

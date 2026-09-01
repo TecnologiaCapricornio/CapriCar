@@ -273,6 +273,7 @@ function renderUserManagement(){
         '<div class="user-permissions">' + cnhBadge(account) + permissionBadges(account) + '</div>' +
       '</div>' +
       '<div class="management-actions">' +
+        '<button type="button" class="secondary-btn user-view-btn" data-id="' + escapeHTML(account.id) + '">Visualizar</button>' +
         (account.role !== 'admin' || isAdmin()
           ? '<button type="button" class="secondary-btn user-edit-btn" data-id="' + escapeHTML(account.id) + '">Editar</button>'
           : '') +
@@ -291,6 +292,12 @@ function renderUserManagement(){
       const id = this.getAttribute('data-id');
       if(this.checked) selectedUserIds.add(id); else selectedUserIds.delete(id);
       updateBulkToolbarState();
+    });
+  });
+
+  userAccountsList.querySelectorAll('.user-view-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      openUserViewModal(this.getAttribute('data-id'));
     });
   });
 
@@ -721,6 +728,89 @@ if(userEditForm){
     }catch(error){
       userEditError.textContent = error.message;
     }
+  });
+}
+
+/* =========================================================
+   Modal de visualização de usuário (somente leitura)
+   Mesmos dados do modal de edição, mais a CNH - sem formulário, sem botão
+   de salvar, pra evitar alteração sem querer no cadastro.
+   ========================================================= */
+const userViewModal = document.getElementById('userViewModal');
+const userViewTitle = document.getElementById('userViewTitle');
+const userViewUsername = document.getElementById('userViewUsername');
+const userViewStatus = document.getElementById('userViewStatus');
+const userViewEmail = document.getElementById('userViewEmail');
+const userViewAuthProvider = document.getElementById('userViewAuthProvider');
+const userViewCostCenter = document.getElementById('userViewCostCenter');
+const userViewPermissions = document.getElementById('userViewPermissions');
+const userViewCnhBadge = document.getElementById('userViewCnhBadge');
+const userViewCnhDetails = document.getElementById('userViewCnhDetails');
+const userViewCnhNumero = document.getElementById('userViewCnhNumero');
+const userViewCnhCategoria = document.getElementById('userViewCnhCategoria');
+const userViewCnhValidade = document.getElementById('userViewCnhValidade');
+const userViewCnhFrente = document.getElementById('userViewCnhFrente');
+const userViewCnhVerso = document.getElementById('userViewCnhVerso');
+const userViewCloseBtn = document.getElementById('userViewCloseBtn');
+const userViewFooterCloseBtn = document.getElementById('userViewFooterCloseBtn');
+
+function renderUserViewPhotoState(el, enviada, userId, lado){
+  if(!el) return;
+  if(!enviada){
+    el.textContent = 'Nenhuma foto enviada.';
+    el.classList.remove('cnh-photo-ok');
+    return;
+  }
+  el.classList.add('cnh-photo-ok');
+  el.innerHTML = 'Foto enviada · <a href="/api/profile/cnh/' +
+    encodeURIComponent(userId) + '/' + encodeURIComponent(lado) +
+    '" target="_blank" rel="noopener">ver</a>';
+}
+
+function renderUserViewCnh(account){
+  const info = CNH_BADGE[account.cnhStatus];
+  userViewCnhBadge.className = 'tag' + (info ? ' ' + info.classe : '');
+  userViewCnhBadge.textContent = info ? info.texto : 'CNH não cadastrada';
+
+  const cnh = account.cnh;
+  userViewCnhDetails.classList.toggle('hidden', !cnh);
+  if(cnh){
+    userViewCnhNumero.textContent = cnh.numero || '—';
+    userViewCnhCategoria.textContent = cnh.categoria || '—';
+    userViewCnhValidade.textContent = cnh.validade ? formatDate(cnh.validade) : '—';
+  }
+  renderUserViewPhotoState(userViewCnhFrente, !!(cnh && cnh.fotos && cnh.fotos.frente), account.id, 'frente');
+  renderUserViewPhotoState(userViewCnhVerso, !!(cnh && cnh.fotos && cnh.fotos.verso), account.id, 'verso');
+}
+
+function closeUserViewModal(){
+  userViewModal.classList.add('hidden');
+}
+
+function openUserViewModal(accountId){
+  if(!canManageUsers()) return;
+  const account = getSystemUsers().find(item => String(item.id) === String(accountId));
+  if(!account) return;
+
+  userViewTitle.textContent = account.nome;
+  userViewUsername.textContent = account.username;
+  userViewStatus.textContent = account.active ? 'Ativo' : 'Inativo';
+  userViewEmail.textContent = account.email || '—';
+  userViewAuthProvider.textContent = account.authProvider === 'entra' ? 'Microsoft (Entra ID)' : 'Local';
+  userViewCostCenter.textContent = account.centroCusto || '—';
+  userViewPermissions.innerHTML = permissionBadges(account) || '<span>Sem permissões adicionais</span>';
+
+  renderUserViewCnh(account);
+
+  userViewModal.classList.remove('hidden');
+}
+
+if(userViewCloseBtn) userViewCloseBtn.addEventListener('click', closeUserViewModal);
+if(userViewFooterCloseBtn) userViewFooterCloseBtn.addEventListener('click', closeUserViewModal);
+
+if(userViewModal){
+  userViewModal.addEventListener('click', function(event){
+    if(event.target === userViewModal) closeUserViewModal();
   });
 }
 

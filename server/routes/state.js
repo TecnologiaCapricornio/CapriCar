@@ -2,6 +2,7 @@ const express = require('express');
 const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
 const { userCanManage } = require('../auth');
+const { getLicensesForUsers, licenseStatus } = require('../driver-licenses');
 const { normalizedStatus } = require('../services/reservation-lifecycle');
 const { getBranchDeletionBlockers } = require('../branch-deletion');
 const { listAllReservations } = require('../reservations-store');
@@ -82,26 +83,41 @@ router.get('/bootstrap', async (req, res) => {
       ORDER BY display_name`
   );
 
-  const users = usersResult.rows.map(row => ({
-    id:row.id,
-    username:row.username,
-    nome:row.nome,
-    email:row.email || '',
-    role:row.role,
-    active:row.active,
-    authProvider:row.auth_provider || 'local',
-    permissions:{
-      reservations:row.can_manage_reservations,
-      branches:row.can_manage_branches,
-      fleet:row.can_manage_fleet,
-      blocks:row.can_manage_blocks,
-      reports:row.can_view_reports,
-      audit:row.can_view_audit,
-      rules:row.can_manage_rules,
-      users:row.can_manage_users,
-      integrations:row.can_manage_integrations
-    }
-  }));
+  // Mesmo CNH que a listagem de /api/users já resolve (getLicensesForUsers,
+  // sem N+1) - aqui também, para quem tem a permissão "Usuários" enxergar
+  // os dados/fotos da CNH de qualquer usuário ao gerenciar o cadastro.
+  const licenses = userCanManage(req.user, 'users')
+    ? await getLicensesForUsers(usersResult.rows.map(row => row.id))
+    : new Map();
+  const hoje = todaySaoPaulo();
+
+  const users = usersResult.rows.map(row => {
+    const cnh = licenses.get(String(row.id)) || null;
+    const status = licenseStatus(cnh, hoje);
+    return {
+      id:row.id,
+      username:row.username,
+      nome:row.nome,
+      email:row.email || '',
+      role:row.role,
+      active:row.active,
+      authProvider:row.auth_provider || 'local',
+      permissions:{
+        reservations:row.can_manage_reservations,
+        branches:row.can_manage_branches,
+        fleet:row.can_manage_fleet,
+        blocks:row.can_manage_blocks,
+        reports:row.can_view_reports,
+        audit:row.can_view_audit,
+        rules:row.can_manage_rules,
+        users:row.can_manage_users,
+        integrations:row.can_manage_integrations
+      },
+      cnh,
+      cnhStatus:status.estado,
+      cnhDiasRestantes:status.diasRestantes
+    };
+  });
 
   const audit = auditResult.rows.map(row => ({
     id:String(row.id),

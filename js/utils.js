@@ -454,17 +454,68 @@ function getTimePickerOptions(selectEl){
 function closeTimePickerControl(control){
   if(!control) return;
   const trigger = control.querySelector('.time-picker-trigger');
-  const popover = control.querySelector('.time-picker-popover');
+  const popover = control._popover;
   if(trigger) trigger.setAttribute('aria-expanded', 'false');
   if(popover) popover.classList.add('hidden');
   control.classList.remove('is-open');
   if(activeTimePickerControl === control) activeTimePickerControl = null;
+  window.removeEventListener('scroll', repositionActiveTimePopover, true);
+  window.removeEventListener('resize', repositionActiveTimePopover);
+}
+
+// Mesmo cálculo do positionPopup() do calendário de data (js/modals.js) -
+// popover solto do body, position:fixed, nunca cobrindo o próprio gatilho.
+function positionTimePopover(control){
+  const trigger = control.querySelector('.time-picker-trigger');
+  const popover = control._popover;
+  if(!trigger || !popover) return;
+  // Em telas estreitas (css/responsive.css, @media max-width:720px) o
+  // popover vira uma folha fixada embaixo da tela via CSS puro (top:auto;
+  // bottom:...) - não mexe em top/left por JS aqui, senão a folha perde
+  // essa ancoragem e vira um popover flutuante colado no gatilho.
+  if(window.matchMedia('(max-width:720px)').matches){
+    popover.style.top = '';
+    popover.style.left = '';
+    popover.style.maxHeight = '';
+    popover.style.overflowY = '';
+    return;
+  }
+  const rect = trigger.getBoundingClientRect();
+  const margin = 8;
+  const gap = 8;
+  const popoverWidth = popover.offsetWidth || 300;
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+
+  let left = rect.left;
+  if(left + popoverWidth > viewportW - margin) left = viewportW - popoverWidth - margin;
+  if(left < margin) left = margin;
+
+  const spaceBelow = viewportH - rect.bottom - gap - margin;
+  const spaceAbove = rect.top - gap - margin;
+  const openBelow = spaceBelow >= spaceAbove;
+  const available = Math.max(160, openBelow ? spaceBelow : spaceAbove);
+
+  popover.style.maxHeight = available + 'px';
+  popover.style.overflowY = 'auto';
+
+  const popoverHeight = Math.min(popover.scrollHeight, available);
+  const top = openBelow
+    ? rect.bottom + gap
+    : Math.max(margin, rect.top - gap - popoverHeight);
+
+  popover.style.top = top + 'px';
+  popover.style.left = left + 'px';
+}
+
+function repositionActiveTimePopover(){
+  if(activeTimePickerControl) positionTimePopover(activeTimePickerControl);
 }
 
 function renderTimePickerOptions(selectEl){
   const control = selectEl.closest('.time-picker-control');
-  if(!control) return;
-  const optionsBox = control.querySelector('.time-picker-options');
+  if(!control || !control._popover) return;
+  const optionsBox = control._popover.querySelector('.time-picker-options');
   if(!optionsBox) return;
   const horarios = getTimePickerOptions(selectEl);
 
@@ -525,6 +576,10 @@ function initializeTimePickers(){
     trigger.setAttribute('aria-haspopup', 'listbox');
     trigger.setAttribute('aria-expanded', 'false');
     trigger.setAttribute('aria-label', fieldName);
+    // O <select> nativo fica aria-hidden (é o trigger que recebe foco e
+    // interação) - por isso é ele, e não o select, que precisa apontar para
+    // a mensagem de erro do campo.
+    trigger.setAttribute('aria-describedby', 'error-' + id);
     trigger.innerHTML =
       '<span class="time-picker-trigger-icon" aria-hidden="true">' +
         '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5v5l3.4 2"></path></svg>' +
@@ -542,7 +597,13 @@ function initializeTimePickers(){
       '<div class="time-picker-options" role="listbox" aria-label="Horários disponíveis"></div>';
 
     control.appendChild(trigger);
-    control.appendChild(popover);
+    // No <body>, não mais filho de .time-picker-control: preso dentro de um
+    // modal, um popover position:absolute fica refém da altura/rolagem
+    // dele (mesmo problema já corrigido no calendário de data - ver
+    // js/modals.js, createDatePicker). control._popover guarda a referência
+    // já que ele não é mais alcançável por control.querySelector.
+    document.body.appendChild(popover);
+    control._popover = popover;
 
     trigger.addEventListener('click', function(){
       const shouldOpen = !control.classList.contains('is-open');
@@ -558,6 +619,9 @@ function initializeTimePickers(){
       control.classList.add('is-open');
       trigger.setAttribute('aria-expanded', 'true');
       activeTimePickerControl = control;
+      positionTimePopover(control);
+      window.addEventListener('scroll', repositionActiveTimePopover, true);
+      window.addEventListener('resize', repositionActiveTimePopover);
       const selectedOption = popover.querySelector('.time-picker-option.is-selected');
       if(selectedOption) selectedOption.scrollIntoView({ block:'nearest' });
     });
@@ -592,7 +656,10 @@ function initializeTimePickers(){
   });
 
   document.addEventListener('click', function(event){
-    if(activeTimePickerControl && !activeTimePickerControl.contains(event.target)){
+    if(!activeTimePickerControl) return;
+    const insidePopover = activeTimePickerControl._popover &&
+      activeTimePickerControl._popover.contains(event.target);
+    if(!activeTimePickerControl.contains(event.target) && !insidePopover){
       closeTimePickerControl(activeTimePickerControl);
     }
   });
