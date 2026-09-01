@@ -13,7 +13,14 @@ const dataVoltaInput = document.getElementById('dataVolta');
 const horarioRetiradaSelect = document.getElementById('horarioRetirada');
 const horarioDevolucaoSelect = document.getElementById('horarioDevolucao');
 const motivoInput = document.getElementById('motivo');
-const passageirosWidget = createPassengerListWidget('passageirosListContainer');
+const passageirosWidget = createInteractiveOccupancyWidget('passageirosOccupancyWidget', {
+  getContext:function(){
+    // getCurrentUser() só existe depois que auth.js carrega, mais tarde que este
+    // script - mas o widget já renderiza (vazio) no momento em que é criado.
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    return { nome:currentUser ? currentUser.nome : '', partida:partidaSelect.value, carro:carroSelect.value };
+  }
+});
 const confirmation = document.getElementById('confirmation');
 const confirmationText = document.getElementById('confirmation-text');
 const myReservationsList = document.getElementById('myReservationsList');
@@ -47,6 +54,10 @@ function refreshRodizioWarning(){
 ].forEach(element => {
   element.addEventListener('input', refreshRodizioWarning);
   element.addEventListener('change', refreshRodizioWarning);
+});
+
+[partidaSelect, carroSelect].forEach(element => {
+  element.addEventListener('change', function(){ passageirosWidget.refresh(); });
 });
 
 function showCreatedReservationInMyReservations(message){
@@ -769,12 +780,26 @@ form.addEventListener('submit', async function(e){
 
   const list = getReservations();
   list.push(reserva);
+  // Desabilita e troca o texto do botão durante o salvamento - sem isso,
+  // clicar duas vezes rápido (rede lenta, mobile) pode enviar a mesma
+  // reserva duas vezes antes da primeira resposta voltar.
+  const confirmBtn = form.querySelector('button[type="submit"]');
+  const confirmBtnOriginalHTML = confirmBtn ? confirmBtn.innerHTML : '';
+  if(confirmBtn){
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Salvando...';
+  }
   try{
     await saveReservations(list);
   }catch(error){
     await hydrateDatabaseState();
     setError('horarioRetirada', error.message);
     return;
+  }finally{
+    if(confirmBtn){
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = confirmBtnOriginalHTML;
+    }
   }
   Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
   renderMainCalendar();

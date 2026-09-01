@@ -42,7 +42,13 @@ function normalizeSystemUser(account){
     role:account.role === 'admin' ? 'admin' : (account.role === 'facilities' ? 'facilities' : 'user'),
     active:account.active !== false,
     authProvider:account.authProvider === 'entra' ? 'entra' : 'local',
-    permissions:normalizeUserPermissions(account.permissions)
+    permissions:normalizeUserPermissions(account.permissions),
+    // Só vem preenchido para quem tem a permissão "Usuários" (o servidor já
+    // filtra) - null/undefined aqui só significa "sem CNH cadastrada ou sem
+    // permissão pra ver", nunca é tratado como erro.
+    cnh:account.cnh || null,
+    cnhStatus:account.cnhStatus || 'ausente',
+    cnhDiasRestantes:account.cnhDiasRestantes == null ? null : Number(account.cnhDiasRestantes)
   };
 }
 

@@ -20,7 +20,9 @@ const adminReservaForm = document.getElementById('adminReservaForm');
 const aNomeInput = document.getElementById('aNome');
 const aNomeFieldParent = aNomeInput.parentNode;
 const aNomeFieldNextSibling = aNomeInput.nextSibling;
-const aNomeAutocomplete = attachPersonAutocomplete(aNomeInput);
+const aNomeAutocomplete = attachPersonAutocomplete(aNomeInput, {
+  onChange:function(){ aPassageirosWidget.refresh(); }
+});
 aNomeFieldParent.insertBefore(aNomeAutocomplete.element, aNomeFieldNextSibling);
 const aPartidaSelect = document.getElementById('aPartida');
 const aDestinoSelect = document.getElementById('aDestino');
@@ -32,8 +34,11 @@ const aHorarioRetiradaSelect = document.getElementById('aHorarioRetirada');
 const aHorarioDevolucaoSelect = document.getElementById('aHorarioDevolucao');
 const aMotivoInput = document.getElementById('aMotivo');
 const aRodizioWarning = document.getElementById('aRodizioWarning');
-const aPassageirosWidget = createPassengerListWidget('aPassageirosListContainer');
-const adminOcupantesPanel = document.getElementById('adminOcupantesPanel');
+const aPassageirosWidget = createInteractiveOccupancyWidget('aOccupancyWidget', {
+  getContext:function(){
+    return { nome:aNomeInput.value.trim(), partida:aPartidaSelect.value, carro:aCarroSelect.value };
+  }
+});
 const aLegadoAvisoBox = document.getElementById('aLegadoAvisoBox');
 const aLegadoAvisoTexto = document.getElementById('aLegadoAvisoTexto');
 const aConverterLegadoBtn = document.getElementById('aConverterLegadoBtn');
@@ -117,6 +122,13 @@ function populateAdminCarroOptions(){
 aPartidaSelect.addEventListener('change', function(){
   populateAdminCarroOptions();
   populateAdminDestinoOptions();
+  aPassageirosWidget.refresh();
+});
+aCarroSelect.addEventListener('change', function(){
+  aPassageirosWidget.refresh();
+});
+aNomeInput.addEventListener('input', function(){
+  aPassageirosWidget.refresh();
 });
 aDestinoSelect.addEventListener('change', toggleAdminDestinoOutro);
 
@@ -259,22 +271,6 @@ adminReservationNextBtn.addEventListener('click', function(){
 
 showAdminMobileReservationStep(1, false);
 
-// Renderiza o painel de ocupantes dentro do modal admin: somente leitura.
-// A edição de passageiros (adicionar/remover/renomear) é feita exclusivamente
-// pelo widget aPassageirosWidget e aplicada ao Salvar — única fonte de verdade,
-// evitando divergência entre uma edição "imediata" e o estado em memória do form.
-function renderAdminOcupantesPanel(reserva){
-  if(!reserva){
-    adminOcupantesPanel.innerHTML = '';
-    return;
-  }
-  // O painel do modal não tem linha de período própria, então as etiquetas
-  // entram aqui mesmo, acima do mapa.
-  adminOcupantesPanel.innerHTML =
-    '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
-    renderOccupancyHTML(reserva);
-}
-
 // Abre o modal admin. Se reservaId for null, abre em modo criação (nome livre).
 function openAdminReservaModal(reservaId, mode){
   adminEditingId = reservaId;
@@ -306,7 +302,6 @@ function openAdminReservaModal(reservaId, mode){
     aPassageirosWidget.clear();
     aLegadoPendente = 0;
     aLegadoAvisoBox.classList.add('hidden');
-    renderAdminOcupantesPanel(null);
   } else {
     const reserva = getReservations().find(r => String(r.id) === String(reservaId));
     if(!reserva) return;
@@ -345,7 +340,6 @@ function openAdminReservaModal(reservaId, mode){
     } else {
       aLegadoAvisoBox.classList.add('hidden');
     }
-    renderAdminOcupantesPanel(reserva);
   }
 
   showAdminMobileReservationStep(1, false);
@@ -379,9 +373,7 @@ adminNovaReservaBtn.addEventListener('click', function(){
 // passageiro legado não identificado) e zera o contador — a zeragem só é
 // persistida quando o formulário for salvo.
 aConverterLegadoBtn.addEventListener('click', function(){
-  for(let i = 0; i < aLegadoPendente; i++){
-    aPassageirosWidget.addRow('');
-  }
+  aPassageirosWidget.addEmptyEntries(aLegadoPendente);
   aLegadoPendente = 0;
   aLegadoAvisoBox.classList.add('hidden');
 });
@@ -478,6 +470,14 @@ adminReservaForm.addEventListener('submit', async function(e){
   }
 
   const list = getReservations();
+  // Mesma proteção contra clique duplo dos outros dois formulários de
+  // reserva - desabilita e troca o texto do botão durante o salvamento.
+  const confirmBtn = adminReservaForm.querySelector('button[type="submit"]');
+  const confirmBtnOriginalText = confirmBtn ? confirmBtn.textContent : '';
+  if(confirmBtn){
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Salvando...';
+  }
 
   if(adminEditingId == null){
     const ownerAccount = findPassengerDirectoryUser(nome);
@@ -506,6 +506,11 @@ adminReservaForm.addEventListener('submit', async function(e){
       await hydrateDatabaseState();
       setAdminError(error.message);
       return;
+    }finally{
+      if(confirmBtn){
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = confirmBtnOriginalText;
+      }
     }
     Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
   } else {
@@ -542,6 +547,11 @@ adminReservaForm.addEventListener('submit', async function(e){
       await hydrateDatabaseState();
       setAdminError(error.message);
       return;
+    }finally{
+      if(confirmBtn){
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = confirmBtnOriginalText;
+      }
     }
   }
 

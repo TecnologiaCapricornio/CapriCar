@@ -42,7 +42,7 @@
   }
 
   .brand{
-    font-family:'Poppins',sans-serif;
+    font-family:'Plus Jakarta Sans',sans-serif;
     font-weight:800;
     font-size:1.25rem;
     background:linear-gradient(90deg,#fff,#cfe0ee);
@@ -153,19 +153,12 @@
     width:100%;
   }
 
-  .tab-panel:not(#panel-admin){
-    max-width:640px;
-  }
-
-  .tab-panel#panel-minhas{
-    max-width:1040px;
-  }
-
-  .tab-panel#panel-caronas{
-    max-width:860px;
-  }
-
-  .tab-panel#panel-calendario{
+  /* Mesma largura em todas as abas - sem isso a tela "pula" de tamanho ao
+     trocar entre Minhas Reservas/Caronas/Calendário/Nova Reserva/Gestão.
+     O card de "Nova Reserva" mantém sua própria largura de formulário mais
+     estreita (ver #panel-nova .card mais abaixo), só o contêiner da aba
+     acompanha o padrão. */
+  .tab-panel{
     max-width:1160px;
   }
 
@@ -193,6 +186,15 @@
 
   #panel-nova .card{
     padding:24px;
+  }
+
+  /* Só o card do formulário (uma coluna de campos) fica mais estreito - o
+     card de "Caronas disponíveis para este trajeto" logo abaixo aproveita a
+     largura toda da aba, igual às demais listas de reserva. */
+  #panel-nova .card:has(#reservaForm){
+    max-width:640px;
+    margin-left:auto;
+    margin-right:auto;
   }
 
   #panel-nova .card h2{
@@ -313,11 +315,13 @@
     transform:rotate(180deg) translateY(2px);
   }
 
+  /* position:fixed com top/left calculados em js/utils.js
+     (positionTimePopover) - mesmo motivo do calendário de data em
+     js/modals.js: solto do body, nunca preso à altura/rolagem de um modal.
+     z-index acima de .modal-overlay (200). */
   .time-picker-popover{
-    position:absolute;
-    z-index:120;
-    top:calc(100% + 8px);
-    left:0;
+    position:fixed;
+    z-index:300;
     width:min(360px, calc(100vw - 32px));
     padding:14px;
     border:1px solid rgba(111,168,216,.3);
@@ -408,11 +412,6 @@
     color:var(--texto-muted);
     font-size:var(--fs-sm);
     text-align:center;
-  }
-
-  .row .field:last-child .time-picker-popover{
-    right:0;
-    left:auto;
   }
 
   .my-reservations-heading{
@@ -755,9 +754,12 @@
   }
 
   /* ============ Reservation lists ============ */
+  /* auto-fill (não auto-fit): mantém a segunda coluna reservada mesmo com
+     um só item, em vez de esticá-lo pra ocupar a linha inteira - é o que
+     faz uma única reserva ocupar só metade da largura, como em "Gestão". */
   .reservations-list{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr));
+    grid-template-columns:repeat(auto-fill,minmax(min(100%,390px),1fr));
     gap:16px;
   }
 
@@ -841,24 +843,34 @@
     color:#b7cde0;
   }
 
+  /* Padrão único de "Ida/Volta" para qualquer tela que mostre o período de
+     uma reserva (Minhas Reservas, confirmação de entrada na carona, admin,
+     Caronas Disponíveis) - cada momento (Ida/Volta) ganha seu próprio
+     cartão com borda, em vez de ficar solto dentro de um bloco só. Era o
+     padrão exclusivo de .ride-card; agora é o padrão de todo mundo. */
   .reservation-period{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:7px;
-    padding:10px 12px;
+    gap:12px;
+    padding:12px;
     border-radius:12px;
-    background:rgba(255,255,255,.035);
+    background:rgba(6,22,38,.34);
   }
 
   .reservation-period > .reservation-moment{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,max-content));
+    display:flex;
+    flex-wrap:wrap;
     align-items:center;
-    gap:4px 5px;
+    gap:6px;
+    padding:10px 12px;
+    border:1px solid rgba(111,168,216,.16);
+    border-radius:10px;
+    background:rgba(255,255,255,.035);
   }
 
   .reservation-moment-label{
-    grid-column:1 / -1;
+    flex:0 0 100%;
+    margin-bottom:2px;
     color:#8fbadb;
     font-size:var(--fs-xs);
     font-weight:800;
@@ -868,8 +880,9 @@
 
   .reservation-moment-part{
     display:inline-flex;
+    flex:0 0 auto;
     align-items:center;
-    gap:5px;
+    gap:4px;
     min-width:0;
     color:#d9e9f6;
     white-space:nowrap;
@@ -877,14 +890,14 @@
 
   .reservation-moment-part strong{
     color:#f3f8fc;
-    font-size:var(--fs-sm);
+    font-size:var(--fs-xs);
     font-weight:600;
   }
 
   .reservation-moment-icon{
-    width:15px;
-    height:15px;
-    flex:0 0 15px;
+    width:13px;
+    height:13px;
+    flex:0 0 13px;
     fill:none;
     stroke:#78b8e8;
     stroke-width:2;
@@ -1066,12 +1079,16 @@
     margin-bottom:12px;
   }
 
+  /* Mesmo grid de .reservations-list (auto-fill mantém a 2ª coluna
+     reservada mesmo com uma única carona). */
   .rides-list{
-    display:flex;
-    flex-direction:column;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(min(100%,390px),1fr));
     gap:16px;
   }
 
+  /* Mesmo cartão de .reservation-item (Minhas Reservas etc.) - sem o
+     verde/azul de antes, que destoava do resto do app. */
   .ride-card{
     position:relative;
     display:flex;
@@ -1080,8 +1097,9 @@
     gap:20px;
     padding:20px 22px;
     border-radius:var(--radius-md);
-    background:linear-gradient(135deg, rgba(51,212,136,0.14), rgba(111,168,216,0.10));
-    border:1.5px solid rgba(51,212,136,0.35);
+    background:rgba(11,31,52,.55);
+    border:1px solid rgba(111,168,216,.16);
+    border-left:3px solid var(--azul-claro);
     box-shadow:0 8px 20px rgba(6,14,24,0.25);
     transition:transform .15s ease, box-shadow .2s ease;
   }
@@ -1099,43 +1117,8 @@
     width:100%;
   }
 
-  .ride-card .reservation-period{
-    gap:12px;
-    padding:12px;
-    background:rgba(6,22,38,.34);
-  }
-
-  .ride-card .reservation-period > .reservation-moment{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:6px;
-    padding:10px 12px;
-    border:1px solid rgba(111,168,216,.16);
-    border-radius:10px;
-    background:rgba(255,255,255,.035);
-  }
-
-  .ride-card .reservation-moment-label{
-    flex:0 0 100%;
-    margin-bottom:2px;
-    font-size:var(--fs-xs);
-  }
-
-  .ride-card .reservation-moment-part{
-    flex:0 0 auto;
-    gap:4px;
-  }
-
-  .ride-card .reservation-moment-part strong{
-    font-size:var(--fs-xs);
-  }
-
-  .ride-card .reservation-moment-icon{
-    width:13px;
-    height:13px;
-    flex-basis:13px;
-  }
+  /* .reservation-period/.reservation-moment já usam este mesmo visual como
+     padrão (ver acima) - nada para sobrescrever aqui. */
 
   .ride-route{
     font-weight:700;
@@ -1419,15 +1402,15 @@
   .occupant-remove-btn{
     display:grid;
     place-items:center;
-    width:18px;
-    height:18px;
+    width:24px;
+    height:24px;
     margin-left:2px;
     padding:0;
     border:none;
     border-radius:50%;
     background:rgba(239,91,106,.18);
     color:#ff9ba6;
-    font-size:13px;
+    font-size:14px;
     line-height:1;
     cursor:pointer;
   }
@@ -1435,6 +1418,84 @@
   .occupant-remove-btn:hover{
     background:rgba(239,91,106,.32);
     color:#ffb3bb;
+  }
+
+  /* ---- Ocupação editável direto no mapa (ver createInteractiveOccupancyWidget) ---- */
+  .occupant-name-btn{
+    background:none;
+    border:none;
+    padding:0;
+    margin:0;
+    font:inherit;
+    color:inherit;
+    cursor:pointer;
+  }
+
+  .occupant-name-btn:hover,
+  .occupant-name-btn:focus-visible{
+    text-decoration:underline;
+  }
+
+  .occupant-chip-editing{
+    padding:0;
+    background:none;
+    border:none;
+  }
+
+  .occupant-chip-editing .passenger-input-wrap{
+    min-width:220px;
+  }
+
+  .occupant-chip-editing input[type="text"]{
+    background:rgba(26,48,80,0.55);
+    border:1.5px solid var(--azul-claro);
+    border-radius:999px;
+    color:var(--texto);
+    padding:6px 14px;
+    font-size:var(--fs-xs);
+    width:100%;
+  }
+
+  .occupant-chip-editing input[type="text"]:focus{
+    outline:none;
+  }
+
+  .occupant-chip-add{
+    display:flex;
+    align-items:center;
+    background:transparent;
+    border:1.5px dashed rgba(111,168,216,0.45);
+    border-radius:999px;
+    color:var(--azul-claro);
+    padding:4px 12px;
+    font-size:var(--fs-xs);
+    font-weight:600;
+    cursor:pointer;
+    transition:background .2s ease, transform .15s ease;
+  }
+
+  .occupant-chip-add:hover{
+    background:rgba(111,168,216,0.1);
+    transform:translateY(-1px);
+  }
+
+  .seat-clickable{
+    cursor:pointer;
+    color:var(--success-text);
+    font-weight:700;
+    transition:filter .15s ease, transform .15s ease;
+  }
+
+  .seat-clickable:hover,
+  .seat-clickable:focus-visible{
+    filter:brightness(1.3);
+    transform:scale(1.1);
+  }
+
+  .field-hint{
+    font-size:var(--fs-xs);
+    color:var(--texto-muted);
+    margin:-2px 0 8px;
   }
 
   .occupants-unidentified{
@@ -1999,6 +2060,12 @@
     position:relative;
     width:100%;
     max-width:340px;
+    /* Sem isso, um conteúdo que cresce (ex.: o popover do calendário abrindo
+       dentro de um campo de data) faz a PÁGINA inteira ganhar uma barra de
+       rolagem esquisita pra acompanhar - com altura travada e rolagem
+       própria, o que excede fica contido dentro do card, de forma normal. */
+    max-height:calc(100dvh - 40px);
+    overflow-y:auto;
     background:var(--card-bg-solid);
     border:1px solid var(--card-border);
     border-radius:var(--radius-lg);
@@ -2010,8 +2077,14 @@
 
   .modal-close{
     position:absolute;
-    top:12px;
-    right:14px;
+    top:2px;
+    right:4px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    height:40px;
+    padding:0;
     background:none;
     border:none;
     color:var(--texto-muted);
@@ -2183,8 +2256,9 @@
    O quadro traz o mapa de lugares e, logo abaixo, quem está no veículo.
    As duas etiquetas (ocupantes e vagas) NÃO ficam aqui: elas vão na linha
    .reservation-card-chips, logo depois do quadro de datas/horários, junto
-   do selo de Motorista/Passageiro. Todas as cores vêm dos tokens, então
-   não há override de tema. */
+   do selo de Motorista/Passageiro. O fundo segue o mesmo padrão de
+   ".reservation-period" (grupo dentro do card): tom próprio no escuro,
+   sem essa diferença no claro - ver override em themes.css. */
   .occupancy{
     display:flex;
     flex-direction:column;
@@ -2194,9 +2268,8 @@
     max-width:100%;
     margin:10px 0;
     padding:12px 14px;
-    border:1px solid var(--border);
     border-radius:var(--radius-sm);
-    background:var(--surface);
+    background:rgba(6,22,38,.34);
   }
 
   .occupancy-tag{

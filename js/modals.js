@@ -134,9 +134,19 @@ const qHorarioRetiradaSelect = document.getElementById('qHorarioRetirada');
 const qHorarioDevolucaoSelect = document.getElementById('qHorarioDevolucao');
 const qMotivoInput = document.getElementById('qMotivo');
 const qRodizioWarning = document.getElementById('qRodizioWarning');
-const qPassageirosWidget = createPassengerListWidget('qPassageirosListContainer');
-
 let quickReserveContext = null; // { local, carro, dataIda }
+const qPassageirosWidget = createInteractiveOccupancyWidget('qPassageirosOccupancyWidget', {
+  getContext:function(){
+    // getCurrentUser() só existe depois que auth.js carrega, mais tarde que este
+    // script - mas o widget já renderiza (vazio) no momento em que é criado.
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    return {
+      nome:currentUser ? currentUser.nome : '',
+      partida:quickReserveContext ? quickReserveContext.local : '',
+      carro:quickReserveContext ? quickReserveContext.carro : ''
+    };
+  }
+});
 
 function refreshQuickRodizioWarning(){
   updateRodizioWarning(qRodizioWarning, {
@@ -463,12 +473,23 @@ quickReserveForm.addEventListener('submit', async function(e){
 
   const list = getReservations();
   list.push(reserva);
+  const confirmBtn = quickReserveForm.querySelector('button[type="submit"]');
+  const confirmBtnOriginalText = confirmBtn ? confirmBtn.textContent : '';
+  if(confirmBtn){
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Salvando...';
+  }
   try{
     await saveReservations(list);
   }catch(error){
     await hydrateDatabaseState();
     setQError('horarioRetirada', error.message);
     return;
+  }finally{
+    if(confirmBtn){
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = confirmBtnOriginalText;
+    }
   }
   Object.assign(reserva, getReservations().find(item => String(item.id) === String(reserva.id)) || {});
 
@@ -756,7 +777,50 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
   let viewYear, viewMonth;
   const popup = document.createElement('div');
   popup.className = 'date-popup range-style-date-popup';
-  wrapperEl.appendChild(popup);
+  // No <body>, com position:fixed calculado em JS (positionPopup) - não mais
+  // filho do wrapper. Preso dentro do modal (position:absolute relativo ao
+  // wrapper), o popup ficava sujeito à altura/rolagem do modal e cortava o
+  // calendário. Solto do body, ele flutua livre sobre qualquer coisa, sem
+  // depender de o modal ter espaço/rolagem para caber.
+  document.body.appendChild(popup);
+
+  // Reposiciona colado no input, virando para cima quando não há espaço
+  // embaixo (dentro da viewport, nunca cortado).
+  function positionPopup(){
+    const rect = inputEl.getBoundingClientRect();
+    const margin = 8;
+    const gap = 6;
+    const popupWidth = popup.offsetWidth || 292;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    let left = rect.left;
+    if(left + popupWidth > viewportW - margin) left = viewportW - popupWidth - margin;
+    if(left < margin) left = margin;
+
+    const spaceBelow = viewportH - rect.bottom - gap - margin;
+    const spaceAbove = rect.top - gap - margin;
+    const openBelow = spaceBelow >= spaceAbove;
+    const available = Math.max(120, openBelow ? spaceBelow : spaceAbove);
+
+    // Trava a altura do popup ao espaço realmente disponível na direção
+    // escolhida - se o calendário não coubesse inteiro, a versão antiga
+    // empurrava o topo pra cima até ele cobrir o próprio campo (e o clique
+    // que deveria abrir o calendário acabava "errando" o alvo e fechando
+    // tudo de novo, no mesmo gesto). Com altura travada, o que não cabe
+    // rola por dentro do popup (ver CSS) - ele nunca mais sobe/desce a
+    // ponto de tampar o campo que o abriu.
+    popup.style.maxHeight = available + 'px';
+    popup.style.overflowY = 'auto';
+
+    const popupHeight = Math.min(popup.scrollHeight, available);
+    const top = openBelow
+      ? rect.bottom + gap
+      : Math.max(margin, rect.top - gap - popupHeight);
+
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+  }
 
   function pickerTitle(){
     if(settings.title) return settings.title;
@@ -877,10 +941,17 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
     render();
     datePickers.forEach(p => { if(p !== controller) p.close(); });
     popup.classList.add('show');
+    positionPopup();
+    // Captura (3º argumento true) pra pegar rolagem de qualquer ancestral
+    // rolável (ex.: o próprio modal), não só da janela.
+    window.addEventListener('scroll', positionPopup, true);
+    window.addEventListener('resize', positionPopup);
   }
 
   function close(){
     popup.classList.remove('show');
+    window.removeEventListener('scroll', positionPopup, true);
+    window.removeEventListener('resize', positionPopup);
   }
 
   popup.addEventListener('click', function(e){
@@ -935,7 +1006,12 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
     refresh: function(){
       if(popup.classList.contains('show')) render();
     },
-    close: close
+    close: close,
+    // Expostos pro handler global de "clicar fora fecha" - o popup não é
+    // mais filho do wrapper (foi pro body), então não dá pra achar um pelo
+    // outro por containment de DOM.
+    popup: popup,
+    wrapperEl: wrapperEl
   };
 
   datePickers.push(controller);
@@ -943,10 +1019,15 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
 }
 
 document.addEventListener('click', function(e){
-  document.querySelectorAll('.date-input-wrapper').forEach(wrap => {
-    if(!wrap.contains(e.target)){
-      const popup = wrap.querySelector('.date-popup');
-      if(popup) popup.classList.remove('show');
+  // datePickers também guarda controllers de um seletor de período (range)
+  // mais antigo, que não expõe wrapperEl/popup e já cuida do próprio
+  // clique-fora sozinho (ver acima) - pular esses aqui, senão o forEach
+  // quebra no meio e os controllers seguintes (ex.: os do "Editar minha
+  // reserva") nunca chegam a ser fechados.
+  datePickers.forEach(p => {
+    if(!p.wrapperEl || !p.popup) return;
+    if(!p.wrapperEl.contains(e.target) && !p.popup.contains(e.target)){
+      p.close();
     }
   });
 });

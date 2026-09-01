@@ -26,19 +26,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
+          cache: pnpm
 
       - name: Instalar dependências
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Testes
-        run: npm test
+        run: pnpm test
 
       - name: Conferir numeração das migrations
         # Migration duplicada ou fora de ordem quebra o deploy silenciosamente:
@@ -75,20 +79,54 @@ jobs:
       PGPASSWORD: capricar-ci-only
       PGDATABASE: capricar_ci
       CAPRICAR_TEST_ADMIN_PASSWORD: ci-only-admin-password
+      # Consumidas por server/scripts/seed.js ao criar os usuários iniciais.
+      # ADMIN_INITIAL_PASSWORD precisa bater com CAPRICAR_TEST_ADMIN_PASSWORD -
+      # é a senha que o teste de integração usa para logar como admin.
+      ADMIN_INITIAL_PASSWORD: ci-only-admin-password
+      FACILITIES_INITIAL_PASSWORD: ci-only-facilities-password
 
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
+          cache: pnpm
 
       - name: Instalar dependências
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Aplicar migrations
-        run: npm run db:migrate
+        run: pnpm run db:migrate
+
+      - name: Carga inicial (usuário admin etc.)
+        run: pnpm run db:seed
+
+      - name: Iniciar servidor
+        # Em segundo plano: o teste de integração (tests/api-integration.test.js)
+        # fala com http://127.0.0.1:3000 por HTTP, não sobe o servidor sozinho.
+        run: nohup pnpm start > server.log 2>&1 &
+
+      - name: Aguardar servidor responder
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000 > /dev/null; then
+              echo "Servidor pronto."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Servidor não respondeu a tempo."
+          cat server.log
+          exit 1
 
       - name: Testes de integração
-        run: npm run test:integration
+        run: pnpm run test:integration
+
+      - name: Logs do servidor (se algo falhar antes daqui)
+        if: failure()
+        run: cat server.log
