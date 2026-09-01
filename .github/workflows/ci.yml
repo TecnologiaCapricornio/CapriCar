@@ -79,6 +79,11 @@ jobs:
       PGPASSWORD: capricar-ci-only
       PGDATABASE: capricar_ci
       CAPRICAR_TEST_ADMIN_PASSWORD: ci-only-admin-password
+      # Consumidas por server/scripts/seed.js ao criar os usuários iniciais.
+      # ADMIN_INITIAL_PASSWORD precisa bater com CAPRICAR_TEST_ADMIN_PASSWORD -
+      # é a senha que o teste de integração usa para logar como admin.
+      ADMIN_INITIAL_PASSWORD: ci-only-admin-password
+      FACILITIES_INITIAL_PASSWORD: ci-only-facilities-password
 
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +102,9 @@ jobs:
 
       - name: Aplicar migrations
         run: pnpm run db:migrate
+
+      - name: Carga inicial (usuário admin etc.)
+        run: pnpm run db:seed
 
       - name: Iniciar servidor
         # Em segundo plano: o teste de integração (tests/api-integration.test.js)
