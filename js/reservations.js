@@ -160,6 +160,10 @@ function validateMobileReservationStep(step){
     if(!dataVolta){ setError('dataVolta', 'Informe a data de volta.'); valid = false; }
     if(!retirada){ setError('horarioRetirada', 'Informe o horário de retirada.'); valid = false; }
     if(!devolucao){ setError('horarioDevolucao', 'Informe o horário de devolução.'); valid = false; }
+    if(dataIda && retirada && isReservationPickupInPast(dataIda, retirada)){
+      setError('horarioRetirada', 'Este horário já passou. Escolha um horário futuro.');
+      valid = false;
+    }
     if(dataIda && dataVolta && dataVolta < dataIda){
       setError('dataVolta', 'A data de volta deve ser igual ou posterior à data de ida.');
       valid = false;
@@ -459,7 +463,7 @@ function bindOccupantRemoveButtons(container){
           type:'warning',
           multiline:true,
           // O nome vem do cadastro, então é escapado antes de virar HTML.
-          messageHtml:'Remover <strong>' + escapeHTML(passengerName) + '</strong> desta carona? ' +
+          messageHtml:'Remover <strong>' + escapeHTML(passengerName) + '</strong> desta carona?<br>' +
             'O passageiro será avisado por notificação e e-mail.',
           inputPlaceholder:'Mensagem para ' + passengerName + ' (opcional). Ex.: preciso do lugar para levar equipamento.'
         }
@@ -603,6 +607,11 @@ function validateForm(){
     valid = false;
   }
 
+  if(!motivoInput.value.trim()){
+    setError('motivo', 'Informe o motivo da viagem.');
+    valid = false;
+  }
+
   if(!dataIda){
     setError('dataIda', 'Informe a data de ida.');
     valid = false;
@@ -710,11 +719,7 @@ form.addEventListener('submit', async function(e){
   // desabilitado, porque o estado da CNH pode ter mudado desde o carregamento
   // da tela (ex.: venceu durante a sessão aberta).
   if(typeof userCanDrive === 'function' && !userCanDrive()){
-    await showSiteAlert(
-      'Para reservar um veículo como motorista é preciso ter uma CNH válida cadastrada. ' +
-      'Abra "Meu perfil" para cadastrar a sua.',
-      { title:'CNH obrigatória', type:'warning' }
-    );
+    await showCnhRequiredAlert();
     return;
   }
 
@@ -739,6 +744,9 @@ form.addEventListener('submit', async function(e){
     else if(stepTwoHasError) showMobileReservationStep(2, true);
     return;
   }
+
+  const regrasAceitas = await openTripRulesModal();
+  if(!regrasAceitas) return;
 
   const reserva = {
     id: Date.now(),

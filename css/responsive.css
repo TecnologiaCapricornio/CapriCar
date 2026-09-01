@@ -4,18 +4,23 @@
   display:none;
 }
 
-/* A Nova Reserva usa o mesmo assistente por etapas em qualquer tamanho de tela.
-   O modal de reserva do admin só usa o assistente em telas pequenas (ver media
-   query abaixo) - no desktop ele mostra todos os campos de uma vez, então seu
-   .mobile-wizard-actions fica sem grid aqui (ver override mais abaixo). */
-#reservaForm .mobile-reservation-progress{
+/* A Nova Reserva usa o mesmo assistente por etapas em qualquer tamanho de
+   tela. O modal de reserva do admin faz o mesmo quando é o próprio usuário
+   editando a própria reserva (form ganha a classe .self-edit-wizard em
+   js/admin.js) - fora desse caso, ele só usa o assistente em telas pequenas
+   (ver media query abaixo) e mostra todos os campos de uma vez no desktop,
+   então seu .mobile-wizard-actions fica sem grid aqui (ver override mais
+   abaixo). */
+#reservaForm .mobile-reservation-progress,
+#adminReservaForm.self-edit-wizard .mobile-reservation-progress{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
   margin:12px 0 18px;
 }
 
-#reservaForm .mobile-reservation-progress span{
+#reservaForm .mobile-reservation-progress span,
+#adminReservaForm.self-edit-wizard .mobile-reservation-progress span{
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -31,7 +36,8 @@
   text-align:center;
 }
 
-#reservaForm .mobile-reservation-progress strong{
+#reservaForm .mobile-reservation-progress strong,
+#adminReservaForm.self-edit-wizard .mobile-reservation-progress strong{
   display:grid;
   place-items:center;
   width:30px;
@@ -43,13 +49,15 @@
   font-size:.78rem;
 }
 
-#reservaForm .mobile-reservation-progress span.active{
+#reservaForm .mobile-reservation-progress span.active,
+#adminReservaForm.self-edit-wizard .mobile-reservation-progress span.active{
   border-color:rgba(101,170,242,.36);
   background:rgba(82,150,218,.09);
   color:var(--texto);
 }
 
-#reservaForm .mobile-reservation-progress span.active strong{
+#reservaForm .mobile-reservation-progress span.active strong,
+#adminReservaForm.self-edit-wizard .mobile-reservation-progress span.active strong{
   border-color:#65aaf2;
   background:linear-gradient(135deg,#4f8dcc,#315982);
   color:#fff;
@@ -62,7 +70,14 @@
   display:none !important;
 }
 
-#reservaForm .mobile-wizard-actions{
+#adminReservaForm.self-edit-wizard[data-mobile-step="1"] .mobile-admin-reservation-step:not([data-admin-reservation-step="1"]),
+#adminReservaForm.self-edit-wizard[data-mobile-step="2"] .mobile-admin-reservation-step:not([data-admin-reservation-step="2"]),
+#adminReservaForm.self-edit-wizard[data-mobile-step="3"] .mobile-admin-reservation-step:not([data-admin-reservation-step="3"]){
+  display:none !important;
+}
+
+#reservaForm .mobile-wizard-actions,
+#adminReservaForm.self-edit-wizard .mobile-wizard-actions{
   display:grid;
   grid-template-columns:1fr auto 1fr;
   align-items:center;
@@ -70,7 +85,8 @@
   margin-top:10px;
 }
 
-#reservaForm .mobile-wizard-actions button{
+#reservaForm .mobile-wizard-actions button,
+#adminReservaForm.self-edit-wizard .mobile-wizard-actions button{
   width:100%;
   min-height:45px;
   margin:0;
@@ -87,15 +103,17 @@
    campos de uma vez) - por isso aqui, e só aqui, seu .mobile-wizard-actions
    vira "invisível" como caixa (display:contents) e só o botão de salvar
    aparece, como um botão comum no fim do formulário. Em telas pequenas a
-   media query abaixo assume o assistente por etapas normalmente. */
+   media query abaixo assume o assistente por etapas normalmente. Exceto
+   quando é a própria pessoa editando a própria reserva (.self-edit-wizard) -
+   aí o assistente fica ligado também no desktop, como na criação. */
 @media (min-width:721px){
-  #adminReservaForm .mobile-wizard-actions{
+  #adminReservaForm:not(.self-edit-wizard) .mobile-wizard-actions{
     display:contents;
   }
 
-  #adminReservaForm #adminReservationBackBtn,
-  #adminReservaForm #adminReservationStepLabel,
-  #adminReservaForm #adminReservationNextBtn{
+  #adminReservaForm:not(.self-edit-wizard) #adminReservationBackBtn,
+  #adminReservaForm:not(.self-edit-wizard) #adminReservationStepLabel,
+  #adminReservaForm:not(.self-edit-wizard) #adminReservationNextBtn{
     display:none;
   }
 }

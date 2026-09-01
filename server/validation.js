@@ -273,6 +273,13 @@ function validateReservations(value, context){
     const branch = text(reservation.partida, 'o local de partida', 120);
     text(reservation.destino, 'o destino', 160);
     const car = text(reservation.carro, 'o veículo', 40);
+    // Opcional aqui de propósito, mesmo o cliente agora exigindo o campo: o
+    // /sync revalida a COLEÇÃO INTEIRA a cada chamada (next = todas as
+    // reservas atuais + as alteradas, não só a mudança em questão - ver
+    // server/routes/reservations.js). Reservas antigas, criadas quando o
+    // motivo ainda era opcional, não têm esse dado - torná-lo obrigatório
+    // aqui quebraria a sincronização de QUALQUER reserva sempre que uma
+    // reserva antiga sem motivo estivesse na base.
     text(reservation.motivo, 'o motivo da viagem', 2000, false);
     text(reservation.responsavel, 'o responsável', 120, false);
     assert(validDate(reservation.dataIda) && validDate(reservation.dataVolta), 'A data da reserva é inválida.');

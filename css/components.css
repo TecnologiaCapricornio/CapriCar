@@ -1556,7 +1556,7 @@
   }
 
   /* ---- Modal de confirmação para entrar na carona ---- */
-  .join-confirm-card{
+  .modal-card.join-confirm-card{
     max-width:380px;
     text-align:left;
   }
@@ -1750,10 +1750,15 @@
   }
 
   .join-confirm-route{
-    text-align:center;
-    color:var(--texto-muted);
-    font-size:var(--fs-sm);
-    margin:-4px 0 16px;
+    margin-top:-4px;
+  }
+
+  /* O cartão de confirmação é bem mais estreito que os cards de listagem
+     (.reservation-item) de onde .reservation-period foi herdado - manter as
+     duas colunas (Ida | Volta) lado a lado aqui espreme "data" e "hora" até
+     o ícone colidir com o texto. Empilhar verticalmente evita isso. */
+  .join-confirm-route .reservation-period{
+    grid-template-columns:1fr;
   }
 
   .join-confirm-actions{
@@ -1762,15 +1767,34 @@
     margin-top:16px;
   }
 
-  .join-confirm-actions button{
+  .join-confirm-actions button,
+  .trip-rules-actions button{
     flex:1;
+  }
+
+  /* Normaliza altura/espaçamento entre .join-confirm-cancel e .submit-btn -
+     sem isso cada um herda o padding/margem do próprio componente-base
+     (button.submit-btn tem margin-top e padding maiores) e os dois botões
+     de uma mesma linha ficam com tamanhos diferentes. Mesmo padrão já usado
+     em .site-dialog-actions/.user-form-actions/.fleet-edit-actions. */
+  .join-confirm-actions .submit-btn,
+  .join-confirm-actions .join-confirm-cancel,
+  .trip-rules-actions .submit-btn,
+  .trip-rules-actions .join-confirm-cancel{
+    height:48px;
+    margin:0;
+    padding:0 12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1.2;
+    white-space:nowrap;
   }
 
   .join-confirm-cancel{
     background:rgba(169,189,209,0.12);
     color:var(--texto);
     border:1px solid rgba(210,228,245,0.2);
-    padding:12px 18px;
     font-size:var(--fs-base);
     font-weight:700;
     border-radius:var(--radius-sm);
@@ -1781,6 +1805,132 @@
   .join-confirm-cancel:hover{
     filter:brightness(1.2);
     transform:translateY(-1px);
+  }
+
+  /* ---- Modal de Regras Básicas da Viagem ---- */
+  .modal-card.trip-rules-card{
+    max-width:460px;
+    text-align:left;
+  }
+
+  .trip-rules-card h3{
+    text-align:center;
+    margin:0 0 16px;
+  }
+
+  .trip-rules-list{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin-bottom:18px;
+  }
+
+  .trip-rule{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  }
+
+  .trip-rule-icon{
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    border:1px solid transparent;
+    border-radius:12px;
+  }
+
+  .trip-rule-icon svg{
+    width:20px;
+    height:20px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .trip-rule-danger .trip-rule-icon{
+    border-color:var(--danger-border);
+    background:var(--danger-surface);
+    color:var(--danger-text);
+  }
+
+  .trip-rule-info .trip-rule-icon{
+    border-color:var(--info-border);
+    background:var(--info-surface);
+    color:var(--info-text);
+  }
+
+  .trip-rule-warning .trip-rule-icon{
+    border-color:var(--warning-border);
+    background:var(--warning-surface);
+    color:var(--warning-text);
+  }
+
+  .trip-rule-success .trip-rule-icon{
+    border-color:var(--success-border);
+    background:var(--success-surface);
+    color:var(--success-text);
+  }
+
+  .trip-rule-muted .trip-rule-icon{
+    border-color:var(--card-border);
+    background:rgba(169,189,209,0.12);
+    color:var(--texto-muted);
+  }
+
+  .trip-rule h4{
+    margin:0 0 2px;
+    font-size:var(--fs-sm);
+    color:var(--texto);
+    font-weight:700;
+  }
+
+  .trip-rule p{
+    margin:0;
+    font-size:var(--fs-xs);
+    color:var(--texto-muted);
+    line-height:1.45;
+  }
+
+  .trip-rules-agree{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding-top:14px;
+    margin-top:2px;
+    border-top:1px solid var(--card-border);
+    font-size:var(--fs-sm);
+    color:var(--texto);
+    cursor:pointer;
+  }
+
+  .trip-rules-agree input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    margin-top:2px;
+    flex:0 0 auto;
+    accent-color:var(--primary);
+    cursor:pointer;
+  }
+
+  .trip-rules-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+
+  .trip-rules-actions .submit-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
+  .trip-rules-actions .submit-btn:disabled:hover{
+    filter:none;
+    transform:none;
+    box-shadow:none;
   }
 
   .reserve-day-btn{

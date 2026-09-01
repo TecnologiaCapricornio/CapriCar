@@ -25,8 +25,7 @@ function openJoinConfirmModal(id, origin){
 
   joinConfirmContext = { id: id, origin: origin };
 
-  joinConfirmRoute.innerHTML = escapeHTML(reserva.partida) + ' → ' + escapeHTML(reserva.destino) + ' · ' +
-    getVehicleDisplayHTML(reserva) + ' · ' + escapeHTML(formatDate(reserva.dataIda)) + ' a ' + escapeHTML(formatDate(reserva.dataVolta));
+  joinConfirmRoute.innerHTML = renderReservationSummaryHTML(reserva);
   // No modal de confirmação as etiquetas vêm logo depois da linha de rota e
   // datas (joinConfirmRoute), mantendo a mesma ordem das telas de reserva.
   joinConfirmOccupants.innerHTML =
@@ -52,6 +51,9 @@ joinConfirmOkBtn.addEventListener('click', async function(){
   const { id, origin } = joinConfirmContext;
   closeJoinConfirmModal();
 
+  const regrasAceitas = await openTripRulesModal();
+  if(!regrasAceitas) return;
+
   if(origin === 'available'){
     await joinRideFromAvailable(id);
   } else if(origin === 'calendar'){
@@ -59,6 +61,55 @@ joinConfirmOkBtn.addEventListener('click', async function(){
   } else {
     await joinRide(id);
   }
+});
+
+/* =========================================================
+   Modal de Regras Básicas da Viagem
+   Gate de aceite antes de criar uma reserva ou entrar como
+   passageiro numa existente - reutilizado nos 3 pontos de entrada
+   (form principal, reserva rápida, "Entrar na carona").
+   ========================================================= */
+const tripRulesModal = document.getElementById('tripRulesModal');
+const tripRulesCloseBtn = document.getElementById('tripRulesCloseBtn');
+const tripRulesCancelBtn = document.getElementById('tripRulesCancelBtn');
+const tripRulesConfirmBtn = document.getElementById('tripRulesConfirmBtn');
+const tripRulesCheckbox = document.getElementById('tripRulesCheckbox');
+
+document.querySelectorAll('#tripRulesModal [data-rule-icon]').forEach(function(el){
+  const icon = TRIP_RULE_ICONS[el.getAttribute('data-rule-icon')];
+  if(icon) el.innerHTML = icon;
+});
+
+let tripRulesResolve = null;
+
+// Promise<boolean> - resolve(true) só quando o usuário confirma com a
+// caixa marcada; qualquer outra saída (cancelar, X, clique fora) resolve false.
+function openTripRulesModal(){
+  tripRulesCheckbox.checked = false;
+  tripRulesConfirmBtn.disabled = true;
+  tripRulesModal.classList.remove('hidden');
+  return new Promise(resolve => { tripRulesResolve = resolve; });
+}
+
+function finishTripRulesModal(accepted){
+  tripRulesModal.classList.add('hidden');
+  if(tripRulesResolve){
+    const resolve = tripRulesResolve;
+    tripRulesResolve = null;
+    resolve(accepted);
+  }
+}
+
+tripRulesCheckbox.addEventListener('change', function(){
+  tripRulesConfirmBtn.disabled = !tripRulesCheckbox.checked;
+});
+tripRulesCloseBtn.addEventListener('click', () => finishTripRulesModal(false));
+tripRulesCancelBtn.addEventListener('click', () => finishTripRulesModal(false));
+tripRulesConfirmBtn.addEventListener('click', function(){
+  if(tripRulesCheckbox.checked) finishTripRulesModal(true);
+});
+tripRulesModal.addEventListener('click', function(e){
+  if(e.target === tripRulesModal) finishTripRulesModal(false);
 });
 
 calPrevBtn.addEventListener('click', function(){
@@ -209,6 +260,16 @@ function openQuickReserveModal(dataIda, selectedRange){
     return;
   }
 
+  // Mesma trava de CNH da tela "Nova Reserva" - avisa já ao tentar abrir o
+  // atalho pelo calendário, em vez de deixar preencher o formulário inteiro.
+  if(
+    typeof getLicenseState === 'function' && getLicenseState() !== null &&
+    typeof userCanDrive === 'function' && !userCanDrive()
+  ){
+    showCnhRequiredAlert();
+    return;
+  }
+
   const info = getSelectedCarInfo();
   if(!info) return;
 
@@ -316,6 +377,11 @@ quickReserveForm.addEventListener('submit', async function(e){
     valid = false;
   }
 
+  if(!motivo){
+    setQError('motivo', 'Informe o motivo da viagem.');
+    valid = false;
+  }
+
   if(!dataVolta){
     setQError('dataVolta', 'Informe a data de volta.');
     valid = false;
@@ -372,6 +438,9 @@ quickReserveForm.addEventListener('submit', async function(e){
   }
 
   if(!valid) return;
+
+  const regrasAceitas = await openTripRulesModal();
+  if(!regrasAceitas) return;
 
   const reserva = {
     id: Date.now(),

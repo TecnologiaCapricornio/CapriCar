@@ -443,6 +443,15 @@ function switchTab(tabName){
         type:'warning'
       });
       tabName = 'minhas';
+    } else if(
+      typeof getLicenseState === 'function' && getLicenseState() !== null &&
+      typeof userCanDrive === 'function' && !userCanDrive()
+    ){
+      // Sem CNH válida a tela nem chega a abrir - mesmo padrão da devolução
+      // pendente logo acima, e não só um aviso com o formulário liberado
+      // por trás dele.
+      showCnhRequiredAlert();
+      tabName = 'minhas';
     }
   }
   appScreen.classList.toggle('calendar-mobile-view', tabName === 'calendario');

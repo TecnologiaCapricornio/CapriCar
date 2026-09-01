@@ -36,6 +36,17 @@ function userCanDrive(){
     (currentLicenseState.status === 'valida' || currentLicenseState.status === 'vencendo');
 }
 
+// Mesmo aviso usado nos dois pontos que bloqueiam por CNH: ao tentar abrir
+// "Nova Reserva" (js/auth.js, switchTab) e, como rede de segurança, no envio
+// do formulário (js/reservations.js) - a CNH pode vencer no meio da sessão.
+function showCnhRequiredAlert(){
+  return showSiteAlert(
+    'Para reservar um veículo como motorista é preciso ter uma CNH válida cadastrada. ' +
+    'Abra "Meu perfil" para cadastrar a sua.',
+    { title:'CNH obrigatória', type:'warning' }
+  );
+}
+
 function fileToDataUrl(file){
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

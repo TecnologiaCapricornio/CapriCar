@@ -450,12 +450,12 @@
   box-shadow:0 0 0 4px rgba(51,212,136,.12);
 }
 
-.operation-card{
+.modal-card.operation-card{
   max-width:460px;
   text-align:left;
 }
 
-.fleet-edit-card{
+.modal-card.fleet-edit-card{
   max-width:560px;
   text-align:left;
 }
@@ -500,8 +500,8 @@
   display:none;
 }
 
-.vehicle-delete-card,
-.user-delete-card{
+.modal-card.vehicle-delete-card,
+.modal-card.user-delete-card{
   max-width:520px;
   text-align:left;
 }
