@@ -196,4 +196,10 @@ async function hydrateDatabaseState(){
   }
   databaseHydrated = true;
   syncFleetGlobals();
+  // Reidrata reservas/veículos/bloqueios direto no localStorage, sem passar
+  // por saveReservations/saveVehicles/saveVehicleBlocks - por isso precisa
+  // invalidar aqui também, senão uma recomendação calculada antes da
+  // reidratação (ex.: outra pessoa criou uma reserva nesse meio tempo)
+  // ficaria presa em cache.
+  if(typeof invalidateVehicleRecommendationCache === 'function') invalidateVehicleRecommendationCache();
 }

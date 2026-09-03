@@ -80,6 +80,8 @@ module.exports = [
     languageOptions:{ sourceType:'commonjs', ecmaVersion:2022, globals:nodeGlobals }
   },
   {
-    ignores:['node_modules/**', 'backups/**', 'server/uploads/**', 'output/**']
+    // .claude/worktrees: checkouts de outras sessões/branches que o Claude Code
+    // cria ao lado deste repo - têm seu próprio lint (ou nenhum), não o nosso.
+    ignores:['node_modules/**', 'backups/**', 'server/uploads/**', 'output/**', '.claude/**']
   }
 ];

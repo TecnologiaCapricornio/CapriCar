@@ -206,7 +206,6 @@ function refreshQuickAvailableTimeOptions(){
   if(qDataVoltaInput.value && !availability.pickup.length){
     setQError('horarioRetirada', 'Não há horários disponíveis para este carro no período selecionado.');
   }
-  syncAllTimePickerControls();
 }
 
 function setQError(fieldId, message){
@@ -283,6 +282,11 @@ function openQuickReserveModal(dataIda, selectedRange){
   const info = getSelectedCarInfo();
   if(!info) return;
 
+  if(typeof checkCnhCategoriaParaVeiculo === 'function' &&
+    !checkCnhCategoriaParaVeiculo(getVehicle(info.local, info.carro))){
+    return;
+  }
+
   quickReserveContext = { local: info.local, carro: info.carro, dataIda: dataIda };
 
   quickReserveSummary.innerHTML = 'Origem: ' + escapeHTML(info.local) +
@@ -313,7 +317,6 @@ function openQuickReserveModal(dataIda, selectedRange){
     }
   }
 
-  syncAllTimePickerControls();
   refreshQuickRodizioWarning();
   quickReserveModal.classList.remove('hidden');
 }
@@ -510,265 +513,6 @@ quickReserveForm.addEventListener('submit', async function(e){
    (bloqueio agora é por carro específico, não por rota)
    ========================================================= */
 const datePickers = [];
-
-function createReservationRangePicker(startInput, endInput, triggerEl, calendarEl, getUnavailableSetFn, options){
-  const settings = options || {};
-  let viewYear;
-  let viewMonth;
-  const startLabel = triggerEl.querySelector('[data-range-start-label]') || document.getElementById('rangeStartLabel');
-  const endLabel = triggerEl.querySelector('[data-range-end-label]') || document.getElementById('rangeEndLabel');
-  const pickerContainer = settings.containerEl || triggerEl.closest('.range-picker-field') || triggerEl.parentElement;
-  const hint = pickerContainer.querySelector('[data-range-hint]') || document.getElementById('rangePickerHint');
-
-  function syncView(){
-    const source = startInput.value || todayISO();
-    const [year, month] = source.split('-').map(Number);
-    viewYear = year;
-    viewMonth = month - 1;
-  }
-
-  function shortDate(iso){
-    if(!iso) return 'Selecionar data';
-    const [year, month, day] = iso.split('-').map(Number);
-    return day + ' ' + MESES[month - 1].slice(0, 3).toLowerCase() + ' ' + year;
-  }
-
-  function dispatchDateChange(input){
-    input.dispatchEvent(new Event('input', { bubbles:true }));
-    input.dispatchEvent(new Event('change', { bubbles:true }));
-  }
-
-  function rangeContainsUnavailable(start, end, unavailable){
-    let found = false;
-    eachDateISOInRange(start, end, iso => {
-      if(unavailable.has(iso)) found = true;
-    });
-    return found;
-  }
-
-  function updateSummary(){
-    startLabel.textContent = shortDate(startInput.value);
-    endLabel.textContent = shortDate(endInput.value);
-    triggerEl.classList.toggle('has-selection', !!startInput.value);
-
-    const rules = getReservationRules();
-    const maxRangeDays = settings.maxRangeDays === null
-      ? null
-      : (typeof settings.maxRangeDays === 'function' ? settings.maxRangeDays() : (settings.maxRangeDays || rules.maxConsecutiveDays));
-    if(!startInput.value){
-      hint.textContent = settings.emptyHint || 'Selecione a data de ida e depois a data de volta.';
-    } else if(!endInput.value){
-      hint.textContent = settings.selectEndHint || (maxRangeDays
-        ? 'Agora selecione o fim — período máximo de ' + maxRangeDays + ' dias.'
-        : 'Agora selecione a data final do período.');
-    } else {
-      const total = daysBetweenInclusive(startInput.value, endInput.value);
-      hint.textContent = total + (total === 1 ? ' dia selecionado.' : ' dias selecionados.');
-    }
-  }
-
-  function render(){
-    updateSummary();
-    const availability = getUnavailableSetFn();
-    const unavailable = availability instanceof Set ? availability : (availability.unavailable || new Set());
-    const occupied = availability instanceof Set ? new Set() : (availability.occupied || new Set());
-    const rules = getReservationRules();
-    const today = todayISO();
-    const maxAdvanceDays = settings.maxAdvanceDays === null
-      ? null
-      : (typeof settings.maxAdvanceDays === 'function' ? settings.maxAdvanceDays() : (settings.maxAdvanceDays || rules.maxAdvanceDays));
-    const maxRangeDays = settings.maxRangeDays === null
-      ? null
-      : (typeof settings.maxRangeDays === 'function' ? settings.maxRangeDays() : (settings.maxRangeDays || rules.maxConsecutiveDays));
-    const advanceLimit = maxAdvanceDays == null ? null : addDaysISO(today, maxAdvanceDays);
-    const selectingEnd = !!startInput.value && !endInput.value;
-    const maxEnd = selectingEnd && maxRangeDays ? addDaysISO(startInput.value, maxRangeDays - 1) : null;
-    const startTitle = settings.startTitle || 'Escolha a ida';
-    const endTitle = settings.endTitle || 'Escolha a volta';
-    const startSubtitle = typeof settings.startSubtitle === 'function'
-      ? settings.startSubtitle()
-      : (settings.startSubtitle || (maxAdvanceDays == null ? 'Selecione a data inicial' : 'Até ' + maxAdvanceDays + ' dias de antecedência'));
-    const endSubtitle = typeof settings.endSubtitle === 'function'
-      ? settings.endSubtitle()
-      : (settings.endSubtitle || (maxRangeDays == null ? 'Selecione a data final' : 'Até ' + maxRangeDays + ' dias consecutivos'));
-
-    let html =
-      '<div class="range-calendar-topline">' +
-        '<div><strong>' + escapeHTML(selectingEnd ? endTitle : startTitle) + '</strong>' +
-        '<span>' + escapeHTML(selectingEnd ? endSubtitle : startSubtitle) + '</span></div>' +
-      '</div>' +
-      '<div class="range-calendar-header">' +
-        '<button type="button" class="range-calendar-nav" data-range-nav="prev" aria-label="Mês anterior">‹</button>' +
-        '<strong>' + MESES[viewMonth] + ' de ' + viewYear + '</strong>' +
-        '<button type="button" class="range-calendar-nav" data-range-nav="next" aria-label="Próximo mês">›</button>' +
-      '</div>' +
-      '<div class="range-calendar-grid">';
-
-    DIAS_SEMANA.forEach(day => {
-      html += '<span class="range-calendar-weekday">' + day.charAt(0) + '</span>';
-    });
-
-    const firstWeekday = new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay();
-    const totalDays = daysInMonth(viewYear, viewMonth);
-    const previousDays = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1);
-
-    for(let index = 0; index < 42; index++){
-      const offset = index - firstWeekday + 1;
-      let day;
-      let year;
-      let monthIndex;
-      let otherMonth = false;
-
-      if(offset < 1){
-        day = previousDays + offset;
-        monthIndex = viewMonth === 0 ? 11 : viewMonth - 1;
-        year = viewMonth === 0 ? viewYear - 1 : viewYear;
-        otherMonth = true;
-      } else if(offset > totalDays){
-        day = offset - totalDays;
-        monthIndex = viewMonth === 11 ? 0 : viewMonth + 1;
-        year = viewMonth === 11 ? viewYear + 1 : viewYear;
-        otherMonth = true;
-      } else {
-        day = offset;
-        monthIndex = viewMonth;
-        year = viewYear;
-      }
-
-      const iso = isoFromParts(year, monthIndex, day);
-      const isPast = !otherMonth && settings.allowPast !== true && iso < today;
-      const isUnavailable = !otherMonth && unavailable.has(iso);
-      const hasOccupiedTimes = !otherMonth && !isUnavailable && occupied.has(iso);
-      const isBeyondAdvance = !otherMonth && advanceLimit && (!selectingEnd || iso < startInput.value) && iso > advanceLimit;
-      const isAfterMaxEnd = !otherMonth && maxEnd && selectingEnd && iso >= startInput.value && iso > maxEnd;
-      const crossesUnavailable = !otherMonth && selectingEnd && iso >= startInput.value &&
-        rangeContainsUnavailable(startInput.value, iso, unavailable);
-      const disabled = otherMonth || isPast || isUnavailable || isBeyondAdvance || isAfterMaxEnd || crossesUnavailable;
-      const isStart = iso === startInput.value;
-      const isEnd = iso === endInput.value;
-      const hasFullRange = startInput.value && endInput.value && startInput.value !== endInput.value;
-      const inRange = hasFullRange && iso >= startInput.value && iso <= endInput.value;
-
-      let classes = 'range-calendar-day';
-      if(otherMonth) classes += ' other-month';
-      if(isPast || isBeyondAdvance || isAfterMaxEnd || crossesUnavailable) classes += ' disabled';
-      if(isUnavailable) classes += ' unavailable';
-      if(hasOccupiedTimes) classes += ' partially-unavailable';
-      if(iso === today) classes += ' today';
-      if(inRange) classes += ' in-range';
-      if(isStart) classes += ' range-start';
-      if(isEnd) classes += ' range-end';
-
-      const availabilityLabel = isUnavailable
-        ? ' — indisponível'
-        : (hasOccupiedTimes ? ' — possui horários ocupados' : '');
-
-      html += '<button type="button" class="' + classes + '" data-range-iso="' + iso + '"' +
-        (disabled ? ' disabled' : '') + ' aria-label="' + day + ' de ' + MESES[monthIndex] + ' de ' + year +
-        availabilityLabel + '">' +
-        '<span>' + day + '</span></button>';
-    }
-
-    html += '</div>' +
-      '<div class="range-calendar-legend">' +
-        '<span><i class="range-legend-dot selected"></i>Período</span>' +
-        '<span><i class="range-legend-dot partially-unavailable"></i>Horários ocupados</span>' +
-        '<span><i class="range-legend-dot unavailable"></i>Indisponível</span>' +
-      '</div>' +
-      '<div class="range-calendar-actions">' +
-        '<button type="button" class="range-clear-btn" data-range-action="clear">Limpar</button>' +
-        '<button type="button" class="range-apply-btn" data-range-action="close"' + (!endInput.value ? ' disabled' : '') + '>Aplicar período</button>' +
-      '</div>';
-
-    calendarEl.innerHTML = html;
-  }
-
-  function open(){
-    syncView();
-    render();
-    calendarEl.classList.remove('hidden');
-    triggerEl.setAttribute('aria-expanded', 'true');
-  }
-
-  function close(){
-    calendarEl.classList.add('hidden');
-    triggerEl.setAttribute('aria-expanded', 'false');
-  }
-
-  triggerEl.addEventListener('click', function(){
-    if(calendarEl.classList.contains('hidden')) open();
-    else close();
-  });
-
-  calendarEl.addEventListener('click', function(e){
-    // O calendário é renderizado novamente após cada ação. Sem interromper a
-    // propagação, o alvo removido deixa de pertencer ao campo e o listener
-    // global interpreta o clique como externo, fechando o seletor.
-    e.stopPropagation();
-
-    const nav = e.target.closest('[data-range-nav]');
-    if(nav){
-      if(nav.getAttribute('data-range-nav') === 'prev'){
-        viewMonth--;
-        if(viewMonth < 0){ viewMonth = 11; viewYear--; }
-      } else {
-        viewMonth++;
-        if(viewMonth > 11){ viewMonth = 0; viewYear++; }
-      }
-      render();
-      return;
-    }
-
-    const action = e.target.closest('[data-range-action]');
-    if(action){
-      if(action.getAttribute('data-range-action') === 'clear'){
-        startInput.value = '';
-        endInput.value = '';
-        dispatchDateChange(startInput);
-        dispatchDateChange(endInput);
-        syncView();
-        render();
-      } else if(endInput.value){
-        close();
-      }
-      return;
-    }
-
-    const dayButton = e.target.closest('[data-range-iso]');
-    if(!dayButton || dayButton.disabled) return;
-    const iso = dayButton.getAttribute('data-range-iso');
-
-    if(!startInput.value || endInput.value){
-      startInput.value = iso;
-      endInput.value = '';
-    } else if(iso < startInput.value){
-      startInput.value = iso;
-      endInput.value = '';
-    } else {
-      endInput.value = iso;
-    }
-    dispatchDateChange(startInput);
-    dispatchDateChange(endInput);
-    render();
-  });
-
-  document.addEventListener('click', function(e){
-    if(!calendarEl.classList.contains('hidden') && !pickerContainer.contains(e.target)){
-      close();
-    }
-  });
-
-  const controller = {
-    refresh:function(){
-      updateSummary();
-      if(!calendarEl.classList.contains('hidden')) render();
-    },
-    close:close
-  };
-  datePickers.push(controller);
-  updateSummary();
-  return controller;
-}
 
 function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
   if(!inputEl || !wrapperEl) return null;
@@ -1120,45 +864,6 @@ createDatePicker(
   { title:'Escolha a data', subtitle:'Selecione uma data para filtrar', allowPast:true, showBlockedLegend:false }
 );
 
-const blockStartDateInput = document.getElementById('blockStart');
-const blockEndDateInput = document.getElementById('blockEnd');
-createReservationRangePicker(
-  blockStartDateInput,
-  blockEndDateInput,
-  document.getElementById('blockRangePickerTrigger'),
-  document.getElementById('blockRangeCalendar'),
-  () => new Set(),
-  {
-    maxAdvanceDays:null,
-    maxRangeDays:null,
-    startTitle:'Escolha o início',
-    endTitle:'Escolha o fim',
-    startSubtitle:'Data inicial do bloqueio',
-    endSubtitle:'Data final do bloqueio',
-    emptyHint:'Selecione o início e depois o fim do bloqueio.'
-  }
-);
-
-const reportStartDateInput = document.getElementById('reportStart');
-const reportEndDateInput = document.getElementById('reportEnd');
-createReservationRangePicker(
-  reportStartDateInput,
-  reportEndDateInput,
-  document.getElementById('reportRangePickerTrigger'),
-  document.getElementById('reportRangeCalendar'),
-  () => new Set(),
-  {
-    allowPast:true,
-    maxAdvanceDays:null,
-    maxRangeDays:null,
-    startTitle:'Escolha a data inicial',
-    endTitle:'Escolha a data final',
-    startSubtitle:'Início do período do relatório',
-    endSubtitle:'Fim do período do relatório',
-    emptyHint:'Selecione a data inicial e depois a data final.'
-  }
-);
-
 function getAdminUnavailableDates(){
   const adminDeparture = document.getElementById('aPartida');
   const adminVehicle = document.getElementById('aCarro');
@@ -1211,6 +916,8 @@ createDatePicker(adminEndDatePickerInput, document.getElementById('wrap-aDataVol
   blockedLegend:'Indisponível para este carro'
 });
 
+const blockStartDateInput = document.getElementById('blockStart');
+const blockEndDateInput = document.getElementById('blockEnd');
 blockStartDateInput.addEventListener('change', function(){
   if(blockEndDateInput.value && blockEndDateInput.value < this.value){
     blockEndDateInput.value = '';

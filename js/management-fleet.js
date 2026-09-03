@@ -28,6 +28,9 @@ const fleetEditVehiclePlateInput = document.getElementById('fleetEditVehiclePlat
 const fleetEditVehicleBrandInput = document.getElementById('fleetEditVehicleBrand');
 const fleetEditVehicleModelInput = document.getElementById('fleetEditVehicleModel');
 const fleetEditVehicleCapacityInput = document.getElementById('fleetEditVehicleCapacity');
+const fleetEditVehicleTypeSelect = document.getElementById('fleetEditVehicleType');
+const fleetEditVehicleCostCenterInput = document.getElementById('fleetEditVehicleCostCenter');
+const fleetEditVehicleRentedInput = document.getElementById('fleetEditVehicleRented');
 const fleetEditError = document.getElementById('fleetEditError');
 const vehicleDeleteModal = document.getElementById('vehicleDeleteModal');
 const vehicleDeleteForm = document.getElementById('vehicleDeleteForm');
@@ -45,6 +48,20 @@ let fleetEditType = null;
 let fleetEditId = null;
 let vehicleDeleteId = null;
 let branchDeleteId = null;
+
+// O teto de capacidade depende do tipo (ver SEAT_LAYOUTS em js/seat-map.js -
+// o mapa de lugares não desenha nada além disso). Ajusta o max do campo e
+// reduz o valor já digitado se ele passar do novo teto.
+if(vehicleTypeSelect && vehicleCapacityInput){
+  vehicleCapacityInput.max = String(seatLayoutFor(vehicleTypeSelect.value).capacidadeMaxima);
+  vehicleTypeSelect.addEventListener('change', function(){
+    const capacidadeMaxima = seatLayoutFor(vehicleTypeSelect.value).capacidadeMaxima;
+    vehicleCapacityInput.max = String(capacidadeMaxima);
+    if(Number(vehicleCapacityInput.value) > capacidadeMaxima){
+      vehicleCapacityInput.value = String(capacidadeMaxima);
+    }
+  });
+}
 
 function closeFleetEditModal(){
   fleetEditModal.classList.add('hidden');
@@ -89,11 +106,26 @@ function openVehicleEditModal(vehicleId){
   fleetEditVehiclePlateInput.value = vehicle.placa || '';
   fleetEditVehicleBrandInput.value = getVehicleBrand(vehicle);
   fleetEditVehicleModelInput.value = getVehicleModelName(vehicle);
+  fleetEditVehicleCapacityInput.max = String(seatLayoutFor(vehicle.tipo).capacidadeMaxima);
   fleetEditVehicleCapacityInput.value = vehicle.capacidade || CAPACIDADE_MAXIMA;
+  fleetEditVehicleTypeSelect.value = vehicle.tipo || 'carro';
+  fleetEditVehicleCostCenterInput.value = vehicle.centroCusto || '';
+  fleetEditVehicleRentedInput.checked = !!vehicle.alugado;
   fleetEditError.textContent = '';
   fleetEditModal.classList.remove('hidden');
   fleetEditVehiclePlateInput.focus();
 }
+
+// Mesmo ajuste de teto de capacidade ao trocar o tipo que o formulário de
+// cadastro já faz (ver topo do arquivo) - só que aqui reage ao <select> do
+// modal de edição.
+fleetEditVehicleTypeSelect.addEventListener('change', function(){
+  const capacidadeMaxima = seatLayoutFor(fleetEditVehicleTypeSelect.value).capacidadeMaxima;
+  fleetEditVehicleCapacityInput.max = String(capacidadeMaxima);
+  if(Number(fleetEditVehicleCapacityInput.value) > capacidadeMaxima){
+    fleetEditVehicleCapacityInput.value = String(capacidadeMaxima);
+  }
+});
 
 function closeVehicleDeleteModal(){
   vehicleDeleteModal.classList.add('hidden');
@@ -285,8 +317,12 @@ fleetEditForm.addEventListener('submit', function(e){
     const modelo = fleetEditVehicleModelInput.value.trim();
     const placa = fleetEditVehiclePlateInput.value.trim().toUpperCase();
     const capacidade = Number(fleetEditVehicleCapacityInput.value);
-    if(!vehicle || !local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > 20){
-      fleetEditError.textContent = 'Preencha local, placa, marca, modelo e uma capacidade entre 1 e 20.';
+    const tipo = fleetEditVehicleTypeSelect.value;
+    const alugado = fleetEditVehicleRentedInput.checked;
+    const centroCusto = fleetEditVehicleCostCenterInput.value.trim();
+    const capacidadeMaxima = seatLayoutFor(tipo).capacidadeMaxima;
+    if(!vehicle || !local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > capacidadeMaxima){
+      fleetEditError.textContent = 'Preencha local, placa, marca, modelo e uma capacidade entre 1 e ' + capacidadeMaxima + '.';
       return;
     }
     if(list.some(item =>
@@ -302,6 +338,9 @@ fleetEditForm.addEventListener('submit', function(e){
     vehicle.modelo = modelo;
     vehicle.placa = placa;
     vehicle.capacidade = capacidade;
+    vehicle.tipo = tipo;
+    vehicle.alugado = alugado;
+    vehicle.centroCusto = centroCusto;
     saveVehicles(list);
     if(oldLocal !== local){
       const blocksUpdated = getVehicleBlocks();
@@ -512,8 +551,10 @@ if(vehicleForm){
     const marca = vehicleBrandInput.value.trim();
     const modelo = vehicleModelInput.value.trim();
     const capacidade = Number(vehicleCapacityInput.value);
-    if(!local || !placa || !marca || !modelo || !Number.isFinite(capacidade) || capacidade < 1){
-      await showSiteAlert('Preencha local, placa, marca, modelo e capacidade.', {
+    const tipoSelecionado = vehicleTypeSelect ? vehicleTypeSelect.value : 'carro';
+    const capacidadeMaxima = seatLayoutFor(tipoSelecionado).capacidadeMaxima;
+    if(!local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > capacidadeMaxima){
+      await showSiteAlert('Preencha local, placa, marca, modelo e uma capacidade entre 1 e ' + capacidadeMaxima + '.', {
         title:'Revise os dados do veículo',
         type:'warning'
       });
@@ -555,6 +596,7 @@ if(vehicleForm){
     logAudit('cadastrou', 'veículo', vehicle.id,
       local + ' · ' + vehicle.marca + ' ' + vehicle.modelo + ' · ' + placa);
     vehicleForm.reset();
+    vehicleCapacityInput.max = String(seatLayoutFor('carro').capacidadeMaxima);
     vehicleCapacityInput.value = '5';
     if(vehicleTypeSelect) vehicleTypeSelect.value = 'carro';
     renderFleetManagement();

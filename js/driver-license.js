@@ -19,6 +19,9 @@ const cnhErrorEl = document.getElementById('cnhError');
 const cnhAlertEl = document.getElementById('cnhAlert');
 const cnhDriveBadge = document.getElementById('cnhDriveBadge');
 const cnhRemoverBtn = document.getElementById('cnhRemoverBtn');
+const cnhCategoriaPreviewEl = document.getElementById('cnhCategoriaPreview');
+const cnhCategoriaGuiaBtn = document.getElementById('cnhCategoriaGuiaBtn');
+const cnhCategoriaLegendEl = document.getElementById('cnhCategoriaLegend');
 
 const MAX_CNH_PHOTO_BYTES = 1024 * 1024;
 
@@ -45,6 +48,30 @@ function showCnhRequiredAlert(){
     'Abra "Meu perfil" para cadastrar a sua.',
     { title:'CNH obrigatória', type:'warning' }
   );
+}
+
+// Mesma checagem de categoria vs. capacidade usada em js/reservations.js
+// (lá como erro inline no campo do carro), aqui como diálogo - o atalho de
+// reserva rápida não tem um campo de carro próprio para anexar o erro.
+function checkCnhCategoriaParaVeiculo(vehicle){
+  if(!vehicle || typeof cnhAtendeCapacidade !== 'function') return true;
+  const licenseState = typeof getLicenseState === 'function' ? getLicenseState() : null;
+  // licenseState null = a CNH ainda não terminou de carregar (loadDriverLicense
+  // roda em segundo plano, sem esperar em showApp) - nesse instante ainda não dá
+  // pra saber a categoria, então não bloqueia (mesmo critério de
+  // refreshDriverGate, em js/reservations.js). Sem isto, tentar reservar rápido
+  // demais pelo calendário logo após o login acusava falta de CNH mesmo para
+  // quem já tem uma cadastrada.
+  if(licenseState === null) return true;
+  const categoria = licenseState.cnh ? licenseState.cnh.categoria : '';
+  if(cnhAtendeCapacidade(categoria, vehicle.capacidade)) return true;
+  const minima = cnhCategoriaMinimaPara(vehicle.capacidade);
+  showSiteAlert(
+    'Este veículo (' + vehicle.capacidade + ' lugares) exige CNH categoria ' + minima + ' ou superior.' +
+    (categoria ? ' Sua CNH é categoria ' + categoria + '.' : ' Cadastre sua CNH em "Meu perfil".'),
+    { title:'Categoria da CNH insuficiente', type:'warning' }
+  );
+  return false;
 }
 
 function fileToDataUrl(file){
@@ -76,6 +103,16 @@ function renderDriveBadge(state){
   cnhDriveBadge.textContent = podeDirigir ? 'Pode dirigir' : 'Apenas passageiro';
 }
 
+// Ícone + veículos permitidos da categoria escolhida - atualiza tanto ao
+// carregar uma CNH já salva quanto a cada troca no <select>, antes mesmo de
+// salvar (ver listener mais abaixo).
+function renderCategoriaPreview(categoria){
+  if(!cnhCategoriaPreviewEl) return;
+  cnhCategoriaPreviewEl.innerHTML = typeof cnhCategoriaPreviewHTML === 'function'
+    ? cnhCategoriaPreviewHTML(categoria)
+    : '';
+}
+
 function renderPhotoState(el, enviada, userId, lado){
   if(!el) return;
   if(!enviada){
@@ -102,6 +139,7 @@ function renderLicense(state){
 
   cnhNumeroInput.value = cnh ? cnh.numero : '';
   cnhCategoriaSelect.value = cnh ? cnh.categoria : '';
+  renderCategoriaPreview(cnhCategoriaSelect.value);
   cnhValidadeInput.value = cnh ? cnh.validade : '';
   cnhFrenteInput.value = '';
   cnhVersoInput.value = '';
@@ -179,6 +217,24 @@ if(cnhForm){
     }catch(error){
       cnhErrorEl.textContent = error.message;
     }
+  });
+}
+
+if(cnhCategoriaSelect){
+  cnhCategoriaSelect.addEventListener('change', function(){
+    renderCategoriaPreview(cnhCategoriaSelect.value);
+  });
+}
+
+if(cnhCategoriaGuiaBtn && cnhCategoriaLegendEl){
+  cnhCategoriaGuiaBtn.addEventListener('click', function(){
+    const abrindo = cnhCategoriaLegendEl.classList.contains('hidden');
+    if(abrindo && !cnhCategoriaLegendEl.dataset.populated){
+      cnhCategoriaLegendEl.innerHTML = typeof cnhCategoriaLegendHTML === 'function' ? cnhCategoriaLegendHTML() : '';
+      cnhCategoriaLegendEl.dataset.populated = '1';
+    }
+    cnhCategoriaLegendEl.classList.toggle('hidden', !abrindo);
+    cnhCategoriaGuiaBtn.textContent = abrindo ? 'Ocultar guia de categorias' : 'Ver guia de categorias';
   });
 }
 

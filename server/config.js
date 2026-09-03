@@ -47,5 +47,23 @@ function ssoConfig(){
   };
 }
 
-module.exports = { databaseConfig, appConfig, ssoConfig };
+const LOGIN_METHOD_VALUES = ['local', 'entra', 'both'];
+
+// Controla quais métodos de login ficam disponíveis (e, portanto, visíveis
+// na tela de login) - independente de o Entra ID estar ou não configurado.
+// Valores aceitos: "local" (só usuário/senha), "entra" (só Microsoft) ou
+// "both" (os dois, padrão - mantém o comportamento anterior a esta
+// variável existir). Um valor desconhecido cai em "both" em vez de travar
+// o login de todo mundo por um typo no .env.
+function loginMethodConfig(){
+  const raw = String(process.env.LOGIN_METHOD || 'both').trim().toLowerCase();
+  const method = LOGIN_METHOD_VALUES.includes(raw) ? raw : 'both';
+  return {
+    method,
+    localEnabled:method !== 'entra',
+    entraEnabled:method !== 'local'
+  };
+}
+
+module.exports = { databaseConfig, appConfig, ssoConfig, loginMethodConfig };
 

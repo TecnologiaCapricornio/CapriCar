@@ -207,6 +207,42 @@ test('recusa veículo bloqueado e excesso de ocupantes', () => {
   );
 });
 
+test('recusa CNH de categoria insuficiente para a capacidade do veículo', () => {
+  const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
+  const licensesByUserId = new Map([['u1', { categoria:'B' }]]);
+  assert.throws(
+    () => validateReservations(
+      [reservation({ carro:'99', criadorUsuarioId:'u1' })],
+      context({ vehicles:onibus, licensesByUserId })
+    ),
+    /categoria D/
+  );
+});
+
+test('aceita CNH de categoria D para veículo de mais de 8 lugares, e categoria C para até 8', () => {
+  const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
+  assert.doesNotThrow(() => validateReservations(
+    [reservation({ carro:'99', criadorUsuarioId:'u1' })],
+    context({ vehicles:onibus, licensesByUserId:new Map([['u1', { categoria:'D' }]]) })
+  ));
+  assert.doesNotThrow(() => validateReservations(
+    [reservation({ criadorUsuarioId:'u1' })],
+    context({ licensesByUserId:new Map([['u1', { categoria:'C' }]]) })
+  ));
+});
+
+test('sem conta vinculada ou sem CNH cadastrada, a checagem de categoria é pulada', () => {
+  const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
+  assert.doesNotThrow(() => validateReservations(
+    [reservation({ carro:'99' })],
+    context({ vehicles:onibus })
+  ));
+  assert.doesNotThrow(() => validateReservations(
+    [reservation({ carro:'99', criadorUsuarioId:'u1' })],
+    context({ vehicles:onibus, licensesByUserId:new Map([['u1', { categoria:'' }]]) })
+  ));
+});
+
 test('recusa marcação HTML e identificadores duplicados', () => {
   assert.throws(
     () => validateReservations([

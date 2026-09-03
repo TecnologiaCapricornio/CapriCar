@@ -17,13 +17,13 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/variables.css?v=20260901-1">
-  <link rel="stylesheet" href="css/base.css?v=20260901-3">
-  <link rel="stylesheet" href="css/components.css?v=20260901-9">
-  <link rel="stylesheet" href="css/calendar.css?v=20260901-1">
-  <link rel="stylesheet" href="css/admin.css?v=20260831-5">
-  <link rel="stylesheet" href="css/responsive.css?v=20260831-1">
-  <link rel="stylesheet" href="css/themes.css?v=20260901-5">
+  <link rel="stylesheet" href="css/variables.css?v=20260903-1">
+  <link rel="stylesheet" href="css/base.css?v=20260903-1">
+  <link rel="stylesheet" href="css/components.css?v=20260903-6">
+  <link rel="stylesheet" href="css/calendar.css?v=20260903-1">
+  <link rel="stylesheet" href="css/admin.css?v=20260903-1">
+  <link rel="stylesheet" href="css/responsive.css?v=20260903-3">
+  <link rel="stylesheet" href="css/themes.css?v=20260903-4">
 </head>
 
 <body>
@@ -46,6 +46,9 @@
       <img src="assets/icone-capricornio.png?v=20260831-1" alt="CapriCar" class="login-logo">
       <h1>CapriCar</h1>
       <div class="login-sub">Gestão da frota corporativa</div>
+      <div class="notice notice-danger hidden" id="loginMethodsUnavailable">
+        Nenhum método de login está disponível no momento. Contate o administrador do sistema.
+      </div>
       <form id="loginForm" novalidate>
         <div class="field" id="field-loginNome">
           <label for="loginNome">Usuário</label>
@@ -137,10 +140,18 @@
             <path d="M20.2 15.3A8.5 8.5 0 0 1 8.7 3.8 8.7 8.7 0 1 0 20.2 15.3Z"></path>
           </svg>
         </button>
-        <button type="button" class="profile-btn" id="profileBtn">
-          <span class="avatar" id="avatarInitials">--</span>
-          <span id="headerUserName">Usuário</span>
-        </button>
+        <div class="profile-menu-center" id="profileMenuCenter">
+          <button type="button" class="profile-btn" id="profileBtn" aria-haspopup="menu" aria-expanded="false"
+            aria-controls="profileMenuPanel">
+            <span class="avatar" id="avatarInitials">--</span>
+            <span id="headerUserName">Usuário</span>
+          </button>
+          <div class="profile-menu-panel hidden" id="profileMenuPanel" role="menu" aria-label="Menu do perfil">
+            <button type="button" class="profile-menu-item" id="profileMenuCnhBtn" role="menuitem">Minha CNH</button>
+            <button type="button" class="profile-menu-item profile-menu-item-danger" id="logoutBtn"
+              role="menuitem">Sair</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -192,7 +203,7 @@
 
             <div class="field hidden mobile-reservation-step" id="field-carro" data-reservation-step="1">
               <label for="carro">Veículo</label>
-              <select id="carro" name="carro" aria-describedby="error-carro">
+              <select id="carro" name="carro" data-styled-select-manual aria-describedby="error-carro">
                 <option value="">Selecione...</option>
               </select>
               <div class="error-msg" role="alert" id="error-carro"></div>
@@ -285,7 +296,10 @@
                 <circle cx="17" cy="8" r="2.6" stroke="#9be9c4" stroke-width="1.8" />
                 <path d="M14.8 13.7c2.6.3 4.7 2.5 4.7 5.3" stroke="#9be9c4" stroke-width="1.8" stroke-linecap="round" />
               </svg>
-              Caronas disponíveis para este trajeto
+              <div class="rides-header-text">
+                <strong>Reservas próximas com carona disponível</strong>
+                <span>Que tal otimizar a sua viagem e aproveitar uma carona?</span>
+              </div>
             </div>
             <div class="rides-list" id="ridesList"></div>
           </div>
@@ -304,10 +318,11 @@
             </div>
             <div class="field hidden" id="calendarVehicleFilter">
               <label for="calendarVehicleSelect">Veículo</label>
-              <select id="calendarVehicleSelect"></select>
+              <select id="calendarVehicleSelect" data-styled-select-manual></select>
             </div>
           </div>
           <div class="car-selector hidden" id="carSelector"></div>
+          <div class="calendar-vehicle-legend hidden" id="calendarVehicleLegend"></div>
 
           <div class="calendar-nav">
             <button type="button" class="calendar-today-btn" id="calTodayBtn">Hoje</button>
@@ -568,7 +583,7 @@
                   </div>
                   <div class="field">
                     <label for="vehicleCapacity">Capacidade</label>
-                    <input type="number" id="vehicleCapacity" min="1" max="20" value="5">
+                    <input type="number" id="vehicleCapacity" min="1" max="8" value="5">
                   </div>
                 </div>
                 <div class="row">
@@ -618,20 +633,15 @@
                     </select>
                   </div>
                 </div>
-                <div class="field range-picker-field" id="field-blockPeriod">
-                  <label for="blockRangePickerTrigger">Período do bloqueio</label>
-                  <button type="button" class="range-picker-trigger" id="blockRangePickerTrigger" aria-expanded="false">
-                    <span class="range-picker-value"><span class="range-picker-caption">Início</span><strong
-                        data-range-start-label>Selecionar data</strong></span>
-                    <span class="range-picker-arrow">→</span>
-                    <span class="range-picker-value"><span class="range-picker-caption">Fim</span><strong
-                        data-range-end-label>Selecionar data</strong></span>
-                    <span class="range-picker-icon" aria-hidden="true">▦</span>
-                  </button>
-                  <input type="hidden" id="blockStart">
-                  <input type="hidden" id="blockEnd">
-                  <div class="reservation-range-calendar hidden" id="blockRangeCalendar"></div>
-                  <div class="range-picker-hint" data-range-hint>Selecione o início e depois o fim do bloqueio.</div>
+                <div class="row admin-filter-row">
+                  <div class="field">
+                    <label for="blockStart">Data inicial</label>
+                    <input type="date" id="blockStart">
+                  </div>
+                  <div class="field">
+                    <label for="blockEnd">Data final</label>
+                    <input type="date" id="blockEnd">
+                  </div>
                 </div>
                 <div class="field">
                   <label for="blockNotes">Observações</label>
@@ -724,20 +734,15 @@
                   <input type="text" id="reportUser" placeholder="Todos">
                 </div>
               </div>
-              <div class="field range-picker-field" id="field-reportPeriod">
-                <label for="reportRangePickerTrigger">Período do relatório</label>
-                <button type="button" class="range-picker-trigger" id="reportRangePickerTrigger" aria-expanded="false">
-                  <span class="range-picker-value"><span class="range-picker-caption">De</span><strong
-                      data-range-start-label>Selecionar data</strong></span>
-                  <span class="range-picker-arrow">→</span>
-                  <span class="range-picker-value"><span class="range-picker-caption">Até</span><strong
-                      data-range-end-label>Selecionar data</strong></span>
-                  <span class="range-picker-icon" aria-hidden="true">▦</span>
-                </button>
-                <input type="hidden" id="reportStart">
-                <input type="hidden" id="reportEnd">
-                <div class="reservation-range-calendar hidden" id="reportRangeCalendar"></div>
-                <div class="range-picker-hint" data-range-hint>Selecione a data inicial e depois a data final.</div>
+              <div class="row">
+                <div class="field">
+                  <label for="reportStart">Data inicial</label>
+                  <input type="date" id="reportStart">
+                </div>
+                <div class="field">
+                  <label for="reportEnd">Data final</label>
+                  <input type="date" id="reportEnd">
+                </div>
               </div>
               <div class="field">
                 <label class="permission-option">
@@ -1181,7 +1186,6 @@
       <button type="button" class="modal-close" id="profileCloseBtn" aria-label="Fechar">&times;</button>
       <div class="profile-avatar-lg" id="profileAvatarLg">--</div>
       <h3 id="profileName"></h3>
-      <div class="form-hint" id="profileRole"></div>
 
       <section class="profile-cnh">
         <div class="profile-cnh-head">
@@ -1212,6 +1216,10 @@
             </div>
           </div>
 
+          <div id="cnhCategoriaPreview"></div>
+          <button type="button" class="cnh-categoria-guia-btn" id="cnhCategoriaGuiaBtn">Ver guia de categorias</button>
+          <div id="cnhCategoriaLegend" class="hidden"></div>
+
           <div class="row">
             <div class="field">
               <label for="cnhFrente">Foto da frente</label>
@@ -1237,8 +1245,6 @@
           </div>
         </form>
       </section>
-
-      <button type="button" class="danger-btn" id="logoutBtn">Sair</button>
     </div>
   </div>
 
@@ -1416,7 +1422,7 @@
 
         <div class="field mobile-admin-reservation-step" id="afield-carro" data-admin-reservation-step="1">
           <label for="aCarro">Veículo</label>
-          <select id="aCarro" aria-describedby="error-aCarro">
+          <select id="aCarro" data-styled-select-manual aria-describedby="error-aCarro">
             <option value="">Selecione...</option>
           </select>
           <div class="error-msg" role="alert" id="error-aCarro"></div>
@@ -1524,7 +1530,28 @@
           <div class="row">
             <div class="field">
               <label for="fleetEditVehicleCapacity">Capacidade</label>
-              <input type="number" id="fleetEditVehicleCapacity" min="1" max="20">
+              <input type="number" id="fleetEditVehicleCapacity" min="1" max="48">
+            </div>
+            <div class="field">
+              <label for="fleetEditVehicleType">Tipo</label>
+              <select id="fleetEditVehicleType">
+                <option value="carro">Carro</option>
+                <option value="van">Van</option>
+                <option value="onibus">Ônibus</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="fleetEditVehicleCostCenter">Centro de custo (opcional)</label>
+              <input type="text" id="fleetEditVehicleCostCenter" maxlength="60" placeholder="Ex.: 1010"
+                autocomplete="off">
+            </div>
+            <div class="field">
+              <label>Propriedade</label>
+              <label class="permission-option">
+                <input type="checkbox" id="fleetEditVehicleRented"> Veículo alugado
+              </label>
             </div>
           </div>
         </div>
@@ -1661,6 +1688,7 @@
           <div class="field">
             <label>Categoria</label>
             <div class="field-value" id="userViewCnhCategoria"></div>
+            <div id="userViewCnhCategoriaPreview"></div>
           </div>
           <div class="field">
             <label>Validade</label>
@@ -1872,37 +1900,40 @@
   </div>
 
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
-  <script src="js/config.js?v=20260831-1"></script>
+  <script src="js/cnh-categorias.js?v=20260901-1"></script>
+  <script src="js/config.js?v=20260901-2"></script>
   <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260901-2"></script>
+  <script src="js/utils.js?v=20260903-1"></script>
+  <script src="js/styled-select.js?v=20260902-1"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
-  <script src="js/api.js?v=20260831-1"></script>
-  <script src="js/storage.js?v=20260831-1"></script>
+  <script src="js/api.js?v=20260902-1"></script>
+  <script src="js/storage.js?v=20260902-1"></script>
+  <script src="js/vehicle-recommendation.js?v=20260902-3"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
-  <script src="js/seat-map.js?v=20260831-2"></script>
-  <script src="js/rides.js?v=20260901-2"></script>
-  <script src="js/reservations.js?v=20260901-2"></script>
-  <script src="js/calendar.js?v=20260831-2"></script>
-  <script src="js/modals.js?v=20260901-5"></script>
-  <script src="js/admin.js?v=20260901-2"></script>
+  <script src="js/seat-map.js?v=20260902-1"></script>
+  <script src="js/rides.js?v=20260902-5"></script>
+  <script src="js/reservations.js?v=20260903-1"></script>
+  <script src="js/calendar.js?v=20260902-3"></script>
+  <script src="js/modals.js?v=20260903-1"></script>
+  <script src="js/admin.js?v=20260903-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260826-2"></script>
   <script src="js/management-config.js?v=20260826-2"></script>
-  <script src="js/management-users.js?v=20260901-1"></script>
+  <script src="js/management-users.js?v=20260901-2"></script>
   <script src="js/management-integrations.js?v=20260831-4"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
   <script src="js/management-email-preview.js?v=20260831-3"></script>
-  <script src="js/management-fleet.js?v=20260831-1"></script>
+  <script src="js/management-fleet.js?v=20260902-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <script src="js/management-indicators.js?v=20260831-1"></script>
   <script src="js/management-reports.js?v=20260831-1"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
-  <script src="js/driver-license.js?v=20260831-2"></script>
-  <script src="js/auth.js?v=20260901-1"></script>
-  <script src="js/app.js?v=20260826-3"></script>
+  <script src="js/driver-license.js?v=20260902-1"></script>
+  <script src="js/auth.js?v=20260903-1"></script>
+  <script src="js/app.js?v=20260903-1"></script>
 
 </body>
 

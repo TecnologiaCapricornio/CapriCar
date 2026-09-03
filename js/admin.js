@@ -28,6 +28,16 @@ const aPartidaSelect = document.getElementById('aPartida');
 const aDestinoSelect = document.getElementById('aDestino');
 const aDestinoOutroInput = document.getElementById('aDestinoOutro');
 const aCarroSelect = document.getElementById('aCarro');
+// Mesma etiqueta "Recomendado" do campo Veículo da tela de Nova Reserva
+// (ver js/reservations.js) - toda tela de criação/edição de reserva segue a
+// mesma lógica, independentemente de quem está reservando.
+let aCarroRecommendedCodigo = null;
+const aCarroStyledSelect = createStyledSelect(aCarroSelect, {
+  optionExtra: function(optionEl){
+    if(!optionEl.value || optionEl.value !== String(aCarroRecommendedCodigo || '')) return '';
+    return '<span class="recommended-badge">Recomendado</span>';
+  }
+});
 const aDataIdaInput = document.getElementById('aDataIda');
 const aDataVoltaInput = document.getElementById('aDataVolta');
 const aHorarioRetiradaSelect = document.getElementById('aHorarioRetirada');
@@ -112,10 +122,23 @@ function populateAdminCarroOptions(){
   const partida = aPartidaSelect.value;
   const carros = getVehicles().filter(v => v.ativo !== false && v.local === partida);
   const currentCarro = aCarroSelect.value;
+  aCarroRecommendedCodigo = null;
   aCarroSelect.innerHTML = '<option value="">Selecione...</option>' +
     carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(getVehicleFullModel(v)) + (v.placa ? ' · ' + escapeHTML(v.placa) : '') + '</option>').join('');
   if(carros.some(v => String(v.codigo) === String(currentCarro))){
     aCarroSelect.value = currentCarro;
+  }
+
+  if(typeof getRecommendedVehicleCodigoForBranch !== 'function' || !carros.length) return;
+  const applyRecommendation = () => {
+    if(aPartidaSelect.value !== partida) return;
+    aCarroRecommendedCodigo = getRecommendedVehicleCodigoForBranch(partida);
+    aCarroStyledSelect.sync();
+  };
+  if(typeof window.requestIdleCallback === 'function'){
+    window.requestIdleCallback(applyRecommendation, { timeout:300 });
+  } else {
+    setTimeout(applyRecommendation, 0);
   }
 }
 
@@ -343,7 +366,6 @@ function openAdminReservaModal(reservaId, mode){
   }
 
   showAdminMobileReservationStep(1, false);
-  syncAllTimePickerControls();
   refreshDatePickers();
   refreshAdminRodizioWarning();
   adminReservaModal.classList.remove('hidden');
@@ -414,6 +436,20 @@ adminReservaForm.addEventListener('submit', async function(e){
   if(!destino){ setAdminFieldError('destino', 'Selecione ou informe o destino.'); valid = false; }
   if(destino && partida && destino === partida){ setAdminFieldError('destino', 'O destino deve ser diferente da partida.'); valid = false; }
   if(!carro){ setAdminFieldError('carro', 'Selecione o veículo.'); valid = false; }
+  // Só dá pra checar aqui quando quem dirige é quem está logado (edição da
+  // própria reserva) - o admin criando/editando para outra pessoa não tem a
+  // CNH de quem mais no navegador; a validação de verdade pra esse caso é a
+  // do servidor (server/validation.js).
+  if(carro && vehicle && reservationEditMode === 'self' && typeof cnhAtendeCapacidade === 'function'){
+    const licenseState = typeof getLicenseState === 'function' ? getLicenseState() : null;
+    const categoria = licenseState && licenseState.cnh ? licenseState.cnh.categoria : '';
+    if(!cnhAtendeCapacidade(categoria, vehicle.capacidade)){
+      const minima = cnhCategoriaMinimaPara(vehicle.capacidade);
+      setAdminFieldError('carro', 'Este veículo (' + vehicle.capacidade + ' lugares) exige CNH categoria ' + minima +
+        ' ou superior.' + (categoria ? ' Sua CNH é categoria ' + categoria + '.' : ' Cadastre sua CNH em "Meu perfil".'));
+      valid = false;
+    }
+  }
   if(!motivo){ setAdminFieldError('motivo', 'Informe o motivo da viagem.'); valid = false; }
   if(!dataIda){ setAdminFieldError('dataIda', 'Informe a data de ida.'); valid = false; }
   if(!dataVolta){ setAdminFieldError('dataVolta', 'Informe a data de volta.'); valid = false; }
@@ -580,47 +616,19 @@ function populateAdminFilters(){
 populateAdminFilters();
 
 function renderAdminReservationItem(res){
-  const ocupantes = getOcupantes(res);
-  const capacidade = getVehicleCapacity(res);
   const completed = isReservationCompleted(res);
   const operacao = res.operacao || {};
-  const statusClass = completed
-    ? 'status-completed'
-    : (operacao.retirada ? 'status-in-use' : 'status-waiting');
-  const administrativelyClosed = normalizeReservationStatus(res.status) === 'encerrada_administrativamente';
-  const statusLabel = administrativelyClosed
-    ? 'Encerrada pela gestão'
-    : completed
-    ? 'Concluída'
-    : (operacao.retirada ? 'Em uso' : 'Confirmada');
+  const extraStatusBadgeHTML = reservationHasOperationReport(res)
+    ? '<span class="operation-report-badge" title="Avarias ou fotos registradas">⚠️ Avaria/foto</span>'
+    : '';
+  const actionsHTML =
+    (!completed && !operacao.retirada ? '<button type="button" class="edit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
+    (!completed && operacao.retirada && !operacao.devolucao ? '<button type="button" class="delete-btn admin-force-close-btn" data-id="' + escapeHTML(res.id) + '">Encerrar administrativamente</button>' : '') +
+    (!completed && !operacao.retirada ? '<button class="delete-btn admin-delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '');
+
   const item = document.createElement('div');
   item.className = 'reservation-item' + (completed ? ' reservation-history-item' : '');
-  item.innerHTML =
-    '<div class="reservation-info">' +
-      '<div class="reservation-card-top">' +
-        '<div>' +
-          '<div class="reservation-route">' + renderReservationNumber(res) + escapeHTML(res.partida) + ' &rarr; ' + escapeHTML(res.destino) + '</div>' +
-          '<div class="reservation-vehicle">' + getVehicleDisplayHTML(res) + '</div>' +
-        '</div>' +
-        '<span class="reservation-card-badges">' +
-          '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
-          (reservationHasOperationReport(res)
-            ? '<span class="operation-report-badge" title="Avarias ou fotos registradas">⚠️ Avaria/foto</span>'
-            : '') +
-        '</span>' +
-      '</div>' +
-      '<div class="reservation-details reservation-period">' + renderReservationPeriod(res) + '</div>' +
-      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(res) + '</div>' +
-      '<div class="reservation-name">Solicitante: ' + escapeHtml(res.nome) + '</div>' +
-      '<div class="reservation-business">' + escapeHTML(res.motivo || 'Motivo não informado') + '</div>' +
-      renderOccupancyHTML(res) +
-      renderOperationDetails(res) +
-    '</div>' +
-    '<div class="reservation-actions">' +
-      (!completed && !operacao.retirada ? '<button type="button" class="edit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
-      (!completed && operacao.retirada && !operacao.devolucao ? '<button type="button" class="delete-btn admin-force-close-btn" data-id="' + escapeHTML(res.id) + '">Encerrar administrativamente</button>' : '') +
-      (!completed && !operacao.retirada ? '<button class="delete-btn admin-delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '') +
-    '</div>';
+  item.innerHTML = renderReservationCardHTML(res, { actionsHTML: actionsHTML, extraStatusBadgeHTML: extraStatusBadgeHTML });
   return item;
 }
 

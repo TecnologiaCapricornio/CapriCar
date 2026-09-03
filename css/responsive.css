@@ -279,33 +279,6 @@
     max-height:calc(100dvh - 160px - env(safe-area-inset-top, 0px));
   }
 
-  .time-picker-popover{
-    position:fixed;
-    z-index:1500;
-    top:auto;
-    right:12px;
-    bottom:max(12px, env(safe-area-inset-bottom, 0px));
-    left:12px;
-    width:auto;
-    max-height:min(68dvh, 470px);
-    padding:16px;
-    border-radius:20px;
-  }
-
-  .row .field:last-child .time-picker-popover{
-    right:12px;
-    left:12px;
-  }
-
-  .time-picker-options{
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    max-height:min(52dvh, 330px);
-  }
-
-  .time-picker-option{
-    min-height:44px;
-    font-size:.88rem;
-  }
 }
 
 @media (max-width:480px){
@@ -488,14 +461,12 @@
     flex:1 1 130px;
   }
 
-  .reservation-item,
-  .ride-card{
+  .reservation-item{
     flex-direction:column;
     align-items:stretch;
   }
 
-  .reservation-actions,
-  .ride-actions{
+  .reservation-actions{
     width:100%;
     flex-flow:row wrap;
     align-items:center;

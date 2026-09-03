@@ -23,7 +23,7 @@
     color:#d7e9f7;
     font:inherit;
     font-size:.8rem;
-    font-weight:750;
+    font-weight:600;
     cursor:pointer;
   }
 
@@ -41,7 +41,7 @@
     padding:8px 15px;
     border-radius:var(--radius-sm);
     color:var(--texto);
-    font-weight:700;
+    font-weight:600;
     transition:background .2s, color .2s;
   }
 
@@ -95,7 +95,7 @@
     padding:10px 4px;
     color:#7594ad;
     font-size:var(--fs-2xs);
-    font-weight:750;
+    font-weight:600;
   }
 
   .week-day-header{
@@ -118,7 +118,7 @@
     margin-bottom:4px;
     color:#8faac0;
     font-size:var(--fs-2xs);
-    font-weight:800;
+    font-weight:700;
     letter-spacing:.08em;
   }
 
@@ -169,7 +169,7 @@
 
   .week-time-label.full-hour{
     color:#9bb6cb;
-    font-weight:700;
+    font-weight:600;
   }
 
   .week-days{
@@ -224,6 +224,12 @@
   }
 
   .week-reservation-event{
+    /* Cor por veículo (js/calendar.js define --event-* inline quando o
+       local tem mais de um veículo e nenhum está selecionado sozinho) -
+       o azul aqui é só o padrão de fora dessa condição. */
+    --event-accent:#7bc4f1;
+    --event-bg-1:rgba(58,106,149,.97);
+    --event-bg-2:rgba(39,80,115,.97);
     position:absolute;
     z-index:5;
     left:4px;
@@ -234,10 +240,10 @@
     min-height:25px;
     padding:5px 7px;
     overflow:hidden;
-    border:1px solid rgba(125,192,239,.72);
-    border-left:4px solid #7bc4f1;
+    border:1px solid var(--event-accent);
+    border-left:4px solid var(--event-accent);
     border-radius:7px;
-    background:linear-gradient(135deg,rgba(58,106,149,.97),rgba(39,80,115,.97));
+    background:linear-gradient(135deg,var(--event-bg-1),var(--event-bg-2));
     color:#fff;
     text-align:left;
     font:inherit;
@@ -263,7 +269,7 @@
     max-width:100%;
     overflow:hidden;
     font-size:var(--fs-2xs);
-    font-weight:750;
+    font-weight:600;
     line-height:1.2;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -285,16 +291,16 @@
 
   .week-reservation-event .calendar-event-id{
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
   }
 
   .week-reservation-event .calendar-event-route{
-    font-weight:800;
+    font-weight:700;
   }
 
   .week-reservation-event .calendar-event-vehicle{
     color:#d9edf9;
-    font-weight:700;
+    font-weight:600;
   }
 
   .week-reservation-event .calendar-event-requester{
@@ -397,7 +403,7 @@
   .calendar-weekday{
     text-align:center;
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
     color:#8fbadb;
     padding-bottom:4px;
   }
@@ -431,7 +437,7 @@
     background:rgba(111,168,216,0.18);
     border-color:var(--azul-claro);
     cursor:pointer;
-    font-weight:700;
+    font-weight:600;
   }
 
   .calendar-day.has-reservation:hover{
@@ -457,7 +463,7 @@
     background:var(--azul-claro);
     color:#fff;
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
     padding:1px 6px;
     border-radius:10px;
     min-width:16px;
@@ -493,35 +499,25 @@
   }
 
   .day-details-title{
-    font-weight:700;
+    font-weight:600;
     color:#fff;
     margin-bottom:10px;
     font-size:0.92rem;
   }
 
-  .day-detail-item{
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    gap:14px;
-    border:1px solid rgba(111,168,216,.16);
-    border-left:3px solid var(--azul-claro);
-    background:rgba(11,31,52,.55);
-    padding:17px 18px;
-    border-radius:var(--radius-md);
+  /* .day-detail-item foi removido: o painel de dia do calendário agora
+     reaproveita .reservation-item (mesmo cartão de Minhas Reservas) para
+     que o layout seja idêntico nas duas telas. Só a margem entre cartões
+     e o destaque de "focado" (ao navegar de um evento do calendário até
+     a reserva) continuam específicos daqui. */
+  .calendar-day-details .reservation-item{
     margin-bottom:12px;
-    font-size:0.85rem;
   }
 
-  .day-detail-item.focused{
+  .reservation-item.focused{
     border-color:var(--azul-claro);
     border-left-color:var(--azul-claro);
     box-shadow:0 0 0 3px rgba(111,168,216,.14);
-  }
-
-  .day-detail-item .reservation-more-content .occupants-block{
-    margin-top:5px;
-    margin-bottom:0;
   }
 
   /* ---- Seletor de local/veículo no Calendário ---- */
@@ -566,10 +562,35 @@
 
   .car-tab-city{
     font-size:0.76rem;
-    font-weight:700;
+    font-weight:600;
     text-transform:uppercase;
     letter-spacing:0.4px;
     opacity:0.85;
+  }
+
+  /* Aparece só quando o filtro de veículo está em "Selecione..." (todos os
+     veículos do local) e há mais de um - explica as cores das reservas na
+     grade (ver CALENDAR_VEHICLE_COLORS em js/calendar.js). */
+  .calendar-vehicle-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 16px;
+    margin:-6px 0 14px;
+    font-size:var(--fs-2xs);
+    color:var(--texto-muted);
+  }
+
+  .calendar-vehicle-legend-item{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .calendar-vehicle-legend-dot{
+    display:inline-block;
+    width:10px;
+    height:10px;
+    border-radius:3px;
   }
 
   .car-tab-btn:disabled{
@@ -604,23 +625,6 @@
     margin-bottom:4px;
   }
 
-  .join-day-btn{
-    background:linear-gradient(135deg, var(--verde), #1f9d64);
-    color:#0f2417;
-    border:none;
-    padding:10px 18px;
-    font-size:0.85rem;
-    font-weight:700;
-    border-radius:999px;
-    cursor:pointer;
-    transition:transform .15s ease, filter .2s ease;
-  }
-
-  .join-day-btn:hover{
-    filter:brightness(1.08);
-    transform:translateY(-1px);
-  }
-
 /* ---- Popup de seleção de data (bloqueio de datas ocupadas) ---- */
   /* position:fixed com top/left calculados em js/modals.js (positionPopup) -
      flutua solto do body, então nunca fica preso à altura/rolagem de um
@@ -648,7 +652,7 @@
     justify-content:space-between;
     align-items:center;
     margin-bottom:8px;
-    font-weight:700;
+    font-weight:600;
     color:#fff;
     font-size:0.88rem;
     text-transform:capitalize;
@@ -678,7 +682,7 @@
     font-size:var(--fs-2xs);
     color:var(--texto-muted);
     text-align:center;
-    font-weight:700;
+    font-weight:600;
     padding:2px 0;
   }
 
@@ -719,7 +723,7 @@
   .date-popup-day.selected{
     background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
     color:#fff;
-    font-weight:700;
+    font-weight:600;
   }
 
   .date-popup-legend{
@@ -782,7 +786,7 @@
     color:var(--azul-claro);
     padding:6px 13px;
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
     cursor:pointer;
   }
 
@@ -945,7 +949,7 @@
     color:#91a9bd;
     text-align:center;
     font-size:var(--fs-2xs);
-    font-weight:800;
+    font-weight:700;
   }
 
   .mobile-month-day{
@@ -1021,7 +1025,7 @@
     background:rgba(58,106,149,.72);
     color:#fff;
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
     line-height:1.25;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -1031,7 +1035,7 @@
     padding-left:4px;
     color:#9fc3df;
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
   }
 
   .mobile-calendar-add{
@@ -1050,6 +1054,11 @@
     line-height:1;
     box-shadow:0 12px 28px rgba(4,15,27,.48);
     cursor:pointer;
+  }
+
+  .mobile-calendar-add:disabled{
+    opacity:.5;
+    cursor:not-allowed;
   }
 
   .mobile-month-mode + .calendar-legend{
@@ -1108,7 +1117,7 @@
   .mobile-day-top span{
     color:#84a3bc;
     font-size:var(--fs-2xs);
-    font-weight:800;
+    font-weight:700;
     text-transform:uppercase;
     letter-spacing:.08em;
   }
@@ -1246,7 +1255,7 @@
   .mobile-selection-sheet span{
     color:#8ba8be;
     font-size:var(--fs-2xs);
-    font-weight:750;
+    font-weight:600;
   }
 
   .mobile-selection-sheet strong{
@@ -1267,7 +1276,7 @@
     border-radius:999px;
     font:inherit;
     font-size:var(--fs-2xs);
-    font-weight:800;
+    font-weight:700;
     cursor:pointer;
   }
 
@@ -1331,7 +1340,7 @@
 .range-picker-caption{
   color:var(--texto-muted);
   font-size:var(--fs-2xs);
-  font-weight:700;
+  font-weight:600;
   text-transform:uppercase;
   letter-spacing:.06em;
 }
@@ -1460,7 +1469,7 @@
   color:#8fa7bd;
   text-align:center;
   font-size:var(--fs-2xs);
-  font-weight:800;
+  font-weight:700;
   text-transform:uppercase;
 }
 
@@ -1566,7 +1575,7 @@
   background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
   color:#fff;
   box-shadow:0 7px 18px rgba(58,106,149,.48);
-  font-weight:800;
+  font-weight:700;
 }
 
 .range-calendar-legend{
@@ -1616,7 +1625,7 @@
   padding:7px 12px;
   border-radius:999px;
   font-size:var(--fs-2xs);
-  font-weight:750;
+  font-weight:600;
   cursor:pointer;
 }
 

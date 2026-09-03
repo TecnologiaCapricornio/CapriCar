@@ -15,6 +15,7 @@ function getReservations(){
 function saveReservations(list, options){
   const previous = getReservations();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  if(typeof invalidateVehicleRecommendationCache === 'function') invalidateVehicleRecommendationCache();
   return typeof syncReservations === 'function'
     ? syncReservations(previous, list, options)
     : Promise.resolve({ localOnly:true, reservations:list });
@@ -60,6 +61,7 @@ function getVehicles(){
 function saveVehicles(list){
   writeCollection(VEHICLES_KEY, list);
   syncFleetGlobals();
+  if(typeof invalidateVehicleRecommendationCache === 'function') invalidateVehicleRecommendationCache();
   return typeof queueCollectionSync === 'function'
     ? queueCollectionSync('vehicles', list)
     : Promise.resolve();
@@ -71,6 +73,7 @@ function getVehicleBlocks(){
 
 function saveVehicleBlocks(list){
   writeCollection(BLOCKS_KEY, list);
+  if(typeof invalidateVehicleRecommendationCache === 'function') invalidateVehicleRecommendationCache();
   return typeof queueCollectionSync === 'function'
     ? queueCollectionSync('blocks', list)
     : Promise.resolve();

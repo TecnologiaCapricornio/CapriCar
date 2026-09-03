@@ -14,6 +14,7 @@ const WEEK_DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
 let TODOS_CARROS = [];
 let calSelectedCarKey = null;
+let calSelectedBranch = null;
 let calSelectedISO = null;
 let calWeekStartISO = startOfCalendarWeek(todayISO());
 let calendarDragState = null;
@@ -28,6 +29,17 @@ const carSelector = document.getElementById('carSelector');
 const calendarBranchSelect = document.getElementById('calendarBranchSelect');
 const calendarVehicleFilter = document.getElementById('calendarVehicleFilter');
 const calendarVehicleSelect = document.getElementById('calendarVehicleSelect');
+// Mesma etiqueta "Recomendado" da tela de Nova Reserva (ver js/reservations.js) -
+// aqui a chave da <option> é "local|codigo" (carKey), não só o código, por
+// isso comparamos contra a chave já montada, não contra o valor bruto.
+let calendarVehicleRecommendedKey = null;
+const calendarVehicleStyledSelect = createStyledSelect(calendarVehicleSelect, {
+  optionExtra: function(optionEl){
+    if(!optionEl.value || optionEl.value !== calendarVehicleRecommendedKey) return '';
+    return '<span class="recommended-badge">Recomendado</span>';
+  }
+});
+const calendarVehicleLegend = document.getElementById('calendarVehicleLegend');
 const calendarGrid = document.getElementById('calendarGrid');
 const calMonthLabel = document.getElementById('calMonthLabel');
 const calendarDragHint = document.querySelector('.calendar-drag-hint');
@@ -83,8 +95,15 @@ function syncCalendarCars(){
       TODOS_CARROS.push({ local:cidade, carro:carro, key:carKey(cidade, carro) });
     });
   });
-  if(!TODOS_CARROS.some(c => c.key === calSelectedCarKey)){
-    calSelectedCarKey = TODOS_CARROS.length ? TODOS_CARROS[0].key : null;
+  const branches = TODOS_CARROS.map(c => c.local);
+  if(!calSelectedBranch || !branches.includes(calSelectedBranch)){
+    calSelectedBranch = branches.length ? branches[0] : (CIDADES[0] || null);
+  }
+  // Sem veículo específico escolhido = "todos os veículos do local" (ver
+  // getCarReservationsForDate). Só limpa a seleção se ela ficou inválida
+  // (veículo removido, ou o local mudou).
+  if(calSelectedCarKey && !TODOS_CARROS.some(c => c.key === calSelectedCarKey && c.local === calSelectedBranch)){
+    calSelectedCarKey = null;
   }
 }
 
@@ -94,13 +113,47 @@ function getSelectedCarInfo(){
   return TODOS_CARROS.find(c => c.key === calSelectedCarKey) || null;
 }
 
+function getCarsForSelectedBranch(){
+  return TODOS_CARROS.filter(c => c.local === calSelectedBranch);
+}
+
+// Paleta fixa por posição do veículo na lista do local (mesma ordem do
+// <select>) - assim cada veículo sempre cai na mesma cor entre renders,
+// sem precisar guardar um mapa à parte. Só é usada quando nenhum veículo
+// específico está selecionado e o local tem mais de um.
+const CALENDAR_VEHICLE_COLORS = [
+  { accent:'#7bc4f1', bg1:'rgba(58,106,149,.97)', bg2:'rgba(39,80,115,.97)' },   // azul (padrão)
+  { accent:'#6fe3a8', bg1:'rgba(47,140,99,.97)', bg2:'rgba(28,94,66,.97)' },     // verde
+  { accent:'#f0b95c', bg1:'rgba(158,110,34,.97)', bg2:'rgba(117,80,22,.97)' },   // âmbar
+  { accent:'#b89af0', bg1:'rgba(103,74,150,.97)', bg2:'rgba(72,50,109,.97)' },   // roxo
+  { accent:'#f095b0', bg1:'rgba(150,60,90,.97)', bg2:'rgba(109,40,65,.97)' },    // rosa
+  { accent:'#6fd8dd', bg1:'rgba(30,120,125,.97)', bg2:'rgba(18,85,90,.97)' }     // ciano
+];
+
+// Índice do veículo da reserva na lista do local selecionado, ou -1 se não
+// houver mais de um veículo (aí não faz sentido colorir por veículo).
+function calendarVehicleColorIndex(reservation){
+  const cars = getCarsForSelectedBranch();
+  if(cars.length < 2) return -1;
+  return cars.findIndex(c => c.carro === reservation.carro);
+}
+
 function getCarReservationsForDate(iso){
   const info = getSelectedCarInfo();
-  if(!info) return [];
+  if(info){
+    return getReservations().filter(r =>
+      !isReservationCompleted(r) &&
+      r.partida === info.local &&
+      r.carro === info.carro &&
+      iso >= r.dataIda &&
+      iso <= r.dataVolta
+    );
+  }
+  // Nenhum veículo específico: mostra todos os veículos do local selecionado.
+  if(!calSelectedBranch) return [];
   return getReservations().filter(r =>
     !isReservationCompleted(r) &&
-    r.partida === info.local &&
-    r.carro === info.carro &&
+    r.partida === calSelectedBranch &&
     iso >= r.dataIda &&
     iso <= r.dataVolta
   );
@@ -108,42 +161,76 @@ function getCarReservationsForDate(iso){
 
 function renderCarSelector(){
   syncCalendarCars();
-  const selected = getSelectedCarInfo();
   calendarBranchSelect.innerHTML = CIDADES.map(branch => {
     const hasCars = TODOS_CARROS.some(car => car.local === branch);
     return '<option value="' + escapeHTML(branch) + '"' +
-      (selected && selected.local === branch ? ' selected' : '') +
+      (calSelectedBranch === branch ? ' selected' : '') +
       (hasCars ? '' : ' disabled') + '>' + escapeHTML(branch) + '</option>';
   }).join('');
   carSelector.innerHTML = CIDADES.map(branch => {
     const branchCars = TODOS_CARROS.filter(car => car.local === branch);
-    const active = selected && selected.local === branch ? ' active' : '';
+    const active = calSelectedBranch === branch ? ' active' : '';
     return '<button type="button" class="car-tab-btn' + active + '" data-calendar-branch="' +
       escapeHTML(branch) + '"' + (branchCars.length ? '' : ' disabled') + '>' +
       '<span class="car-tab-city">' + escapeHTML(branch) + '</span>' +
       '</button>';
   }).join('');
 
-  const selectedBranch = selected ? selected.local : '';
-  const branchCars = TODOS_CARROS.filter(car => car.local === selectedBranch);
+  const branchCars = getCarsForSelectedBranch();
   calendarVehicleFilter.classList.remove('hidden');
+  calendarVehicleRecommendedKey = null;
   if(branchCars.length){
-    calendarVehicleSelect.innerHTML = branchCars.map(car =>
+    calendarVehicleSelect.innerHTML = '<option value="">Selecione...</option>' + branchCars.map(car =>
       '<option value="' + escapeHTML(car.key) + '"' +
       (car.key === calSelectedCarKey ? ' selected' : '') + '>' +
       escapeHTML(getVehicleDisplayName({ partida:car.local, carro:car.carro })) + '</option>'
     ).join('');
-    calendarVehicleSelect.disabled = branchCars.length === 1;
+    calendarVehicleSelect.disabled = false;
+
+    if(typeof getRecommendedVehicleCodigoForBranch === 'function'){
+      const branch = calSelectedBranch;
+      const applyRecommendation = () => {
+        if(calSelectedBranch !== branch) return;
+        const recommendedCodigo = getRecommendedVehicleCodigoForBranch(branch);
+        calendarVehicleRecommendedKey = recommendedCodigo ? carKey(branch, recommendedCodigo) : null;
+        calendarVehicleStyledSelect.sync();
+      };
+      if(typeof window.requestIdleCallback === 'function'){
+        window.requestIdleCallback(applyRecommendation, { timeout:300 });
+      } else {
+        setTimeout(applyRecommendation, 0);
+      }
+    }
   } else {
     calendarVehicleSelect.innerHTML = '<option value="">Nenhum veículo cadastrado</option>';
     calendarVehicleSelect.disabled = true;
   }
+  renderCalendarVehicleLegend();
+}
+
+// Legenda das cores por veículo - só aparece quando estamos vendo "todos
+// os veículos" (nenhum específico selecionado) de um local com mais de um.
+function renderCalendarVehicleLegend(){
+  const cars = getCarsForSelectedBranch();
+  if(calSelectedCarKey || cars.length < 2){
+    calendarVehicleLegend.classList.add('hidden');
+    calendarVehicleLegend.innerHTML = '';
+    return;
+  }
+  calendarVehicleLegend.innerHTML = cars.map((car, index) => {
+    const color = CALENDAR_VEHICLE_COLORS[index % CALENDAR_VEHICLE_COLORS.length];
+    return '<span class="calendar-vehicle-legend-item">' +
+      '<span class="calendar-vehicle-legend-dot" style="background:' + color.accent + '"></span>' +
+      escapeHTML(getVehicleDisplayName({ partida:car.local, carro:car.carro })) +
+      '</span>';
+  }).join('');
+  calendarVehicleLegend.classList.remove('hidden');
 }
 
 function selectCalendarBranch(branch){
-  const firstCar = TODOS_CARROS.find(car => car.local === branch);
-  if(!firstCar) return;
-  calSelectedCarKey = firstCar.key;
+  if(!TODOS_CARROS.some(car => car.local === branch)) return;
+  calSelectedBranch = branch;
+  calSelectedCarKey = null;
   clearCalendarSelection();
   renderCarSelector();
   renderMainCalendar();
@@ -160,8 +247,8 @@ calendarBranchSelect.addEventListener('change', function(){
 });
 
 calendarVehicleSelect.addEventListener('change', function(){
-  if(!TODOS_CARROS.some(car => car.key === this.value)) return;
-  calSelectedCarKey = this.value;
+  if(this.value && !TODOS_CARROS.some(car => car.key === this.value)) return;
+  calSelectedCarKey = this.value || null;
   clearCalendarSelection();
   renderCarSelector();
   renderMainCalendar();
@@ -281,10 +368,17 @@ function buildReservationEvent(reservation, iso){
     reservation.partida + ' para ' + reservation.destino + '. ' +
     layout.label + '. ' + vehicleName + '. Solicitante: ' + (reservation.nome || 'Não informado') +
     '. ' + occupancy + '. Motivo: ' + reason;
+  const colorIndex = calendarVehicleColorIndex(reservation);
+  const colorStyle = colorIndex >= 0
+    ? (function(){
+      const color = CALENDAR_VEHICLE_COLORS[colorIndex % CALENDAR_VEHICLE_COLORS.length];
+      return ';--event-accent:' + color.accent + ';--event-bg-1:' + color.bg1 + ';--event-bg-2:' + color.bg2;
+    })()
+    : '';
   return '<button type="button" class="week-reservation-event' + clippedClass + densityClass + '"' +
     ' data-id="' + escapeHTML(reservation.id) + '" data-iso="' + iso + '"' +
     ' aria-label="' + escapeHTML(accessibleSummary) + '" title="' + escapeHTML(accessibleSummary) + '"' +
-    ' style="top:' + layout.top + 'px;height:' + layout.height + 'px">' +
+    ' style="top:' + layout.top + 'px;height:' + layout.height + 'px' + colorStyle + '">' +
       (getReservationNumberLabel(reservation) ? '<span class="calendar-event-id">' + escapeHTML(getReservationNumberLabel(reservation)) + '</span>' : '') +
       '<span class="calendar-event-time">' + RESERVATION_CLOCK_ICON + '<strong>' + escapeHTML(layout.label) + '</strong></span>' +
       '<span class="calendar-event-route">' + escapeHTML(reservation.partida) + ' → ' + escapeHTML(reservation.destino || 'Reserva') + '</span>' +
@@ -300,12 +394,13 @@ function buildDayColumn(iso){
     return (rangeA ? rangeA.inicio : 0) - (rangeB ? rangeB.inicio : 0);
   });
   let html = '<div class="week-day-column" data-iso="' + iso + '">';
+  const noSpecificVehicle = !getSelectedCarInfo();
   for(let minute = WEEK_START_MINUTE; minute < WEEK_END_MINUTE; minute += WEEK_SLOT_MINUTES){
     const unavailableDate = !isCalendarDateSelectable(iso);
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const pastTime = iso === todayISO() && minute + WEEK_SLOT_MINUTES <= currentMinutes;
-    const disabled = unavailableDate || pastTime;
+    const disabled = unavailableDate || pastTime || noSpecificVehicle;
     html += '<div class="week-time-slot' + (disabled ? ' disabled' : '') +
       '" data-iso="' + iso + '" data-minute="' + minute + '" data-disabled="' +
       (disabled ? '1' : '0') + '" ' +
@@ -371,7 +466,9 @@ function buildMobileMonthCalendar(){
   }
 
   html += '</div></div>' +
-    '<button type="button" class="mobile-calendar-add" id="mobileCalendarAddBtn" aria-label="Nova reserva">+</button>';
+    '<button type="button" class="mobile-calendar-add" id="mobileCalendarAddBtn" aria-label="Nova reserva"' +
+    (getSelectedCarInfo() ? '' : ' disabled title="Selecione um veículo específico no filtro acima para criar uma reserva."') +
+    '>+</button>';
   return html;
 }
 
@@ -386,11 +483,12 @@ function buildMobileDayCalendar(){
   const parts = mobileSelectedISO.split('-').map(Number);
   calMonthLabel.textContent = MESES[parts[1] - 1] + ' de ' + parts[0];
   const info = getSelectedCarInfo();
+  const branchLabel = info ? info.local : calSelectedBranch;
   return '<div class="mobile-day-calendar">' +
     '<div class="mobile-day-top">' +
       '<button type="button" class="mobile-day-back" aria-label="Voltar para o mês">&#8249;</button>' +
       '<div><span>Agenda do dia</span><strong>' + escapeHTML(formatMobileDayTitle(mobileSelectedISO)) + '</strong>' +
-      (info ? '<small>' + escapeHTML(info.local) + '</small>' : '') +
+      (branchLabel ? '<small>' + escapeHTML(branchLabel) + '</small>' : '') +
       '</div>' +
     '</div>' +
     '<div class="mobile-day-scroll">' +
@@ -448,7 +546,9 @@ function renderMobileCalendar(){
   calNextBtn.setAttribute('aria-label', isDay ? 'Próximo dia' : 'Próximo mês');
   calendarDragHint.classList.toggle('hidden', !isDay);
   if(isDay){
-    calendarDragHint.textContent = 'Toque em um horário ou arraste para selecionar o período.';
+    calendarDragHint.textContent = getSelectedCarInfo()
+      ? 'Toque em um horário ou arraste para selecionar o período.'
+      : 'Selecione um veículo específico para criar uma reserva por aqui.';
   }
   calendarGrid.classList.toggle('mobile-month-mode', mobileCalendarMode === 'month');
   calendarGrid.classList.toggle('mobile-day-mode', isDay);
@@ -483,7 +583,9 @@ function renderMainCalendar(){
   calPrevBtn.setAttribute('aria-label', 'Semana anterior');
   calNextBtn.setAttribute('aria-label', 'Próxima semana');
   calendarDragHint.classList.remove('hidden');
-  calendarDragHint.textContent = 'Clique em um horário ou arraste na mesma coluna para selecionar o período da reserva.';
+  calendarDragHint.textContent = getSelectedCarInfo()
+    ? 'Clique em um horário ou arraste na mesma coluna para selecionar o período da reserva.'
+    : 'Selecione um veículo específico no filtro acima para criar uma reserva por aqui.';
   calMonthLabel.textContent = formatWeekLabel(calWeekStartISO);
   let html = '<div class="week-calendar-header">' + buildWeekHeader() + '</div>' +
     '<div class="week-calendar-body">' + buildTimeAxis() + '<div class="week-days">';
@@ -800,7 +902,7 @@ function showDayDetails(iso, focusReservationId){
   const header = calendarGrid.querySelector('.week-day-header[data-iso="' + iso + '"]');
   if(header) header.classList.add('selected');
 
-  if(!info){
+  if(!calSelectedBranch){
     clearCalendarSelection();
     return;
   }
@@ -810,64 +912,33 @@ function showDayDetails(iso, focusReservationId){
     const second = getOccupiedMinutesRangeForDate(b, iso);
     return (first ? first.inicio : 0) - (second ? second.inicio : 0);
   });
-  let html = '<div class="day-details-title">' + escapeHTML(info.local) +
+  let html = '<div class="day-details-title">' + escapeHTML(info ? info.local : calSelectedBranch) +
     ' &mdash; <span class="reservation-moment-part">' + RESERVATION_CALENDAR_ICON + '<strong>' + formatDate(iso) + '</strong></span></div>';
 
   if(!list.length){
-    html += '<div class="day-empty-msg">Nenhuma reserva deste veículo nesta data.</div>';
+    html += '<div class="day-empty-msg">' +
+      (info ? 'Nenhuma reserva deste veículo nesta data.' : 'Nenhuma reserva deste local nesta data.') +
+      '</div>';
   } else {
     list.forEach(reservation => {
-      const ocupantes = getOcupantes(reservation);
-      const vagas = getVagasRestantes(reservation);
       const isCreator = currentUser && isReservationCreator(reservation, currentUser);
       const isPassenger = currentUser && isPassageiro(reservation, currentUser);
       const participant = isCreator || isPassenger;
+      const vagas = getVagasRestantes(reservation);
       const canJoin = currentUser && !participant && vagas > 0 && reservationCanAcceptPassengers(reservation);
-      const completed = isReservationCompleted(reservation);
-      const operation = reservation.operacao || {};
-      const statusClass = operation.devolucao || completed
-        ? 'status-completed'
-        : (operation.retirada ? 'status-in-use' : 'status-waiting');
-      const statusLabel = normalizeReservationStatus(reservation.status) === 'encerrada_administrativamente'
-        ? 'Encerrada pela gestão'
-        : operation.devolucao || completed
-        ? 'Concluída'
-        : (operation.retirada ? 'Em uso' : 'Confirmada');
-      const roleBadge = isCreator
-        ? '<span class="role-badge creator">Motorista</span>'
-        : (isPassenger ? '<span class="role-badge passenger">Passageiro</span>' : '');
       const focusedClass = String(reservation.id) === String(focusReservationId) ? ' focused' : '';
-      html += '<div class="day-detail-item' + focusedClass + '">' +
-        '<div class="reservation-info">' +
-          '<div class="reservation-card-top">' +
-            '<div>' +
-              '<div class="reservation-route">' + renderReservationNumber(reservation) + escapeHTML(reservation.partida) + ' &rarr; ' +
-                escapeHTML(reservation.destino) + '</div>' +
-              '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reservation) + '</div>' +
-            '</div>' +
-            '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
-          '</div>' +
-          '<div class="reservation-details reservation-period">' + renderReservationPeriod(reservation) + '</div>' +
-          '<div class="reservation-card-chips">' + roleBadge +
-            renderOccupancyBadgesHTML(reservation) + '</div>' +
-          '<details class="reservation-more-details">' +
-            '<summary>Ver detalhes da reserva</summary>' +
-            '<div class="reservation-more-content">' +
-              '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(reservation.nome) + '</div>' +
-              '<div class="reservation-business"><strong>Motivo:</strong> ' +
-                escapeHTML(reservation.motivo || 'Não informado') + '</div>' +
-              renderOccupancyHTML(reservation) +
-            '</div>' +
-          '</details>' +
-        '</div>' +
-        (canJoin ? '<div class="reservation-actions"><button type="button" class="join-day-btn" data-id="' +
-          escapeHTML(reservation.id) + '">Entrar nessa carona</button></div>' : '') +
+      const actionsHTML = canJoin
+        ? '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reservation.id) + '">Entrar nessa carona</button>'
+        : '';
+      html += '<div class="reservation-item' + focusedClass + '">' +
+        renderReservationCardHTML(reservation, { actionsHTML: actionsHTML }) +
         '</div>';
     });
   }
 
-  html += '<div class="day-actions"><button type="button" class="reserve-day-btn" id="reserveThisDayBtn">' +
-    'Criar reserva neste dia</button></div>';
+  html += '<div class="day-actions"><button type="button" class="reserve-day-btn" id="reserveThisDayBtn"' +
+    (info ? '' : ' disabled title="Selecione um veículo específico no filtro acima para criar uma reserva."') +
+    '>Criar reserva neste dia</button></div>';
   calendarDayDetails.innerHTML = html;
   calendarDayDetails.classList.remove('hidden');
   if(focusReservationId){
@@ -881,7 +952,7 @@ calendarDayDetails.addEventListener('click', function(event){
     openQuickReserveModal(calSelectedISO);
     return;
   }
-  const joinButton = event.target.closest('.join-day-btn');
+  const joinButton = event.target.closest('.join-ride-btn');
   if(joinButton){
     openJoinConfirmModal(joinButton.getAttribute('data-id'), 'calendar');
   }
