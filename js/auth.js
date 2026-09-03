@@ -162,6 +162,7 @@ const loginNomeInput = document.getElementById('loginNome');
 const loginEmailInput = document.getElementById('loginEmail');
 const ssoDivider = document.getElementById('ssoDivider');
 const ssoLoginBtn = document.getElementById('ssoLoginBtn');
+const loginMethodsUnavailable = document.getElementById('loginMethodsUnavailable');
 
 const headerUserName = document.getElementById('headerUserName');
 const avatarInitials = document.getElementById('avatarInitials');
@@ -169,11 +170,13 @@ const solicitanteHint = document.getElementById('solicitanteHint');
 const adminTabBtn = document.getElementById('adminTabBtn');
 
 const profileBtn = document.getElementById('profileBtn');
+const profileMenuCenter = document.getElementById('profileMenuCenter');
+const profileMenuPanel = document.getElementById('profileMenuPanel');
+const profileMenuCnhBtn = document.getElementById('profileMenuCnhBtn');
 const profileModal = document.getElementById('profileModal');
 const profileCloseBtn = document.getElementById('profileCloseBtn');
 const profileAvatarLg = document.getElementById('profileAvatarLg');
 const profileName = document.getElementById('profileName');
-const profileRole = document.getElementById('profileRole');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
@@ -218,10 +221,6 @@ function showApp(user){
   avatarInitials.textContent = initials(user.nome);
   profileName.textContent = user.nome;
   profileAvatarLg.textContent = initials(user.nome);
-  if(profileRole){
-    profileRole.textContent = isAdmin() ? 'Administrador' :
-      (isFacilities() ? 'Facilities' : (canAccessManagement() ? 'Gestão personalizada' : 'Usuário'));
-  }
   solicitanteHint.textContent = 'Reservando como: ' + user.nome;
   adminTabBtn.textContent = isFacilities() ? 'Facilities' : (isAdmin() ? 'Admin' : 'Gestão');
   adminTabBtn.setAttribute(
@@ -299,15 +298,20 @@ ssoLoginBtn.addEventListener('click', function(){
 // que nao existem no sandbox usado por tests/permissions.test.js para
 // carregar este arquivo - por isso so roda em um browser de verdade.
 if(typeof window !== 'undefined' && typeof URLSearchParams !== 'undefined'){
-  // Consulta se o login via Microsoft foi configurado no servidor - o botao
-  // so aparece quando ha credenciais do Entra ID no .env (ver server/sso.js).
+  // Consulta quais metodos de login estao disponiveis no servidor - a
+  // variavel LOGIN_METHOD (.env, ver server/config.js) decide se cada um
+  // aparece, independente de o Entra ID estar configurado ou nao. O
+  // formulario local comeca visivel (cobre o caso mais comum sem esperar a
+  // resposta); so e escondido se o servidor disser que esta desativado.
   (async function checkSsoAvailability(){
     try{
       const status = await apiRequest('/api/auth/sso/status');
-      if(status.enabled){
-        ssoDivider.classList.remove('hidden');
-        ssoLoginBtn.classList.remove('hidden');
-      }
+      const showSso = status.enabled === true;
+      const showLocal = status.localEnabled !== false;
+      loginForm.classList.toggle('hidden', !showLocal);
+      ssoLoginBtn.classList.toggle('hidden', !showSso);
+      ssoDivider.classList.toggle('hidden', !(showSso && showLocal));
+      loginMethodsUnavailable.classList.toggle('hidden', showSso || showLocal);
     }catch(error){
       console.error('Falha ao consultar status do login via Microsoft:', error);
     }
@@ -332,11 +336,41 @@ if(typeof window !== 'undefined' && typeof URLSearchParams !== 'undefined'){
   })();
 }
 
-profileBtn.addEventListener('click', function(){
+function closeProfileMenu(){
+  profileMenuPanel.classList.add('hidden');
+  profileBtn.setAttribute('aria-expanded', 'false');
+}
+
+function openProfileCnhModal(){
   profileModal.classList.remove('hidden');
   // O seletor de data da CNH só pode ser criado depois de js/modals.js ter
   // carregado, por isso a inicialização é sob demanda (ver js/driver-license.js).
   if(typeof ensureCnhDatePicker === 'function') ensureCnhDatePicker();
+}
+
+// Clicar no nome/avatar abre um menu ("Minha CNH", "Sair") em vez da CNH
+// direto - mesmo padrão do sino de notificações (js/notifications.js).
+profileBtn.addEventListener('click', function(event){
+  event.stopPropagation();
+  const opening = profileMenuPanel.classList.contains('hidden');
+  profileMenuPanel.classList.toggle('hidden', !opening);
+  profileBtn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+});
+
+profileMenuCnhBtn.addEventListener('click', function(){
+  closeProfileMenu();
+  openProfileCnhModal();
+});
+
+document.addEventListener('click', function(event){
+  if(profileMenuCenter && !profileMenuCenter.contains(event.target)) closeProfileMenu();
+});
+
+document.addEventListener('keydown', function(event){
+  if(event.key === 'Escape' && !profileMenuPanel.classList.contains('hidden')){
+    closeProfileMenu();
+    profileBtn.focus();
+  }
 });
 
 profileCloseBtn.addEventListener('click', function(){
@@ -348,6 +382,7 @@ profileModal.addEventListener('click', function(e){
 });
 
 logoutBtn.addEventListener('click', async function(){
+  closeProfileMenu();
   try{
     await apiRequest('/api/auth/logout', { method:'POST' });
   }catch(error){
@@ -458,6 +493,14 @@ function switchTab(tabName){
       // por trás dele.
       showCnhRequiredAlert();
       tabName = 'minhas';
+    } else if(typeof showMobileReservationStep === 'function'){
+      // Reseta o assistente por etapas sempre que a aba é aberta - inclusive
+      // pela barra de abas, não só pelo atalho "+ Nova reserva" (que já
+      // fazia isso à parte). Sem isto, uma etapa avançada numa visita
+      // anterior ficava "presa" no atributo data-mobile-step do formulário,
+      // e o CSS (ver responsive.css) escondia os campos da etapa 1 - como o
+      // de veículo - mesmo já preenchidos e prontos para exibição.
+      showMobileReservationStep(1, false);
     }
   }
   appScreen.classList.toggle('calendar-mobile-view', tabName === 'calendario');
@@ -487,9 +530,6 @@ function switchTab(tabName){
 
 myNewReservationBtn.addEventListener('click', function(){
   switchTab('nova');
-  if(typeof showMobileReservationStep === 'function'){
-    showMobileReservationStep(1, false);
-  }
   if(typeof window.scrollTo === 'function'){
     window.scrollTo({ top:0, behavior:'smooth' });
   }

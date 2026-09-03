@@ -41,7 +41,6 @@ function markRequiredFields(){
 }
 
 markRequiredFields();
-initializeTimePickers();
 
 (async function initializeApplication(){
   try{

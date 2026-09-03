@@ -91,6 +91,60 @@ function renderReservationPeriod(reservation){
     renderReservationMoment(reservation.dataVolta, reservation.horarioDevolucao, 'Volta');
 }
 
+// Corpo padrão de um cartão de reserva - cabeçalho (número/rota/veículo/status),
+// período, selos (papel do usuário + ocupação) e o "Ver detalhes da reserva"
+// (solicitante, motivo, mapa de lugares). Usado por Minhas Reservas, Caronas
+// Disponíveis, Calendário e Gestão: as únicas diferenças legítimas entre essas
+// telas são os botões de ação (opts.actionsHTML) e um selo extra opcional
+// (opts.extraStatusBadgeHTML, usado pela Gestão para avisos de avaria/foto) -
+// tudo o mais precisa ser idêntico, então mora aqui uma vez só.
+function renderReservationCardHTML(reservation, options){
+  const opts = options || {};
+  const currentUser = getCurrentUser();
+  const isCreator = isReservationCreator(reservation, currentUser);
+  const isPassenger = !isCreator && currentUser && isPassageiro(reservation, currentUser);
+  const completed = isReservationCompleted(reservation);
+  const operacao = reservation.operacao || {};
+  const statusClass = operacao.devolucao || completed
+    ? 'status-completed'
+    : (operacao.retirada ? 'status-in-use' : 'status-waiting');
+  const statusLabel = normalizeReservationStatus(reservation.status) === 'encerrada_administrativamente'
+    ? 'Encerrada pela gestão'
+    : operacao.devolucao || completed
+    ? 'Concluída'
+    : (operacao.retirada ? 'Em uso' : 'Confirmada');
+  const roleBadge = isCreator
+    ? '<span class="role-badge creator">Motorista</span>'
+    : (isPassenger ? '<span class="role-badge passenger">Passageiro</span>' : '');
+
+  return (
+    '<div class="reservation-info">' +
+      '<div class="reservation-card-top">' +
+        '<div>' +
+          '<div class="reservation-route">' + renderReservationNumber(reservation) + escapeHTML(reservation.partida) + ' &rarr; ' + escapeHTML(reservation.destino) + '</div>' +
+          '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reservation) + '</div>' +
+        '</div>' +
+        '<span class="reservation-card-badges">' +
+          '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
+          (opts.extraStatusBadgeHTML || '') +
+        '</span>' +
+      '</div>' +
+      '<div class="reservation-details reservation-period">' + renderReservationPeriod(reservation) + '</div>' +
+      '<div class="reservation-card-chips">' + roleBadge + renderOccupancyBadgesHTML(reservation) + '</div>' +
+      '<details class="reservation-more-details">' +
+        '<summary>Ver detalhes da reserva</summary>' +
+        '<div class="reservation-more-content">' +
+          '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(reservation.nome) + '</div>' +
+          '<div class="reservation-business"><strong>Motivo:</strong> ' + escapeHTML(reservation.motivo || 'Não informado') + '</div>' +
+          renderOccupancyHTML(reservation, { allowRemove:isCreator }) +
+        '</div>' +
+      '</details>' +
+      renderOperationDetails(reservation) +
+    '</div>' +
+    '<div class="reservation-actions">' + (opts.actionsHTML || '') + '</div>'
+  );
+}
+
 // Bloco padrão de resumo de reserva (rota / veículo+placa / datas), em
 // linhas separadas e alinhadas à esquerda - mesmo formato usado nos cards de
 // "Minhas Reservas", "Caronas" e no calendário. Reaproveitar aqui evita cada
@@ -440,239 +494,6 @@ function populateHorarioOptions(selectEl, availableTimes){
     horarios.map(h => '<option value="' + h + '">' + h + '</option>').join('');
   selectEl.disabled = horarios.length === 0;
   selectEl.value = horarios.includes(previousValue) ? previousValue : '';
-  syncTimePickerControl(selectEl);
-}
-
-let activeTimePickerControl = null;
-
-function getTimePickerOptions(selectEl){
-  return Array.from(selectEl.options)
-    .filter(option => option.value && !option.disabled)
-    .map(option => option.value);
-}
-
-function closeTimePickerControl(control){
-  if(!control) return;
-  const trigger = control.querySelector('.time-picker-trigger');
-  const popover = control._popover;
-  if(trigger) trigger.setAttribute('aria-expanded', 'false');
-  if(popover) popover.classList.add('hidden');
-  control.classList.remove('is-open');
-  if(activeTimePickerControl === control) activeTimePickerControl = null;
-  window.removeEventListener('scroll', repositionActiveTimePopover, true);
-  window.removeEventListener('resize', repositionActiveTimePopover);
-}
-
-// Mesmo cálculo do positionPopup() do calendário de data (js/modals.js) -
-// popover solto do body, position:fixed, nunca cobrindo o próprio gatilho.
-function positionTimePopover(control){
-  const trigger = control.querySelector('.time-picker-trigger');
-  const popover = control._popover;
-  if(!trigger || !popover) return;
-  // Em telas estreitas (css/responsive.css, @media max-width:720px) o
-  // popover vira uma folha fixada embaixo da tela via CSS puro (top:auto;
-  // bottom:...) - não mexe em top/left por JS aqui, senão a folha perde
-  // essa ancoragem e vira um popover flutuante colado no gatilho.
-  if(window.matchMedia('(max-width:720px)').matches){
-    popover.style.top = '';
-    popover.style.left = '';
-    popover.style.maxHeight = '';
-    popover.style.overflowY = '';
-    return;
-  }
-  const rect = trigger.getBoundingClientRect();
-  const margin = 8;
-  const gap = 8;
-  const popoverWidth = popover.offsetWidth || 300;
-  const viewportW = window.innerWidth;
-  const viewportH = window.innerHeight;
-
-  let left = rect.left;
-  if(left + popoverWidth > viewportW - margin) left = viewportW - popoverWidth - margin;
-  if(left < margin) left = margin;
-
-  const spaceBelow = viewportH - rect.bottom - gap - margin;
-  const spaceAbove = rect.top - gap - margin;
-  const openBelow = spaceBelow >= spaceAbove;
-  const available = Math.max(160, openBelow ? spaceBelow : spaceAbove);
-
-  popover.style.maxHeight = available + 'px';
-  popover.style.overflowY = 'auto';
-
-  const popoverHeight = Math.min(popover.scrollHeight, available);
-  const top = openBelow
-    ? rect.bottom + gap
-    : Math.max(margin, rect.top - gap - popoverHeight);
-
-  popover.style.top = top + 'px';
-  popover.style.left = left + 'px';
-}
-
-function repositionActiveTimePopover(){
-  if(activeTimePickerControl) positionTimePopover(activeTimePickerControl);
-}
-
-function renderTimePickerOptions(selectEl){
-  const control = selectEl.closest('.time-picker-control');
-  if(!control || !control._popover) return;
-  const optionsBox = control._popover.querySelector('.time-picker-options');
-  if(!optionsBox) return;
-  const horarios = getTimePickerOptions(selectEl);
-
-  optionsBox.innerHTML = horarios.length
-    ? horarios.map(horario => {
-      const activeClass = horario === selectEl.value ? ' is-selected' : '';
-      const selected = horario === selectEl.value ? 'true' : 'false';
-      return '<button type="button" class="time-picker-option' + activeClass + '" data-time="' +
-        escapeHTML(horario) + '" role="option" aria-selected="' + selected + '">' +
-        escapeHTML(horario) + '</button>';
-    }).join('')
-    : '<div class="time-picker-empty">Nenhum horário disponível para este período.</div>';
-}
-
-function syncTimePickerControl(selectEl){
-  if(!selectEl) return;
-  const control = selectEl.closest('.time-picker-control');
-  if(!control) return;
-  const trigger = control.querySelector('.time-picker-trigger');
-  const value = selectEl.value;
-  const hasOptions = getTimePickerOptions(selectEl).length > 0;
-  if(trigger){
-    const valueEl = trigger.querySelector('.time-picker-trigger-value');
-    if(valueEl) valueEl.textContent = value || (hasOptions ? 'Selecionar horário' : 'Nenhum horário disponível');
-    trigger.disabled = selectEl.disabled || !hasOptions;
-    trigger.classList.toggle('has-value', Boolean(value));
-  }
-  if(control.classList.contains('is-open')) renderTimePickerOptions(selectEl);
-}
-
-function syncAllTimePickerControls(){
-  document.querySelectorAll('.time-picker-native').forEach(syncTimePickerControl);
-}
-
-function initializeTimePickers(){
-  const ids = [
-    'horarioRetirada', 'horarioDevolucao',
-    'qHorarioRetirada', 'qHorarioDevolucao',
-    'aHorarioRetirada', 'aHorarioDevolucao'
-  ];
-
-  ids.forEach(id => {
-    const selectEl = document.getElementById(id);
-    if(!selectEl || selectEl.closest('.time-picker-control')) return;
-    const label = document.querySelector('label[for="' + id + '"]');
-    const fieldName = label ? label.textContent.replace('*', '').trim() : 'Horário';
-    const control = document.createElement('div');
-    control.className = 'time-picker-control';
-    selectEl.parentNode.insertBefore(control, selectEl);
-    control.appendChild(selectEl);
-    selectEl.classList.add('time-picker-native');
-    selectEl.setAttribute('aria-hidden', 'true');
-    selectEl.tabIndex = -1;
-
-    const trigger = document.createElement('button');
-    trigger.type = 'button';
-    trigger.className = 'time-picker-trigger';
-    trigger.setAttribute('aria-haspopup', 'listbox');
-    trigger.setAttribute('aria-expanded', 'false');
-    trigger.setAttribute('aria-label', fieldName);
-    // O <select> nativo fica aria-hidden (é o trigger que recebe foco e
-    // interação) - por isso é ele, e não o select, que precisa apontar para
-    // a mensagem de erro do campo.
-    trigger.setAttribute('aria-describedby', 'error-' + id);
-    trigger.innerHTML =
-      '<span class="time-picker-trigger-icon" aria-hidden="true">' +
-        '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5v5l3.4 2"></path></svg>' +
-      '</span>' +
-      '<span class="time-picker-trigger-value">Selecionar horário</span>' +
-      '<span class="time-picker-trigger-chevron" aria-hidden="true">&#8964;</span>';
-
-    const popover = document.createElement('div');
-    popover.className = 'time-picker-popover hidden';
-    popover.innerHTML =
-      '<div class="time-picker-popover-header">' +
-        '<div><strong>Escolha o horário</strong><small>' + escapeHTML(fieldName) + '</small></div>' +
-        '<button type="button" class="time-picker-close" aria-label="Fechar seletor">&times;</button>' +
-      '</div>' +
-      '<div class="time-picker-options" role="listbox" aria-label="Horários disponíveis"></div>';
-
-    control.appendChild(trigger);
-    // No <body>, não mais filho de .time-picker-control: preso dentro de um
-    // modal, um popover position:absolute fica refém da altura/rolagem
-    // dele (mesmo problema já corrigido no calendário de data - ver
-    // js/modals.js, createDatePicker). control._popover guarda a referência
-    // já que ele não é mais alcançável por control.querySelector.
-    document.body.appendChild(popover);
-    control._popover = popover;
-
-    trigger.addEventListener('click', function(){
-      const shouldOpen = !control.classList.contains('is-open');
-      if(activeTimePickerControl && activeTimePickerControl !== control){
-        closeTimePickerControl(activeTimePickerControl);
-      }
-      if(!shouldOpen){
-        closeTimePickerControl(control);
-        return;
-      }
-      renderTimePickerOptions(selectEl);
-      popover.classList.remove('hidden');
-      control.classList.add('is-open');
-      trigger.setAttribute('aria-expanded', 'true');
-      activeTimePickerControl = control;
-      positionTimePopover(control);
-      window.addEventListener('scroll', repositionActiveTimePopover, true);
-      window.addEventListener('resize', repositionActiveTimePopover);
-      const selectedOption = popover.querySelector('.time-picker-option.is-selected');
-      if(selectedOption) selectedOption.scrollIntoView({ block:'nearest' });
-    });
-
-    if(label){
-      label.addEventListener('click', function(event){
-        event.preventDefault();
-        trigger.click();
-      });
-    }
-
-    popover.addEventListener('click', function(event){
-      const option = event.target.closest('.time-picker-option');
-      if(option){
-        selectEl.value = option.getAttribute('data-time');
-        selectEl.dispatchEvent(new Event('change', { bubbles:true }));
-        syncTimePickerControl(selectEl);
-        closeTimePickerControl(control);
-        trigger.focus();
-        return;
-      }
-      if(event.target.closest('.time-picker-close')){
-        closeTimePickerControl(control);
-        trigger.focus();
-      }
-    });
-
-    selectEl.addEventListener('change', function(){
-      syncTimePickerControl(selectEl);
-    });
-    syncTimePickerControl(selectEl);
-  });
-
-  document.addEventListener('click', function(event){
-    if(!activeTimePickerControl) return;
-    const insidePopover = activeTimePickerControl._popover &&
-      activeTimePickerControl._popover.contains(event.target);
-    if(!activeTimePickerControl.contains(event.target) && !insidePopover){
-      closeTimePickerControl(activeTimePickerControl);
-    }
-  });
-  document.addEventListener('keydown', function(event){
-    if(event.key === 'Escape' && activeTimePickerControl){
-      const trigger = activeTimePickerControl.querySelector('.time-picker-trigger');
-      closeTimePickerControl(activeTimePickerControl);
-      if(trigger) trigger.focus();
-    }
-  });
-  document.addEventListener('reset', function(){
-    setTimeout(syncAllTimePickerControls, 0);
-  });
 }
 
 function getAvailableReservationTimeOptions(partida, carro, dataIda, dataVolta, selectedPickup, excludeId){

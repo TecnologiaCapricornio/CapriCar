@@ -1,4 +1,5 @@
 const { DEFAULT_RESERVATION_RULES } = require('../js/reservation-defaults');
+const { cnhAtendeCapacidade, cnhCategoriaMinimaPara } = require('../js/cnh-categorias');
 
 class ValidationError extends Error {
   constructor(message, status = 400){
@@ -16,6 +17,11 @@ const MAX_PHOTO_BYTES = 1024 * 1024;
 // Tipos de veículo aceitos (ver migration 022). 'carro' é o padrão dos
 // registros anteriores à coluna.
 const VEHICLE_TYPES = ['carro', 'van', 'onibus'];
+
+// Teto de cadastro por tipo - precisa ficar igual a SEAT_LAYOUTS em
+// js/seat-map.js (o mapa de lugares não desenha nada além disso).
+const VEHICLE_CAPACITY_LIMITS = { carro:8, van:20, onibus:48 };
+const VEHICLE_CAPACITY_LIMIT_DEFAULT = 20; // veículo sem tipo (anterior à migration 022)
 const IMAGE_SIGNATURES = {
   png:[[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
   jpeg:[[0xFF, 0xD8, 0xFF]],
@@ -151,15 +157,21 @@ function validateVehicles(value, branches, currentVehicles){
     text(vehicle.modelo, 'o modelo do veículo', 120);
     const plate = text(vehicle.placa, 'a placa do veículo', 7).toUpperCase();
     assert(branchNames.has(branch.toLowerCase()), 'O veículo referencia um local inexistente.');
-    assert(Number.isInteger(Number(vehicle.capacidade)) && Number(vehicle.capacidade) >= 1 && Number(vehicle.capacidade) <= 20,
-      'A capacidade do veículo deve estar entre 1 e 20.');
     assert(typeof vehicle.ativo === 'boolean', 'O status do veículo é inválido.');
     // Campos novos: ausentes em veículos cadastrados antes da migration 022,
     // por isso são opcionais e caem no padrão em vez de recusar o registro.
-    if(vehicle.tipo !== undefined && vehicle.tipo !== null && vehicle.tipo !== ''){
+    const tipoDefinido = vehicle.tipo !== undefined && vehicle.tipo !== null && vehicle.tipo !== '';
+    if(tipoDefinido){
       assert(VEHICLE_TYPES.includes(String(vehicle.tipo)),
         'O tipo do veículo deve ser carro, van ou ônibus.');
     }
+    // Sem tipo definido (cadastro anterior à migration 022), mantém o teto
+    // antigo em vez de recusar um registro que já existia.
+    const capacidadeMaxima = tipoDefinido
+      ? VEHICLE_CAPACITY_LIMITS[String(vehicle.tipo)]
+      : VEHICLE_CAPACITY_LIMIT_DEFAULT;
+    assert(Number.isInteger(Number(vehicle.capacidade)) && Number(vehicle.capacidade) >= 1 && Number(vehicle.capacidade) <= capacidadeMaxima,
+      'A capacidade do veículo deve estar entre 1 e ' + capacidadeMaxima + '.');
     if(vehicle.alugado !== undefined && vehicle.alugado !== null){
       assert(typeof vehicle.alugado === 'boolean', 'O campo "alugado" do veículo é inválido.');
     }
@@ -358,6 +370,18 @@ function validateReservations(value, context){
     assert(new Set(passengerNames).size === passengerNames.length, 'Existem passageiros duplicados.');
     assert(passengers.length + Number(reservation.passageirosConfirmados || 0) <= Number(vehicle.capacidade),
       'A quantidade de ocupantes excede a capacidade do veículo.');
+    // Só valida quando o motorista tem conta vinculada E CNH cadastrada -
+    // sem isso não há categoria nenhuma pra comparar (reserva com motorista
+    // digitado à mão, sem conta, continua passando por aqui como sempre).
+    const driverLicense = reservation.criadorUsuarioId
+      ? context.licensesByUserId && context.licensesByUserId.get(String(reservation.criadorUsuarioId))
+      : null;
+    if(driverLicense && driverLicense.categoria){
+      const capacidadeVeiculo = Number(vehicle.capacidade);
+      assert(cnhAtendeCapacidade(driverLicense.categoria, capacidadeVeiculo),
+        `Este veículo (${capacidadeVeiculo} lugares) exige CNH categoria ${cnhCategoriaMinimaPara(capacidadeVeiculo)} ` +
+        `ou superior. A CNH cadastrada é categoria ${driverLicense.categoria}.`);
+    }
     validateOperation(reservation.operacao);
 
     const blockConflict = blocks.some(block =>
@@ -421,6 +445,8 @@ module.exports = {
   decodeImageDataUrl,
   isValidEmail,
   VEHICLE_TYPES,
+  VEHICLE_CAPACITY_LIMITS,
+  VEHICLE_CAPACITY_LIMIT_DEFAULT,
   // Reaproveitados por server/driver-licenses.js - exportar evita que a
   // validação de data e a de mensagem de erro sigam caminhos diferentes.
   assert,

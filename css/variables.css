@@ -88,11 +88,14 @@
     --radius-md:14px;
     --radius-sm:10px;
 
-    /* Escala tipográfica. --fs-2xs é o piso legível (12px) - nenhum texto
-       com informação real deveria usar algo menor que isso. */
-    --fs-2xs:0.75rem;
-    --fs-xs:0.8125rem;
-    --fs-sm:0.875rem;
+    /* Escala tipográfica. --fs-2xs é o piso legível (13px) - nenhum texto
+       com informação real deveria usar algo menor que isso. Os três
+       primeiros degraus (2xs/xs/sm) subiram ~1px em relação ao original:
+       em tela de 14" Full HD, texto pequeno e com peso alto (ver comentários
+       de "halação" no resto do CSS) ficava difícil de ler com nitidez. */
+    --fs-2xs:0.8125rem;
+    --fs-xs:0.875rem;
+    --fs-sm:0.9375rem;
     --fs-base:1rem;
     --fs-md:1.125rem;
     --fs-lg:1.25rem;

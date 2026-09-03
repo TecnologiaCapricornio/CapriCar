@@ -23,6 +23,15 @@
   body{
     margin:0;
     font-family:'Inter', 'Segoe UI', Arial, sans-serif;
+    /* Texto claro sobre fundo escuro (o padrão daqui) tende a parecer mais
+       grosso/borrado que o mesmo peso em texto escuro sobre claro - efeito
+       óptico real (halação), não coisa de tela ruim. Isso ajuda a
+       renderização em si; o restante da correção é reduzir o peso onde
+       está pesado demais por padrão (ver comentários "halação" no resto
+       do CSS). */
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
     background-color:#07182a;
     background-image:
       linear-gradient(rgba(4,18,32,.48), rgba(4,18,32,.62)),
@@ -286,7 +295,7 @@
     min-height:14px;
   }
 
-  .field.invalid select, .field.invalid input{
+  .field.invalid select, .field.invalid input, .field.invalid .styled-select-trigger{
     border-color:var(--vermelho);
     box-shadow:0 0 0 3px rgba(239,91,106,0.15);
   }

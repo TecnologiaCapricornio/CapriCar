@@ -439,8 +439,11 @@ function createInteractiveOccupancyWidget(containerId, options){
     seatMapWrap.innerHTML = typeof renderSeatMapHTML === 'function' ? renderSeatMapHTML(reserva) : '';
     seatMapWrap.querySelectorAll('.seat-livre').forEach(function(seatEl){
       seatEl.classList.add('seat-clickable');
-      seatEl.textContent = '+';
-      seatEl.title = 'Adicionar passageiro';
+      // seatEl é um <g> SVG (rect + ícone de "+" já desenhado) - não um
+      // elemento HTML comum, então mexer em textContent apagaria o desenho.
+      // Só troca o texto do <title> (tooltip nativo) para refletir a ação.
+      const titleEl = seatEl.querySelector('title');
+      if(titleEl) titleEl.textContent = 'Adicionar passageiro';
       seatEl.setAttribute('role', 'button');
       seatEl.setAttribute('aria-label', 'Adicionar passageiro');
       seatEl.tabIndex = 0;
@@ -575,39 +578,33 @@ function isPassageiro(reserva, nome){
   );
 }
 
-// Busca reservas com a mesma origem, o mesmo destino e o mesmo dia de ida.
-// Os horários e a data de volta podem ser diferentes: eles são exibidos no cartão
-// para que a pessoa decida se a carona atende à necessidade dela.
+// Busca reservas com a mesma origem e o mesmo destino - o dia de ida só entra
+// no filtro quando já foi escolhido (etapa 1 do assistente de nova reserva
+// ainda não tem data, então mostra qualquer data compatível com o trajeto).
+// Os horários e a data de volta podem ser diferentes: eles são exibidos no
+// cartão para que a pessoa decida se a carona atende à necessidade dela.
+// O resultado vem ordenado pela ida mais próxima primeiro.
 function findReservasCompativeis(partida, destino, dataIda, currentUserNome){
   return getReservations().filter(r => {
     if(!reservationCanAcceptPassengers(r)) return false;
     if(r.partida !== partida) return false;
     if(r.destino !== destino) return false;
-    if(r.dataIda !== dataIda) return false;
+    if(dataIda && r.dataIda !== dataIda) return false;
     if(isReservaLotada(r)) return false;
     if(currentUserNome && isPassageiro(r, currentUserNome)) return false;
     return true;
-  });
+  }).sort((a, b) => (a.dataIda < b.dataIda ? -1 : (a.dataIda > b.dataIda ? 1 : 0)));
 }
 
+// Mesmo cartão de Minhas Reservas (renderReservationCardHTML em utils.js),
+// usado tanto pelas sugestões de carona compatível quanto pela aba "Caronas
+// Disponíveis" - a única diferença entre as telas é o botão de ação.
 function renderRideCard(reserva){
-  const vagas = getVagasRestantes(reserva);
-  const ocupantes = getOcupantes(reserva);
-  const capacidade = getVehicleCapacity(reserva);
   const card = document.createElement('div');
-  card.className = 'ride-card';
-  card.innerHTML =
-      '<div class="ride-info">' +
-      '<div class="ride-route">' + renderReservationNumber(reserva) + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
-      '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
-      '<div class="ride-driver">Reservado por: ' + escapeHTML(reserva.nome) + '</div>' +
-      '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
-      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
-      renderOccupancyHTML(reserva) +
-    '</div>' +
-    '<div class="ride-actions">' +
-      '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>' +
-    '</div>';
+  card.className = 'reservation-item';
+  card.innerHTML = renderReservationCardHTML(reserva, {
+    actionsHTML:'<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>'
+  });
   return card;
 }
 
@@ -708,13 +705,24 @@ async function removePassengerAsDriver(reservationId, passengerUserId, motivo){
   return { reserva: reserva };
 }
 
+// Mostrada assim que trajeto (etapa 1) ou data (etapa 2) já dão pra achar
+// carona compatível; escondida na etapa 3 (motivo/passageiros/confirmar),
+// onde só ocuparia espaço sem ajudar mais na decisão.
 function checkAndShowCompatibleRides(){
-  const currentUser = getCurrentUser();
+  // getCurrentUser vem de js/auth.js, carregado depois deste arquivo - e
+  // showMobileReservationStep (js/reservations.js) chama esta função já na
+  // carga inicial da página (linha de topo, fora de qualquer handler), antes
+  // de auth.js sequer ter rodado. Sem essa guarda, isso derrubava com um
+  // ReferenceError bem no início da execução de reservations.js, o que
+  // impedia todo o código depois desse ponto no arquivo - inclusive os
+  // listeners de clique do combobox de Veículo - de ser registrado.
+  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   const partida = partidaSelect.value;
   const destino = getDestinoValue();
   const dataIda = dataIdaInput.value;
+  const onLastStep = form.getAttribute('data-mobile-step') === '3';
 
-  if(!partida || !destino || !dataIda || partida === destino){
+  if(!partida || !destino || partida === destino || onLastStep){
     ridesSection.classList.add('hidden');
     ridesList.innerHTML = '';
     return;
@@ -760,7 +768,8 @@ async function joinRide(id){
 
   form.reset();
   fieldCarro.classList.add('hidden');
-  carroSelect.innerHTML = '<option value="">Selecione...</option>';
+  carroRecommendedCodigo = null;
+  renderCarroOptions([], '');
   populateDestinoOptions();
   toggleDestinoOutro();
   clearAllErrors();
@@ -826,27 +835,6 @@ function getAvailableRidesForCurrentUser(){
   });
 }
 
-function renderAvailableRideCard(reserva){
-  const vagas = getVagasRestantes(reserva);
-  const ocupantes = getOcupantes(reserva);
-  const capacidade = getVehicleCapacity(reserva);
-  const card = document.createElement('div');
-  card.className = 'ride-card available-ride-card';
-  card.innerHTML =
-      '<div class="ride-info">' +
-      '<div class="ride-route">' + renderReservationNumber(reserva) + escapeHTML(reserva.partida) + ' &rarr; ' + escapeHTML(reserva.destino) + '</div>' +
-      '<div class="reservation-vehicle">' + getVehicleDisplayHTML(reserva) + '</div>' +
-      '<div class="ride-driver">Criado por: ' + escapeHTML(reserva.nome) + '</div>' +
-      '<div class="ride-meta reservation-period">' + renderReservationPeriod(reserva) + '</div>' +
-      '<div class="reservation-card-chips">' + renderOccupancyBadgesHTML(reserva) + '</div>' +
-      renderOccupancyHTML(reserva) +
-    '</div>' +
-    '<div class="ride-actions">' +
-      '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reserva.id) + '">Entrar nessa carona</button>' +
-    '</div>';
-  return card;
-}
-
 function renderAvailableRides(){
   populateFiltroOptions();
   ensureRideWatchDatePickers();
@@ -871,7 +859,7 @@ function renderAvailableRides(){
     .slice()
     .sort((a,b) => a.dataIda < b.dataIda ? -1 : (a.dataIda > b.dataIda ? 1 : 0))
     .forEach(reserva => {
-      availableRidesList.appendChild(renderAvailableRideCard(reserva));
+      availableRidesList.appendChild(renderRideCard(reserva));
     });
 }
 

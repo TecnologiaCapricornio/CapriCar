@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../db');
 const { hashPassword, verifyPassword, hashSessionToken } = require('../security');
 const { SESSION_COOKIE, parseCookies, cookieOptions, issueSession, publicUser, requireAuth } = require('../auth');
+const { loginMethodConfig } = require('../config');
 const {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_FAILURES,
@@ -15,6 +16,9 @@ const router = express.Router();
 const dummyPasswordHash = hashPassword('CapriCar-Dummy-Password@2026');
 
 router.post('/login', async (req, res) => {
+  if(!loginMethodConfig().localEnabled){
+    return res.status(403).json({ error:'Login local está desativado. Use o login via Microsoft.' });
+  }
   const username = String(req.body && req.body.username || '').trim().toLowerCase();
   const password = String(req.body && req.body.password || '');
   if(!username || !password){

@@ -117,9 +117,55 @@
     transition:background .2s ease, transform .15s ease;
   }
 
-  .profile-btn:hover{
+  .profile-btn:hover,
+  .profile-btn[aria-expanded="true"]{
     background:rgba(255,255,255,0.09);
     transform:translateY(-1px);
+  }
+
+  /* Menu do nome/avatar no cabeçalho ("Minha CNH", "Sair") - mesmo padrão
+     do sino de notificações (.notification-center/.notification-panel). */
+  .profile-menu-center{
+    position:relative;
+  }
+
+  .profile-menu-panel{
+    position:absolute;
+    z-index:150;
+    top:calc(100% + 10px);
+    right:0;
+    min-width:180px;
+    padding:6px;
+    border:1px solid var(--card-border);
+    border-radius:14px;
+    background:#172d48;
+    box-shadow:0 18px 50px rgba(0,0,0,.38);
+  }
+
+  .profile-menu-item{
+    display:block;
+    width:100%;
+    padding:11px 14px;
+    border:none;
+    border-radius:9px;
+    background:none;
+    color:var(--texto);
+    font-size:var(--fs-sm);
+    font-weight:600;
+    text-align:left;
+    cursor:pointer;
+  }
+
+  .profile-menu-item:hover{
+    background:rgba(255,255,255,.08);
+  }
+
+  .profile-menu-item-danger{
+    color:var(--vermelho);
+  }
+
+  .profile-menu-item-danger:hover{
+    background:rgba(239,91,106,.14);
   }
 
   .avatar{
@@ -223,197 +269,6 @@
     min-height:0;
   }
 
-  /* Seletor visual de horário. O select original continua sendo a fonte de dados. */
-  .time-picker-control{
-    position:relative;
-    width:100%;
-  }
-
-  .time-picker-native{
-    display:none !important;
-  }
-
-  .time-picker-trigger{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    width:100%;
-    min-height:47px;
-    padding:10px 13px;
-    border:1.5px solid rgba(255,255,255,.10);
-    border-radius:var(--radius-sm);
-    background:rgba(255,255,255,.05);
-    color:#8fa4b8;
-    font:inherit;
-    font-size:var(--fs-base);
-    font-weight:600;
-    text-align:left;
-    cursor:pointer;
-    transition:border-color .2s, box-shadow .2s, background .2s;
-  }
-
-  .time-picker-trigger:hover,
-  .time-picker-control.is-open .time-picker-trigger{
-    border-color:var(--azul-claro);
-    background:rgba(255,255,255,.08);
-  }
-
-  .time-picker-trigger:focus-visible{
-    outline:none;
-    border-color:var(--azul-claro);
-    box-shadow:0 0 0 4px rgba(111,168,216,.18);
-  }
-
-  .field.invalid .time-picker-trigger{
-    border-color:var(--vermelho);
-    box-shadow:0 0 0 3px rgba(239,91,106,.15);
-  }
-
-  .time-picker-trigger.has-value{
-    color:#fff;
-  }
-
-  .time-picker-trigger:disabled{
-    opacity:.58;
-    cursor:not-allowed;
-  }
-
-  .time-picker-trigger-icon{
-    display:grid;
-    place-items:center;
-    width:27px;
-    height:27px;
-    flex:0 0 27px;
-    border-radius:8px;
-    background:rgba(111,168,216,.13);
-    color:var(--azul-claro);
-  }
-
-  .time-picker-trigger-icon svg{
-    width:17px;
-    height:17px;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.8;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
-
-  .time-picker-trigger-value{
-    flex:1;
-  }
-
-  .time-picker-trigger-chevron{
-    color:var(--azul-claro);
-    font-size:1.05rem;
-    line-height:1;
-    transform:translateY(-2px);
-    transition:transform .2s;
-  }
-
-  .time-picker-control.is-open .time-picker-trigger-chevron{
-    transform:rotate(180deg) translateY(2px);
-  }
-
-  /* position:fixed com top/left calculados em js/utils.js
-     (positionTimePopover) - mesmo motivo do calendário de data em
-     js/modals.js: solto do body, nunca preso à altura/rolagem de um modal.
-     z-index acima de .modal-overlay (200). */
-  .time-picker-popover{
-    position:fixed;
-    z-index:300;
-    width:min(360px, calc(100vw - 32px));
-    padding:14px;
-    border:1px solid rgba(111,168,216,.3);
-    border-radius:16px;
-    background:#142a45;
-    box-shadow:0 20px 50px rgba(2,10,20,.55);
-  }
-
-  .time-picker-popover-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:12px;
-  }
-
-  .time-picker-popover-header > div{
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-  }
-
-  .time-picker-popover-header strong{
-    color:#fff;
-    font-size:var(--fs-base);
-  }
-
-  .time-picker-popover-header small{
-    color:var(--texto-muted);
-    font-size:var(--fs-xs);
-  }
-
-  .time-picker-close{
-    display:grid;
-    place-items:center;
-    width:31px;
-    height:31px;
-    padding:0;
-    border:1px solid rgba(111,168,216,.22);
-    border-radius:50%;
-    background:rgba(255,255,255,.04);
-    color:#cfe0ee;
-    font-size:1.25rem;
-    cursor:pointer;
-  }
-
-  .time-picker-options{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:7px;
-    max-height:230px;
-    overflow-y:auto;
-    padding-right:3px;
-    scrollbar-width:thin;
-    scrollbar-color:rgba(111,168,216,.5) transparent;
-  }
-
-  .time-picker-option{
-    min-height:40px;
-    padding:8px 5px;
-    border:1px solid rgba(111,168,216,.22);
-    border-radius:10px;
-    background:rgba(255,255,255,.035);
-    color:#dce8f3;
-    font:inherit;
-    font-size:var(--fs-sm);
-    font-weight:700;
-    cursor:pointer;
-    transition:background .15s, border-color .15s, transform .15s;
-  }
-
-  .time-picker-option:hover{
-    border-color:var(--azul-claro);
-    background:rgba(111,168,216,.13);
-    transform:translateY(-1px);
-  }
-
-  .time-picker-option.is-selected{
-    border-color:#82bce7;
-    background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
-    color:#fff;
-    box-shadow:0 2px 6px rgba(58,106,149,.2);
-  }
-
-  .time-picker-empty{
-    grid-column:1 / -1;
-    padding:18px 10px;
-    color:var(--texto-muted);
-    font-size:var(--fs-sm);
-    text-align:center;
-  }
-
   .my-reservations-heading{
     display:flex;
     align-items:center;
@@ -455,7 +310,7 @@
     color:var(--texto-muted);
     font:inherit;
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     cursor:pointer;
   }
 
@@ -538,7 +393,7 @@
     border-radius:999px;
     border:1px solid;
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     white-space:nowrap;
   }
 
@@ -631,7 +486,11 @@
     background:#e04f5f;
     color:#fff;
     font-size:var(--fs-xs);
-    font-weight:800;
+    font-weight:700;
+    /* Sem isso o número fica visualmente abaixo do centro: a caixa de
+       linha do texto (herdada do body) é mais alta que o dígito, e o
+       grid centraliza a CAIXA, não o glifo. */
+    line-height:1;
   }
 
   .notification-panel{
@@ -670,7 +529,7 @@
     background:transparent;
     color:var(--azul-claro);
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     cursor:pointer;
   }
   .notification-panel-header button:disabled{opacity:.45;cursor:default;}
@@ -803,6 +662,17 @@
     gap:12px;
   }
 
+  /* Envolve o selo de status (+ um selo extra opcional, como o aviso de
+     avaria/foto da Gestão) - fica à direita de .reservation-card-top em
+     todas as telas que usam renderReservationCardHTML (js/utils.js). */
+  .reservation-card-badges{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:4px;
+    flex-shrink:0;
+  }
+
   .reservation-id-badge{
     display:inline-flex;
     align-items:center;
@@ -815,27 +685,15 @@
     background:rgba(111,168,216,.16);
     color:#9fd4fa;
     font-size:var(--fs-sm);
-    font-weight:700;
+    font-weight:600;
     line-height:1.1;
     vertical-align:1px;
   }
 
   .reservation-route{
-    font-weight:700;
-    color:#fff;
+    font-weight:600;
+    color:var(--text);
     font-size:1rem;
-  }
-
-  .reservation-car{
-    display:inline-block;
-    background:rgba(111,168,216,0.18);
-    color:#bcd9f0;
-    font-size:var(--fs-xs);
-    font-weight:700;
-    padding:2px 9px;
-    border-radius:999px;
-    margin-top:2px;
-    width:fit-content;
   }
 
   .reservation-details{
@@ -852,9 +710,14 @@
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;
-    padding:12px;
     border-radius:12px;
-    background:rgba(6,22,38,.34);
+    /* Mesmo fundo do cartão de reserva que envolve tudo isso (.reservation-item,
+       logo abaixo) - os cartões Ida/Volta devem se misturar nele, não ganhar
+       um tom próprio (o vão entre os dois, por causa do gap, usa esse mesmo
+       fundo por baixo). Tema escuro explícito repete o mesmo valor de
+       .reservation-item ali (ver html[data-theme="dark"] em css/themes.css);
+       tema claro faz o mesmo com #f7f8fa. */
+    background:rgba(11,31,52,.55);
   }
 
   .reservation-period > .reservation-moment{
@@ -865,7 +728,7 @@
     padding:10px 12px;
     border:1px solid rgba(111,168,216,.16);
     border-radius:10px;
-    background:rgba(255,255,255,.035);
+    background:rgba(11,31,52,.55);
   }
 
   .reservation-moment-label{
@@ -873,7 +736,7 @@
     margin-bottom:2px;
     color:#8fbadb;
     font-size:var(--fs-xs);
-    font-weight:800;
+    font-weight:700;
     letter-spacing:.04em;
     text-transform:uppercase;
   }
@@ -921,7 +784,7 @@
     background:rgba(255,255,255,.2);
     color:inherit;
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     line-height:1.2;
   }
 
@@ -947,7 +810,7 @@
 
   .reservation-more-details summary{
     color:var(--azul-claro);
-    font-weight:700;
+    font-weight:600;
     cursor:pointer;
   }
 
@@ -1041,7 +904,10 @@
   .role-badge{
     display:inline-block;
     font-size:var(--fs-xs);
-    font-weight:700;
+    /* 600, não 700: em texto claro sobre fundo escuro o mesmo peso
+       aparenta mais grosso por causa da irradiação ótica (halação) -
+       tema claro compensa de volta para 700 em themes.css. */
+    font-weight:600;
     padding:2px 9px;
     border-radius:999px;
     width:fit-content;
@@ -1071,12 +937,32 @@
 
   .rides-header{
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     gap:8px;
-    font-weight:700;
-    color:#fff;
-    font-size:var(--fs-base);
     margin-bottom:12px;
+  }
+
+  .rides-header svg{
+    flex-shrink:0;
+    margin-top:1px;
+  }
+
+  .rides-header-text{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .rides-header-text strong{
+    font-weight:700;
+    color:var(--text);
+    font-size:var(--fs-base);
+  }
+
+  .rides-header-text span{
+    font-weight:500;
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
   }
 
   /* Mesmo grid de .reservations-list (auto-fill mantém a 2ª coluna
@@ -1087,56 +973,19 @@
     gap:16px;
   }
 
-  /* Mesmo cartão de .reservation-item (Minhas Reservas etc.) - sem o
-     verde/azul de antes, que destoava do resto do app. */
-  .ride-card{
-    position:relative;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:20px;
-    padding:20px 22px;
-    border-radius:var(--radius-md);
-    background:rgba(11,31,52,.55);
-    border:1px solid rgba(111,168,216,.16);
-    border-left:3px solid var(--azul-claro);
-    box-shadow:0 8px 20px rgba(6,14,24,0.25);
-    transition:transform .15s ease, box-shadow .2s ease;
-  }
-
-  .ride-card:hover{
-    transform:translateY(-2px);
-    box-shadow:0 12px 26px rgba(6,14,24,0.35);
-  }
-
-  .ride-info{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    min-width:0;
-    width:100%;
-  }
-
-  /* .reservation-period/.reservation-moment já usam este mesmo visual como
-     padrão (ver acima) - nada para sobrescrever aqui. */
-
-  .ride-route{
-    font-weight:700;
-    color:#fff;
-    font-size:var(--fs-base);
-  }
-
+  /* Os cartões de carona (Caronas Disponíveis, sugestões de trajeto) usam as
+     mesmas classes .reservation-item/.reservation-info/.reservation-actions
+     de Minhas Reservas (ver renderRideCard/renderAvailableRideCard em
+     js/rides.js) - por isso não há .ride-card/.ride-info/.ride-route/
+     .ride-actions aqui: eram uma cópia paralela que só servia pra desviar
+     visualmente das mesmas regras. */
   .reservation-vehicle{
     width:fit-content;
     margin-top:3px;
     color:#a9c7df;
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     line-height:1.25;
-  }
-
-  .ride-card .reservation-vehicle{
-    margin-top:-7px;
   }
 
   /* Badge visual da placa (formato/cores do padrão Mercosul, sem os
@@ -1185,39 +1034,6 @@
     padding:1px 0 2px;
   }
 
-  .ride-meta{
-    font-size:var(--fs-sm);
-    color:var(--texto-muted);
-  }
-
-  .ride-driver{
-    font-size:var(--fs-sm);
-    color:#8fbadb;
-    font-weight:600;
-  }
-
-  .ride-seats{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    background:rgba(51,212,136,0.18);
-    color:#9be9c4;
-    font-size:var(--fs-xs);
-    font-weight:700;
-    padding:4px 10px;
-    border-radius:999px;
-    width:fit-content;
-    margin-top:2px;
-  }
-
-  .ride-actions{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-end;
-    gap:8px;
-    flex-shrink:0;
-  }
-
   .join-ride-btn{
     background:linear-gradient(135deg, var(--verde), #1f9d64);
     color:#0f2417;
@@ -1255,7 +1071,7 @@
   .ride-watch-panel summary{
     cursor:pointer;
     color:var(--azul-claro);
-    font-weight:700;
+    font-weight:600;
     font-size:var(--fs-sm);
   }
 
@@ -1300,24 +1116,6 @@
     margin-top:2px;
   }
 
-  .available-ride-card{
-    flex-wrap:wrap;
-  }
-
-  .ride-occupants-badge{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    background:rgba(111,168,216,0.16);
-    color:#bcd9f0;
-    font-size:var(--fs-xs);
-    font-weight:700;
-    padding:4px 10px;
-    border-radius:999px;
-    width:fit-content;
-    margin-top:2px;
-  }
-
 /* ---- Bloco "Quem já está no carro" ---- */
   .occupants-block{
     background:rgba(26,48,80,0.55);
@@ -1348,7 +1146,7 @@
 
   .occupants-title{
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     color:var(--texto-muted);
     text-transform:uppercase;
     letter-spacing:.04em;
@@ -1481,9 +1279,11 @@
 
   .seat-clickable{
     cursor:pointer;
-    color:var(--success-text);
-    font-weight:700;
     transition:filter .15s ease, transform .15s ease;
+    /* Sem isso um <g> dentro de <svg> escala a partir da origem do viewBox,
+       não do próprio centro - o lugar "pularia" de posição ao passar o mouse. */
+    transform-box:fill-box;
+    transform-origin:center;
   }
 
   .seat-clickable:hover,
@@ -1492,10 +1292,152 @@
     transform:scale(1.1);
   }
 
+  .seat-clickable:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
   .field-hint{
     font-size:var(--fs-xs);
     color:var(--texto-muted);
     margin:-2px 0 8px;
+  }
+
+  /* Combobox customizado usado por todo campo <select> do sistema (ver
+     js/styled-select.js) - existe porque um <select> nativo não aceita
+     marcação dentro da <option> (só texto puro, por isso a etiqueta
+     "Recomendado" do campo Veículo não dava pra estilizar só com CSS) nem
+     tem a lista aberta alcançável por CSS (o navegador desenha por fora da
+     página). O <select> real de cada campo fica escondido (.hidden) e
+     continua sendo a fonte da verdade para o resto do formulário. */
+  .styled-select{
+    position:relative;
+  }
+
+  .styled-select-trigger{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    width:100%;
+    padding:12px 15px;
+    border:1.5px solid rgba(255,255,255,0.10);
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,0.05);
+    color:var(--texto);
+    font-size:0.95rem;
+    font-family:inherit;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+  }
+
+  .styled-select-trigger:not(.has-value) .styled-select-trigger-value{
+    color:#7d93a8;
+  }
+
+  .styled-select-trigger-value{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .styled-select-arrow{
+    flex-shrink:0;
+    color:var(--texto-muted);
+    transition:transform .15s ease;
+  }
+
+  .styled-select-trigger[aria-expanded="true"] .styled-select-arrow{
+    transform:rotate(180deg);
+  }
+
+  .styled-select-trigger:focus-visible{
+    outline:none;
+    border-color:var(--azul-claro);
+    box-shadow:0 0 0 4px rgba(111,168,216,0.18);
+    background:rgba(255,255,255,0.08);
+  }
+
+  .styled-select-trigger:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+  }
+
+  .styled-select-list{
+    position:absolute;
+    z-index:20;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    max-height:260px;
+    overflow-y:auto;
+    margin:0;
+    padding:6px;
+    list-style:none;
+    background:#1a2f48;
+    border:1px solid rgba(111,168,216,.3);
+    border-radius:var(--radius-sm);
+    box-shadow:0 12px 28px rgba(4,15,27,.4);
+  }
+
+  .styled-select-list:focus-visible{
+    outline:none;
+  }
+
+  .styled-select-option{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:6px;
+    color:var(--texto);
+    font-size:0.92rem;
+    cursor:pointer;
+  }
+
+  .styled-select-option:hover,
+  .styled-select-option.active{
+    background:rgba(111,168,216,.18);
+  }
+
+  .styled-select-option[aria-selected="true"]{
+    font-weight:600;
+  }
+
+  .styled-select-option[aria-disabled="true"]{
+    color:var(--texto-muted);
+    cursor:not-allowed;
+    opacity:.55;
+  }
+
+  .styled-select-option[aria-disabled="true"]:hover{
+    background:transparent;
+  }
+
+  .styled-select-option .recommended-badge{
+    flex-shrink:0;
+  }
+
+  /* Etiqueta "Recomendado" dentro da lista do combobox (ver .styled-select-option
+     acima) - único lugar onde ela aparece; a lista fechada não mostra mais
+     nenhum destaque depois de escolhido. */
+  .recommended-badge{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:999px;
+    border:1px solid var(--success-border);
+    background:var(--success-surface);
+    color:var(--success-text);
+    font-size:var(--fs-2xs);
+    /* 600, não 700: texto claro sobre fundo escuro aparenta mais grosso
+       (halação) - tema claro compensa de volta em css/themes.css. */
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.03em;
   }
 
   .occupants-unidentified{
@@ -1612,7 +1554,7 @@
 
   .occupants-vagas{
     font-size:var(--fs-sm);
-    font-weight:700;
+    font-weight:600;
     color:var(--verde);
   }
 
@@ -1690,7 +1632,7 @@
     margin-bottom:12px;
     color:var(--texto);
     font-size:1.15rem;
-    font-weight:800;
+    font-weight:700;
   }
 
   .pickup-availability-card .quick-reserve-summary{
@@ -1857,7 +1799,7 @@
     color:var(--texto);
     border:1px solid rgba(210,228,245,0.2);
     font-size:var(--fs-base);
-    font-weight:700;
+    font-weight:600;
     border-radius:var(--radius-sm);
     cursor:pointer;
     transition:filter .2s ease, transform .15s ease;
@@ -2012,6 +1954,13 @@
   .reserve-day-btn:hover{
     filter:brightness(1.12);
     transform:translateY(-1px);
+  }
+
+  .reserve-day-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+    filter:none;
+    transform:none;
   }
 
   /* ---- Modal de reserva rápida pelo calendário ---- */
@@ -2181,6 +2130,89 @@
     color:var(--accent);
   }
 
+  /* ---- Guia visual de categorias (ver CNH_CATEGORIA_INFO em
+     js/cnh-categorias.js e os ícones em js/config.js) ---- */
+  .cnh-categoria-guia-btn{
+    align-self:flex-start;
+    background:none;
+    border:none;
+    padding:0;
+    color:var(--accent);
+    font-size:var(--fs-xs);
+    font-weight:600;
+    cursor:pointer;
+    text-decoration:underline;
+  }
+
+  .cnh-veiculo-icon{
+    display:inline-grid;
+    place-items:center;
+    width:26px;
+    height:26px;
+    flex:0 0 auto;
+    border-radius:8px;
+    background:rgba(255,255,255,.05);
+    color:var(--text-muted);
+  }
+
+  .cnh-veiculo-icon svg{
+    width:16px;
+    height:16px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .cnh-categoria-preview{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,.03);
+    font-size:var(--fs-xs);
+    color:var(--text-muted);
+  }
+
+  .cnh-categoria-legend{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:8px;
+    margin-top:10px;
+  }
+
+  .cnh-categoria-card{
+    padding:10px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:rgba(255,255,255,.03);
+  }
+
+  .cnh-categoria-card-head{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:4px;
+  }
+
+  .cnh-categoria-code{
+    font-weight:600;
+    font-size:var(--fs-sm);
+    color:var(--text);
+    margin-right:2px;
+  }
+
+  .cnh-categoria-card p{
+    margin:0;
+    font-size:var(--fs-2xs);
+    color:var(--text-muted);
+    line-height:1.4;
+  }
+
 /* ============ Mapa de lugares (ver js/seat-map.js) ============
    O desenho vem do tipo e da capacidade do veículo, então van e ônibus
    funcionam sem CSS novo. */
@@ -2214,42 +2246,66 @@
     color:var(--text-muted);
   }
 
-  .seat-row{
-    display:flex;
-    gap:5px;
+  /* Contorno do veículo (ver renderVehicleSVG em js/seat-map.js): sobreposição
+     translúcida branca, funciona nos dois temas sem precisar de override -
+     mesmo truque que .seat usava antes de virar SVG. */
+  .car-body{
+    fill:rgba(255,255,255,.035);
+    stroke:var(--border);
+    stroke-width:1.5;
   }
 
-  /* Van e ônibus têm corredor central: separa a primeira coluna do resto. */
-  .seat-row-aisle > .seat:first-child{
-    margin-right:12px;
+  .car-glass{
+    fill:rgba(255,255,255,.05);
+    stroke:var(--border);
+    stroke-width:1;
   }
 
-  .seat{
-    display:grid;
-    place-items:center;
-    width:24px;
-    height:24px;
-    border-radius:6px;
-    border:1px solid var(--border);
-    background:rgba(255,255,255,.05);
-    font-size:11px;
-    line-height:1;
+  .car-aisle{
+    fill:rgba(255,255,255,.025);
   }
 
-  .seat-motorista{
-    border-color:var(--info-border);
-    background:var(--info-surface);
+  .car-wheel{
+    fill:rgba(70,78,92,.85);
+    stroke:rgba(140,150,166,.4);
+    stroke-width:1;
   }
 
-  .seat-ocupado{
-    border-color:var(--danger-border);
-    background:var(--danger-surface);
+  .car-mirror{
+    fill:rgba(140,150,162,.35);
+  }
+
+  .seat rect{
+    fill:rgba(255,255,255,.05);
+    stroke:var(--border);
+    stroke-width:1;
+  }
+
+  .seat-motorista rect{
+    stroke:var(--info-border);
+    fill:var(--info-surface);
+  }
+
+  .seat-motorista .seat-icon{
+    color:var(--info-text);
+  }
+
+  .seat-ocupado rect{
+    stroke:var(--danger-border);
+    fill:var(--danger-surface);
+  }
+
+  .seat-ocupado .seat-icon{
     color:var(--danger-text);
   }
 
-  .seat-livre{
-    border-color:var(--success-border);
-    background:var(--success-surface);
+  .seat-livre rect{
+    stroke:var(--success-border);
+    fill:var(--success-surface);
+  }
+
+  .seat-livre .seat-icon{
+    color:var(--success-text);
   }
 
 /* ============ Ocupação (ver renderOccupancyHTML) ============
@@ -2259,13 +2315,19 @@
    do selo de Motorista/Passageiro. O fundo segue o mesmo padrão de
    ".reservation-period" (grupo dentro do card): tom próprio no escuro,
    sem essa diferença no claro - ver override em themes.css. */
+  /* width:100% (não fit-content) em vez de encolher pro conteúdo: dentro de
+     um pai flex-column (.ride-info, .reservation-info etc.) um item
+     fit-content não estica e fica preso à esquerda, então o quadro inteiro -
+     mapa incluso - ficava menor que o card e "colado" na borda esquerda em
+     vez de acompanhar a largura dele. Com width:100% o quadro acompanha o
+     card, e o align-self:center do .seat-map (mais abaixo) passa a
+     centralizar de verdade, não só dentro de uma caixa pequena. */
   .occupancy{
     display:flex;
     flex-direction:column;
     align-items:flex-start;
     gap:10px;
-    width:fit-content;
-    max-width:100%;
+    width:100%;
     margin:10px 0;
     padding:12px 14px;
     border-radius:var(--radius-sm);
@@ -2282,7 +2344,7 @@
     background:rgba(255,255,255,.04);
     color:var(--text-muted);
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     white-space:nowrap;
   }
 
@@ -2326,4 +2388,9 @@
     padding:0;
     border:0;
     background:none;
+    /* As etiquetas e os chips de passageiro ficam à esquerda (leitura
+       natural), mas o desenho do veículo é o elemento mais largo do quadro -
+       sem centralizar só ele, sobra um vão vazio do lado direito sempre que
+       ocupa menos largura que a linha de cima. */
+    align-self:center;
   }

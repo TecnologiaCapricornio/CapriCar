@@ -32,10 +32,10 @@ test('van de 15 lugares se distribui sem perder nem inventar lugar', () => {
   assert.deepEqual(rows.flat(), [...Array(15).keys()], 'índices contíguos');
 });
 
-test('ônibus usa fileiras de 2 e a última fileira pode ficar incompleta', () => {
+test('ônibus usa fileiras de 4 (2+corredor+2) e a última fileira pode ficar incompleta', () => {
   const rows = buildSeatRows('onibus', 7);
   assert.equal(rows.flat().length, 7);
-  assert.equal(rows[rows.length - 1].length, 1, 'sobra 1 no fim');
+  assert.deepEqual(rows, [[0, 1], [2, 3, 4, 5], [6]]);
 });
 
 test('capacidade menor que a primeira fileira não estoura', () => {
@@ -43,10 +43,12 @@ test('capacidade menor que a primeira fileira não estoura', () => {
   assert.deepEqual(buildSeatRows('van', 2), [[0, 1]]);
 });
 
-test('capacidade é limitada à faixa aceita pelo banco (1 a 20)', () => {
+test('capacidade é limitada ao teto de cada tipo (carro 8, van 20, ônibus 48)', () => {
   assert.equal(buildSeatRows('carro', 0).flat().length, 1);
-  assert.equal(buildSeatRows('carro', 99).flat().length, 20);
+  assert.equal(buildSeatRows('carro', 99).flat().length, 8);
   assert.equal(buildSeatRows('carro', -3).flat().length, 1);
+  assert.equal(buildSeatRows('van', 99).flat().length, 20);
+  assert.equal(buildSeatRows('onibus', 99).flat().length, 48);
 });
 
 test('tipo desconhecido cai no layout de carro em vez de quebrar', () => {

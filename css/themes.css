@@ -67,12 +67,14 @@
   --text-muted:#5c6570;
   --on-primary:#ffffff;
 
-  /* Azul Capricórnio direto da marca: #001A52 (navy exato da logo, amostrado
-     por pixel em capricornio.com.br) como ação e #00133D como o fim escuro
-     do gradiente. Branco sobre os dois passa folgadíssimo em contraste
-     (16.5:1 e mais). */
-  --primary:#001a52;
-  --primary-strong:#00133d;
+  /* Mesmo valor do tema escuro (não o navy exato da logo, que testado nos
+     botões ficou escuro demais e destoando do tema escuro - ver os
+     relatos de "botão diferente entre os temas" no Entrar e no + Nova
+     reserva). --primary/--primary-strong precisam ser idênticos nos dois
+     temas para os botões não mudarem de tom ao trocar de tema; o navy
+     exato da marca continua disponível em --brand/--brand-deep. */
+  --primary:#2f5ec4;
+  --primary-strong:#1b3d86;
   --accent:#1a45a0;
 
   /* No tema claro a cor sólida e a de texto coincidem: ambas precisam
@@ -124,7 +126,8 @@ html[data-theme="dark"] .card{
 html[data-theme="dark"] .admin-subcard,
 html[data-theme="dark"] .reservation-item,
 html[data-theme="dark"] .modal-card,
-html[data-theme="dark"] .time-picker-popover{
+html[data-theme="dark"] .reservation-period,
+html[data-theme="dark"] .reservation-period > .reservation-moment{
   background-color:#282b30;
 }
 
@@ -228,11 +231,16 @@ html[data-theme="light"] .mobile-nav-toggle{
   border-color:rgba(31,45,58,.14);
 }
 
-html[data-theme="light"] .notification-panel{
+html[data-theme="light"] .notification-panel,
+html[data-theme="light"] .profile-menu-panel{
   background:#fff;
   border-color:rgba(31,45,58,.16);
   box-shadow:0 18px 48px rgba(31,45,58,.18);
 }
+
+html[data-theme="light"] .profile-menu-item{color:#253443;}
+html[data-theme="light"] .profile-menu-item:hover{background:#f3f7fa;}
+html[data-theme="light"] .profile-menu-item-danger:hover{background:#fdecee;}
 
 html[data-theme="light"] .notification-item{color:#253443;border-bottom-color:rgba(31,45,58,.1);}
 html[data-theme="light"] .notification-item:hover{background:#f3f7fa;}
@@ -293,14 +301,10 @@ html[data-theme="light"] .card h2,
 html[data-theme="light"] .card h3,
 html[data-theme="light"] .modal-card h3,
 html[data-theme="light"] .admin-subcard h3,
-html[data-theme="light"] .reservation-route,
-html[data-theme="light"] .ride-route,
 html[data-theme="light"] .day-details-title,
-html[data-theme="light"] .day-detail-item .route,
 html[data-theme="light"] .calendar-month-label,
 html[data-theme="light"] .range-calendar-topline strong,
-html[data-theme="light"] .range-calendar-header strong,
-html[data-theme="light"] .time-picker-popover-header strong{
+html[data-theme="light"] .range-calendar-header strong{
   color:#20262d;
 }
 
@@ -366,11 +370,34 @@ html[data-theme="light"] input[type="date"],
 html[data-theme="light"] input[type="password"],
 html[data-theme="light"] input[type="number"],
 html[data-theme="light"] input[type="file"],
-html[data-theme="light"] .time-picker-trigger,
-html[data-theme="light"] .range-picker-trigger{
+html[data-theme="light"] .range-picker-trigger,
+html[data-theme="light"] .styled-select-trigger{
   border-color:rgba(31,45,58,.16);
   background:#f8f9fa;
   color:#28323c;
+}
+
+html[data-theme="light"] .styled-select-trigger:not(.has-value) .styled-select-trigger-value{
+  color:#8a929b;
+}
+
+html[data-theme="light"] .styled-select-list{
+  background:#fff;
+  border-color:rgba(31,45,58,.15);
+  box-shadow:0 12px 28px rgba(20,30,40,.14);
+}
+
+html[data-theme="light"] .styled-select-option{
+  color:#34404a;
+}
+
+html[data-theme="light"] .styled-select-option:hover,
+html[data-theme="light"] .styled-select-option.active{
+  background:#eef2f6;
+}
+
+html[data-theme="light"] .styled-select-option[aria-disabled="true"]:hover{
+  background:transparent;
 }
 
 html[data-theme="light"] select option{
@@ -390,11 +417,9 @@ html[data-theme="light"] textarea::placeholder{
 }
 
 html[data-theme="light"] .reservation-item,
-html[data-theme="light"] .ride-card,
 html[data-theme="light"] .admin-subcard,
 html[data-theme="light"] .management-item,
 html[data-theme="light"] .audit-item,
-html[data-theme="light"] .day-detail-item,
 html[data-theme="light"] .occupants-block,
 html[data-theme="light"] .occupancy,
 html[data-theme="light"] .reservation-period,
@@ -452,8 +477,7 @@ html[data-theme="light"] .reservation-business{
   color:#35414c;
 }
 
-html[data-theme="light"] .reservation-vehicle,
-html[data-theme="light"] .ride-driver{
+html[data-theme="light"] .reservation-vehicle{
   color:#526a7c;
 }
 
@@ -493,16 +517,84 @@ html[data-theme="light"] .calendar-nav-btn{
   background:#e7eef3;
   border-color:rgba(23,63,92,.32);
   color:#214c69;
+  /* Texto escuro sobre fundo claro não sofre a halação do texto claro
+     sobre fundo escuro, então aqui pode voltar ao peso de referência. */
+  font-weight:700;
+}
+
+html[data-theme="light"] .role-badge,
+html[data-theme="light"] .occupancy-tag,
+html[data-theme="light"] .reservation-more-details summary,
+html[data-theme="light"] .reservation-view-btn,
+html[data-theme="light"] .tag,
+html[data-theme="light"] .notification-panel-header button,
+html[data-theme="light"] .reservation-id-badge,
+html[data-theme="light"] .reservation-route,
+html[data-theme="light"] .calendar-event-id,
+html[data-theme="light"] .reservation-vehicle,
+html[data-theme="light"] .ride-watch-panel summary,
+html[data-theme="light"] .occupants-title,
+html[data-theme="light"] .styled-select-option[aria-selected="true"],
+html[data-theme="light"] .recommended-badge,
+html[data-theme="light"] .occupants-vagas,
+html[data-theme="light"] .join-confirm-cancel,
+html[data-theme="light"] .cnh-categoria-code,
+html[data-theme="light"] .user-permissions span,
+html[data-theme="light"] .user-select-all-label,
+html[data-theme="light"] #operationPhotos::file-selector-button,
+html[data-theme="light"] #operationPhotos::-webkit-file-upload-button,
+html[data-theme="light"] .operation-status,
+html[data-theme="light"] .operation-report-badge,
+html[data-theme="light"] .operation-details summary,
+html[data-theme="light"] .indicator-label,
+html[data-theme="light"] .email-preview-meta-label,
+html[data-theme="light"] .week-header-corner,
+html[data-theme="light"] .week-time-label.full-hour,
+html[data-theme="light"] .week-reservation-event span,
+html[data-theme="light"] .calendar-event-vehicle,
+html[data-theme="light"] .calendar-weekday,
+html[data-theme="light"] .calendar-day.has-reservation,
+html[data-theme="light"] .day-badge,
+html[data-theme="light"] .day-details-title,
+html[data-theme="light"] .car-tab-city,
+html[data-theme="light"] .date-popup-header,
+html[data-theme="light"] .date-popup-weekday,
+html[data-theme="light"] .date-popup-day.selected,
+html[data-theme="light"] .date-popup-clear-btn,
+html[data-theme="light"] .mobile-month-event,
+html[data-theme="light"] .mobile-month-more,
+html[data-theme="light"] .mobile-selection-sheet span,
+html[data-theme="light"] .range-picker-caption,
+html[data-theme="light"] .range-clear-btn,
+html[data-theme="light"] .range-apply-btn{
+  font-weight:700;
+}
+
+/* Mesmo raciocínio, para os pontos que eram 800 no escuro (agora 700 - ver
+   componentes correspondentes em css/components.css, css/admin.css e
+   css/calendar.css): claro volta ao valor de referência original. */
+html[data-theme="light"] .notification-badge,
+html[data-theme="light"] .pickup-availability-date,
+html[data-theme="light"] .reservation-moment-label,
+html[data-theme="light"] .operation-photo-download,
+html[data-theme="light"] .week-day-header span,
+html[data-theme="light"] .calendar-event-route,
+html[data-theme="light"] .mobile-month-weekdays span,
+html[data-theme="light"] .mobile-day-top span,
+html[data-theme="light"] .mobile-selection-cancel,
+html[data-theme="light"] .mobile-selection-confirm,
+html[data-theme="light"] .range-calendar-weekday,
+html[data-theme="light"] .range-calendar-day.range-start span,
+html[data-theme="light"] .range-calendar-day.range-end span{
+  font-weight:800;
 }
 
 html[data-theme="light"] button.submit-btn,
 html[data-theme="light"] .tab-btn.active,
 html[data-theme="light"] .admin-section-btn.active,
 html[data-theme="light"] .reservation-view-btn.active,
-html[data-theme="light"] button.secondary-btn.my-new-reservation-btn,
 html[data-theme="light"] .reserve-day-btn,
 html[data-theme="light"] .location-filter-btn.active,
-html[data-theme="light"] .time-picker-option.is-selected,
 html[data-theme="light"] .range-calendar-day.selected,
 html[data-theme="light"] .calendar-add-btn{
   background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
@@ -511,8 +603,7 @@ html[data-theme="light"] .calendar-add-btn{
   box-shadow:0 3px 8px rgba(23,63,92,.18);
 }
 
-html[data-theme="light"] .join-ride-btn,
-html[data-theme="light"] .join-day-btn{
+html[data-theme="light"] .join-ride-btn{
   background:linear-gradient(135deg,#0b8450,#05633a);
   color:#fff;
   box-shadow:0 7px 17px rgba(5,99,58,.24);
@@ -564,14 +655,9 @@ html[data-theme="light"] .range-calendar-day.partially-unavailable{
 html[data-theme="light"] .confirmation,
 html[data-theme="light"] .reservation-item .operation-status.status-completed,
 html[data-theme="light"] .operation-status,
-html[data-theme="light"] .role-badge.passenger,
-html[data-theme="light"] .ride-seats{
+html[data-theme="light"] .role-badge.passenger{
   background:#def2e7;
   border-color:#72b994;
-  color:#075f39;
-}
-
-html[data-theme="light"] .ride-seats *{
   color:#075f39;
 }
 
@@ -580,9 +666,7 @@ html[data-theme="light"] .occupants-vagas{
 }
 
 html[data-theme="light"] .reservation-item .operation-status.status-waiting,
-html[data-theme="light"] .role-badge.creator,
-html[data-theme="light"] .reservation-car,
-html[data-theme="light"] .ride-occupants-badge{
+html[data-theme="light"] .role-badge.creator{
   background:#dceaf4;
   color:#204e6d;
 }
@@ -624,19 +708,12 @@ html[data-theme="light"] .modal-overlay{
   background:rgba(39,45,52,.34);
 }
 
-html[data-theme="light"] .time-picker-popover,
 html[data-theme="light"] .reservation-range-calendar,
 html[data-theme="light"] .date-popup.range-style-date-popup,
 html[data-theme="light"] .mobile-selection-sheet{
   background:#fff;
   border-color:rgba(31,45,58,.15);
   box-shadow:0 18px 42px rgba(32,43,55,.16);
-}
-
-html[data-theme="light"] .time-picker-option{
-  background:#f7f8fa;
-  color:#34404a;
-  border-color:rgba(31,45,58,.14);
 }
 
 html[data-theme="light"] .weekly-calendar{
@@ -745,10 +822,6 @@ html[data-theme="light"] .destructive-modal-icon{
 
 html[data-theme="light"] .required-marker{
   color:#c83f50;
-}
-
-html[data-theme="light"] .time-picker-close{
-  color:#526575;
 }
 
 html[data-theme="light"] .notification-item-icon{

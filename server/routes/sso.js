@@ -1,5 +1,5 @@
 const express = require('express');
-const { appConfig } = require('../config');
+const { appConfig, loginMethodConfig } = require('../config');
 const { createSessionToken } = require('../security');
 const { parseCookies, issueSession } = require('../auth');
 const { getAuthCodeUrl, acquireTokenFromCode, resolveOrCreateSsoUser, resolveSsoConfig } = require('../sso');
@@ -18,11 +18,18 @@ function stateCookieOptions(){
 }
 
 router.get('/status', async (req, res) => {
-  const config = await resolveSsoConfig();
-  res.json({ enabled:config.enabled, graphImportEnabled:config.enabled });
+  const { entraEnabled, localEnabled } = loginMethodConfig();
+  // Sem consultar o banco/`.env` do Entra se a política já desativou o
+  // método - evita expor se há (ou não) credenciais configuradas quando
+  // LOGIN_METHOD=local nem precisa dessa resposta.
+  const config = entraEnabled ? await resolveSsoConfig() : { enabled:false };
+  res.json({ enabled:config.enabled, graphImportEnabled:config.enabled, localEnabled });
 });
 
 router.get('/login', async (req, res) => {
+  if(!loginMethodConfig().entraEnabled){
+    return res.status(403).json({ error:'Login via Microsoft está desativado.' });
+  }
   if(!(await resolveSsoConfig()).enabled){
     return res.status(503).json({ error:'Login via Microsoft não está configurado.' });
   }
@@ -40,7 +47,7 @@ router.get('/login', async (req, res) => {
 router.get('/callback', async (req, res) => {
   const clearStateCookie = () => res.clearCookie(STATE_COOKIE, { ...stateCookieOptions(), maxAge:undefined });
 
-  if(!(await resolveSsoConfig()).enabled){
+  if(!loginMethodConfig().entraEnabled || !(await resolveSsoConfig()).enabled){
     clearStateCookie();
     return res.redirect('/?error=sso_disabled');
   }

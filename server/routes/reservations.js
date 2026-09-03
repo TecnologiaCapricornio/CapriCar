@@ -21,6 +21,7 @@ const {
 const { createOrUpdateCalendarEvent, deleteCalendarEvent, resolveCalendarOwner } = require('../calendar-sync');
 const { sendPassengerJoinedEmail, sendPassengerRemovalEmail } = require('../reminders');
 const { notifyRideWatchMatches, sendRideWatchMatchEmails } = require('../ride-watches');
+const { getLicensesForUsers } = require('../driver-licenses');
 
 const router = express.Router();
 
@@ -120,16 +121,22 @@ function sanitizeIncoming(current, incoming, user, manager){
   return { ...incoming, criadorUsuarioId:current.criadorUsuarioId, nome:manager ? incoming.nome : current.nome };
 }
 
-async function validationContext(client){
+async function validationContext(client, driverIds){
   const state = await client.query(
     `SELECT collection_name, value FROM application_state
       WHERE collection_name IN ('vehicles','blocks','rules')`
   );
   const values = Object.fromEntries(state.rows.map(row => [row.collection_name, row.value]));
+  // Só busca a CNH de quem aparece como motorista no lote - a checagem de
+  // categoria x capacidade (server/validation.js) usa isso por
+  // criadorUsuarioId; sem conta vinculada, essa checagem é pulada (ver
+  // comentário lá).
+  const licensesByUserId = await getLicensesForUsers(driverIds || []);
   return {
     vehicles:Array.isArray(values.vehicles) ? values.vehicles : [],
     blocks:Array.isArray(values.blocks) ? values.blocks : [],
-    rules:values.rules || {}
+    rules:values.rules || {},
+    licensesByUserId
   };
 }
 
@@ -184,7 +191,8 @@ router.post('/sync', async (req, res) => {
     }
 
     const next = [...nextById.values()];
-    const context = await validationContext(client);
+    const driverIds = next.map(reservation => reservation.criadorUsuarioId).filter(Boolean);
+    const context = await validationContext(client, driverIds);
     validateCollection('reservations', next, {
       ...context,
       currentReservations:current
@@ -244,7 +252,10 @@ router.post('/sync', async (req, res) => {
         calendarSyncTasks.push({
           type:'upsert',
           legacyId:saved.legacyId,
-          reservation:change.reservation,
+          // numeroReserva não vem em change.reservation (é atribuído só ao
+          // persistir) - sem isso o evento no Outlook fica sem "#N ·" no
+          // assunto e no corpo.
+          reservation:{ ...change.reservation, numeroReserva:saved.reservationNumber },
           previousGraphEventId
         });
       }

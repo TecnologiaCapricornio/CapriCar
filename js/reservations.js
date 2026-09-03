@@ -8,6 +8,15 @@ const destinoSelect = document.getElementById('destino');
 const destinoOutroInput = document.getElementById('destinoOutro');
 const fieldCarro = document.getElementById('field-carro');
 const carroSelect = document.getElementById('carro');
+// Código do veículo recomendado do momento - lido pelo optionExtra abaixo
+// pra colorir a etiqueta "Recomendado" dentro da lista (ver js/styled-select.js).
+let carroRecommendedCodigo = null;
+const carroStyledSelect = createStyledSelect(carroSelect, {
+  optionExtra: function(optionEl){
+    if(!optionEl.value || optionEl.value !== String(carroRecommendedCodigo || '')) return '';
+    return '<span class="recommended-badge">Recomendado</span>';
+  }
+});
 const dataIdaInput = document.getElementById('dataIda');
 const dataVoltaInput = document.getElementById('dataVolta');
 const horarioRetiradaSelect = document.getElementById('horarioRetirada');
@@ -110,7 +119,6 @@ function refreshAvailableTimeOptions(){
   if(hasCompletePeriod && !availability.pickup.length){
     setError('horarioRetirada', 'Não há horários disponíveis para este carro no período selecionado.');
   }
-  syncAllTimePickerControls();
 }
 
 function isMobileReservationWizard(){
@@ -131,6 +139,9 @@ function showMobileReservationStep(step, shouldScroll){
   if(shouldScroll){
     form.closest('.card').scrollIntoView({ behavior:'smooth', block:'start' });
   }
+  // As caronas compatíveis ajudam a decidir o trajeto/data (etapas 1 e 2);
+  // na etapa 3 (motivo/passageiros/confirmar) elas só ocupariam espaço.
+  if(typeof checkAndShowCompatibleRides === 'function') checkAndShowCompatibleRides();
 }
 
 function validateMobileReservationStep(step){
@@ -317,16 +328,45 @@ function populateCarroOptions(preserveSelection){
   const partida = partidaSelect.value;
   const carros = getVehicles().filter(v => v.ativo !== false && v.local === partida);
   const currentCarro = carroSelect.value;
-  carroSelect.innerHTML = '<option value="">Selecione...</option>' +
-    carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(getVehicleFullModel(v)) + (v.placa ? ' · ' + escapeHTML(v.placa) : '') + '</option>').join('');
-  carroSelect.value = preserveSelection && carros.some(v => String(v.codigo) === String(currentCarro))
-    ? currentCarro
-    : '';
+  const keepCurrent = preserveSelection && carros.some(v => String(v.codigo) === String(currentCarro));
+
+  // Primeiro passo: mostra o campo e a lista de veículos JÁ, sem esperar o
+  // cálculo do recomendado - é o que ele adiar (mais abaixo) resolve: antes
+  // rodava aqui embaixo, na hora, e segurava tanto este campo quanto a seção
+  // de caronas compatíveis (chamada logo depois, no mesmo evento) até
+  // terminar.
+  carroRecommendedCodigo = null;
+  renderCarroOptions(carros, keepCurrent ? currentCarro : '');
   if(carros.length){
     fieldCarro.classList.remove('hidden');
   } else {
     fieldCarro.classList.add('hidden');
   }
+
+  if(typeof getRecommendedVehicleCodigoForBranch !== 'function' || !carros.length) return;
+  const applyRecommendation = () => {
+    // A partida (ou o próprio veículo) pode ter mudado de novo enquanto o
+    // cálculo estava agendado - nesse caso o resultado já não serve.
+    if(partidaSelect.value !== partida) return;
+    carroRecommendedCodigo = getRecommendedVehicleCodigoForBranch(partida);
+    carroStyledSelect.sync();
+  };
+  if(typeof window.requestIdleCallback === 'function'){
+    window.requestIdleCallback(applyRecommendation, { timeout:300 });
+  } else {
+    setTimeout(applyRecommendation, 0);
+  }
+}
+
+// Só popula o <select> real - o combobox customizado (trigger + lista, com
+// a etiqueta "Recomendado" via optionExtra) é mantido em sincronia
+// automaticamente por createStyledSelect (ver js/styled-select.js).
+function renderCarroOptions(carros, selectedCodigo){
+  carroSelect.innerHTML = '<option value="">Selecione...</option>' +
+    carros.map(v => '<option value="' + escapeHTML(v.codigo) + '">' + escapeHTML(getVehicleFullModel(v)) +
+      (v.placa ? ' · ' + escapeHTML(v.placa) : '') +
+      '</option>').join('');
+  carroSelect.value = selectedCodigo || '';
 }
 
 // Atualiza as opções do select de Destino, removendo a cidade igual à partida selecionada.
@@ -360,55 +400,22 @@ function renderReservationItem(res, opts){
   const operacao = res.operacao || {};
   const canOperate = isCreator && !completed;
   const pickupAvailable = canRegisterPickupNow(res);
-  const statusClass = operacao.devolucao || completed
-    ? 'status-completed'
-    : (operacao.retirada ? 'status-in-use' : 'status-waiting');
-  const statusLabel = normalizeReservationStatus(res.status) === 'encerrada_administrativamente'
-    ? 'Encerrada pela gestão'
-    : operacao.devolucao || completed
-    ? 'Concluída'
-    : (operacao.retirada ? 'Em uso' : 'Confirmada');
+  const actionsHTML =
+    (isCreator && !operacao.retirada
+      ? '<button class="edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>'
+      : '') +
+    (canOperate && !operacao.retirada
+      ? '<button class="operation-btn" data-phase="retirada" data-id="' + escapeHTML(res.id) + '"' +
+        (pickupAvailable ? '' : ' data-pickup-info="true" title="Consultar quando a retirada será liberada"') +
+        '>' + (pickupAvailable ? 'Registrar retirada' : 'Retirada ainda indisponível') + '</button>'
+      : '') +
+    (canOperate && operacao.retirada && !operacao.devolucao ? '<button class="operation-btn" data-phase="devolucao" data-id="' + escapeHTML(res.id) + '">Registrar devolução</button>' : '') +
+    (canDelete && !operacao.retirada ? '<button class="delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '') +
+    (canLeave ? '<button class="leave-btn" data-id="' + escapeHTML(res.id) + '">Sair da carona</button>' : '');
+
   const item = document.createElement('div');
   item.className = 'reservation-item' + (completed ? ' reservation-history-item' : '');
-  item.innerHTML =
-    '<div class="reservation-info">' +
-      '<div class="reservation-card-top">' +
-        '<div>' +
-          '<div class="reservation-route">' + renderReservationNumber(res) + escapeHTML(res.partida) + ' &rarr; ' + escapeHTML(res.destino) + '</div>' +
-          '<div class="reservation-vehicle">' + getVehicleDisplayHTML(res) + '</div>' +
-        '</div>' +
-        '<span class="operation-status ' + statusClass + '">' + statusLabel + '</span>' +
-      '</div>' +
-      '<div class="reservation-details reservation-period">' +
-        renderReservationPeriod(res) +
-      '</div>' +
-      '<div class="reservation-card-chips">' +
-        '<span class="role-badge ' + (isCreator ? 'creator' : 'passenger') + '">' + (isCreator ? 'Motorista' : 'Passageiro') + '</span>' +
-        renderOccupancyBadgesHTML(res) +
-      '</div>' +
-      '<details class="reservation-more-details">' +
-        '<summary>Ver detalhes da reserva</summary>' +
-        '<div class="reservation-more-content">' +
-          '<div class="reservation-name"><strong>Solicitante:</strong> ' + escapeHTML(res.nome) + '</div>' +
-          '<div class="reservation-business"><strong>Motivo:</strong> ' + escapeHTML(res.motivo || 'Não informado') + '</div>' +
-          renderOccupancyHTML(res, { allowRemove:isCreator }) +
-        '</div>' +
-      '</details>' +
-      renderOperationDetails(res) +
-    '</div>' +
-    '<div class="reservation-actions">' +
-      (isCreator && !operacao.retirada
-        ? '<button class="edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>'
-        : '') +
-      (canOperate && !operacao.retirada
-        ? '<button class="operation-btn" data-phase="retirada" data-id="' + escapeHTML(res.id) + '"' +
-          (pickupAvailable ? '' : ' data-pickup-info="true" title="Consultar quando a retirada será liberada"') +
-          '>' + (pickupAvailable ? 'Registrar retirada' : 'Retirada ainda indisponível') + '</button>'
-        : '') +
-      (canOperate && operacao.retirada && !operacao.devolucao ? '<button class="operation-btn" data-phase="devolucao" data-id="' + escapeHTML(res.id) + '">Registrar devolução</button>' : '') +
-      (canDelete && !operacao.retirada ? '<button class="delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '') +
-      (canLeave ? '<button class="leave-btn" data-id="' + escapeHTML(res.id) + '">Sair da carona</button>' : '') +
-    '</div>';
+  item.innerHTML = renderReservationCardHTML(res, { actionsHTML: actionsHTML });
   return item;
 }
 
@@ -618,6 +625,20 @@ function validateForm(){
     valid = false;
   }
 
+  const licenseState = typeof getLicenseState === 'function' ? getLicenseState() : null;
+  // licenseState null = CNH ainda carregando (loadDriverLicense roda em segundo
+  // plano - ver mesmo comentário em checkCnhCategoriaParaVeiculo, em
+  // js/driver-license.js) - não bloqueia sem dado suficiente para decidir.
+  if(carro && vehicle && licenseState && typeof cnhAtendeCapacidade === 'function'){
+    const categoria = licenseState.cnh ? licenseState.cnh.categoria : '';
+    if(!cnhAtendeCapacidade(categoria, vehicle.capacidade)){
+      const minima = cnhCategoriaMinimaPara(vehicle.capacidade);
+      setError('carro', 'Este veículo (' + vehicle.capacidade + ' lugares) exige CNH categoria ' + minima +
+        ' ou superior.' + (categoria ? ' Sua CNH é categoria ' + categoria + '.' : ' Cadastre sua CNH em "Meu perfil".'));
+      valid = false;
+    }
+  }
+
   if(!motivoInput.value.trim()){
     setError('motivo', 'Informe o motivo da viagem.');
     valid = false;
@@ -811,7 +832,8 @@ form.addEventListener('submit', async function(e){
 
   form.reset();
   fieldCarro.classList.add('hidden');
-  carroSelect.innerHTML = '<option value="">Selecione...</option>';
+  carroRecommendedCodigo = null;
+  renderCarroOptions([], '');
   passageirosWidget.clear();
   populateDestinoOptions();
   toggleDestinoOutro();

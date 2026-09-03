@@ -748,6 +748,7 @@ const userViewCnhBadge = document.getElementById('userViewCnhBadge');
 const userViewCnhDetails = document.getElementById('userViewCnhDetails');
 const userViewCnhNumero = document.getElementById('userViewCnhNumero');
 const userViewCnhCategoria = document.getElementById('userViewCnhCategoria');
+const userViewCnhCategoriaPreview = document.getElementById('userViewCnhCategoriaPreview');
 const userViewCnhValidade = document.getElementById('userViewCnhValidade');
 const userViewCnhFrente = document.getElementById('userViewCnhFrente');
 const userViewCnhVerso = document.getElementById('userViewCnhVerso');
@@ -778,6 +779,11 @@ function renderUserViewCnh(account){
     userViewCnhNumero.textContent = cnh.numero || '—';
     userViewCnhCategoria.textContent = cnh.categoria || '—';
     userViewCnhValidade.textContent = cnh.validade ? formatDate(cnh.validade) : '—';
+  }
+  if(userViewCnhCategoriaPreview){
+    userViewCnhCategoriaPreview.innerHTML = (cnh && cnh.categoria && typeof cnhCategoriaPreviewHTML === 'function')
+      ? cnhCategoriaPreviewHTML(cnh.categoria)
+      : '';
   }
   renderUserViewPhotoState(userViewCnhFrente, !!(cnh && cnh.fotos && cnh.fotos.frente), account.id, 'frente');
   renderUserViewPhotoState(userViewCnhVerso, !!(cnh && cnh.fotos && cnh.fotos.verso), account.id, 'verso');

@@ -10,7 +10,7 @@
     "db:seed": "node server/scripts/seed.js",
     "db:backup": "node server/scripts/backup.js",
     "db:restore": "node server/scripts/restore.js",
-    "test": "node tests/core.test.js && node tests/xlsx-export.test.js && node tests/permissions.test.js && node tests/backend-permissions.test.js && node tests/backend-security.test.js && node tests/validation.test.js && node tests/vehicle-deletion.test.js && node tests/branch-deletion.test.js && node tests/notifications.test.js && node tests/reservation-projection.test.js && node tests/sso.test.js && node tests/secrets.test.js && node tests/reminders.test.js && node tests/calendar-sync.test.js && node tests/ride-watches.test.js && node tests/driver-licenses.test.js && node tests/seat-map.test.js",
+    "test": "node tests/core.test.js && node tests/xlsx-export.test.js && node tests/permissions.test.js && node tests/backend-permissions.test.js && node tests/backend-security.test.js && node tests/validation.test.js && node tests/vehicle-deletion.test.js && node tests/branch-deletion.test.js && node tests/notifications.test.js && node tests/reservation-projection.test.js && node tests/sso.test.js && node tests/secrets.test.js && node tests/reminders.test.js && node tests/calendar-sync.test.js && node tests/ride-watches.test.js && node tests/driver-licenses.test.js && node tests/seat-map.test.js && node tests/cnh-categorias.test.js && node tests/vehicle-recommendation.test.js",
     "test:integration": "node tests/api-integration.test.js",
     "lint": "eslint ."
   },
