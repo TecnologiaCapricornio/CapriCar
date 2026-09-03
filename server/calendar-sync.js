@@ -93,7 +93,7 @@ function buildEventPayload(reservation, attendees) {
     subject: `Reserva CapriCar ${prefix}${origem} → ${destino}`,
     body: {
       contentType: 'HTML',
-      content: `<p>Reserva ${prefix}<br><br>` +
+      content: `<p>Reserva ${prefix}${origem} → ${destino}<br><br>` +
         `Veículo: ${reservation.carro || ''} - Placa: ${reservation.placa || ''}<br>` +
         `Origem: ${origem}<br>Destino: ${destino} ${reservation.motivo ? '<br>Motivo: ' + reservation.motivo : ''}<br>` +
         `${passageirosDescricao || ''}` +
