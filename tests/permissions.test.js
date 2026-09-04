@@ -44,35 +44,53 @@ function loadPermissions() {
 test('administrador mantém acesso a todas as seções', () => {
   const app = loadPermissions();
   app.setCurrentUser({ nome: 'admin', role: 'admin', isAdmin: true });
-  ['reservas', 'locais', 'veiculos', 'bloqueios', 'auditoria', 'relatorios', 'regras', 'usuarios'].forEach(section => {
+  ['reservas', 'locais', 'veiculos', 'bloqueios', 'manutencao', 'auditoria', 'relatorios', 'regras', 'usuarios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
 });
 
-test('Facilities acessa somente as quatro áreas permitidas', () => {
+test('usuário com permissões de frota acessa somente as áreas marcadas (sem papel especial)', () => {
   const app = loadPermissions();
   app.setCurrentUser({
-    id: 'facilities-id',
-    username: 'facilities',
-    nome: 'Facilities',
-    role: 'facilities',
+    id: 'gestor-frota-id',
+    username: 'gestor.frota',
+    nome: 'Gestor de Frota',
+    role: 'user',
     permissions: { reservations: true, branches: true, fleet: true, blocks: true, reports: true }
   });
   ['reservas', 'locais', 'veiculos', 'bloqueios', 'relatorios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
-  ['auditoria', 'regras', 'usuarios'].forEach(section => {
+  // "Manutenção" tem permissão própria (can_manage_maintenance), separada de
+  // "Veículos" (fleet) - fleet:true sozinho não dá acesso a ela.
+  ['manutencao', 'auditoria', 'regras', 'usuarios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), false);
   });
   assert.equal(app.canManageReservations(), true);
   assert.equal(app.canManageBranches(), true);
   assert.equal(app.canManageFleet(), true);
+  assert.equal(app.canManageMaintenance(), false);
   assert.equal(app.canManageBlocks(), true);
   assert.equal(app.canViewReports(), true);
   assert.equal(app.canViewAudit(), false);
   assert.equal(app.canManageRules(), false);
   assert.equal(app.canManageUsers(), false);
   assert.equal(app.isAdmin(), false);
+});
+
+test('permissão de manutenção é independente da permissão de veículos', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({
+    id: 'gestor-manutencao-id',
+    username: 'gestor.manutencao',
+    nome: 'Gestor de Manutenção',
+    role: 'user',
+    permissions: { maintenance: true }
+  });
+  assert.equal(app.canAccessAdminSection('manutencao'), true);
+  assert.equal(app.canManageMaintenance(), true);
+  assert.equal(app.canManageFleet(), false);
+  assert.equal(app.canAccessAdminSection('veiculos'), false);
 });
 
 test('usuário comum não acessa o painel de gestão', () => {

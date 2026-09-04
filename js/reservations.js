@@ -6,7 +6,6 @@ const form = document.getElementById('reservaForm');
 const partidaSelect = document.getElementById('partida');
 const destinoSelect = document.getElementById('destino');
 const destinoOutroInput = document.getElementById('destinoOutro');
-const fieldCarro = document.getElementById('field-carro');
 const carroSelect = document.getElementById('carro');
 // Código do veículo recomendado do momento - lido pelo optionExtra abaixo
 // pra colorir a etiqueta "Recomendado" dentro da lista (ver js/styled-select.js).
@@ -126,27 +125,21 @@ function isMobileReservationWizard(){
 }
 
 function showMobileReservationStep(step, shouldScroll){
-  mobileReservationStep = Math.max(1, Math.min(3, Number(step) || 1));
+  mobileReservationStep = Math.max(1, Math.min(2, Number(step) || 1));
   form.setAttribute('data-mobile-step', String(mobileReservationStep));
-  document.querySelectorAll('#mobileReservationProgress [data-progress-step]').forEach(item => {
-    item.classList.toggle(
-      'active',
-      Number(item.getAttribute('data-progress-step')) === mobileReservationStep
-    );
-  });
   mobileReservationBackBtn.disabled = mobileReservationStep === 1;
-  mobileReservationStepLabel.textContent = 'Etapa ' + mobileReservationStep + ' de 3';
+  mobileReservationStepLabel.textContent = 'Etapa ' + mobileReservationStep + ' de 2';
   if(shouldScroll){
     form.closest('.card').scrollIntoView({ behavior:'smooth', block:'start' });
   }
-  // As caronas compatíveis ajudam a decidir o trajeto/data (etapas 1 e 2);
-  // na etapa 3 (motivo/passageiros/confirmar) elas só ocupariam espaço.
+  // As caronas compatíveis ajudam a decidir o trajeto/veículo/data (etapa 1);
+  // na etapa 2 (motivo/passageiros/confirmar) elas só ocupariam espaço.
   if(typeof checkAndShowCompatibleRides === 'function') checkAndShowCompatibleRides();
 }
 
 function validateMobileReservationStep(step){
   if(step === 1){
-    ['partida','destino','carro'].forEach(id => setError(id, ''));
+    ['partida','destino','carro','dataIda','dataVolta','horarioRetirada','horarioDevolucao'].forEach(id => setError(id, ''));
     let valid = true;
     const partida = partidaSelect.value;
     const destino = getDestinoValue();
@@ -168,12 +161,7 @@ function validateMobileReservationStep(step){
       setError('carro', 'Selecione o veículo do local de partida.');
       valid = false;
     }
-    return valid;
-  }
 
-  if(step === 2){
-    ['dataIda','dataVolta','horarioRetirada','horarioDevolucao','carro'].forEach(id => setError(id, ''));
-    let valid = true;
     const dataIda = dataIdaInput.value;
     const dataVolta = dataVoltaInput.value;
     const retirada = horarioRetiradaSelect.value;
@@ -227,7 +215,6 @@ function validateMobileReservationStep(step){
       if(blocks.length){
         setError('carro', 'Veículo indisponível no período selecionado.');
         valid = false;
-        showMobileReservationStep(1, true);
       }
     }
     return valid;
@@ -289,10 +276,16 @@ function getCarReservedDates(partida, carro, excludeId){
   const set = new Set();
   if(!partida || !carro) return set;
 
+  // Case-insensitive, igual a findVehicleBlocks/findConflictingReservations
+  // (ver js/storage.js) - mesmo raciocínio: evita o calendário mostrar como
+  // livre uma data que o servidor (comparação case-insensitive) considera
+  // ocupada.
+  const localLower = String(partida).toLowerCase();
+  const carroLower = String(carro).toLowerCase();
   const reservas = getReservations().filter(r =>
     !isReservationCompleted(r) &&
     (excludeId == null || String(r.id) !== String(excludeId)) &&
-    r.partida === partida && r.carro === carro
+    String(r.partida).toLowerCase() === localLower && String(r.carro).toLowerCase() === carroLower
   );
   if(reservas.length === 0) return set;
 
@@ -337,11 +330,6 @@ function populateCarroOptions(preserveSelection){
   // terminar.
   carroRecommendedCodigo = null;
   renderCarroOptions(carros, keepCurrent ? currentCarro : '');
-  if(carros.length){
-    fieldCarro.classList.remove('hidden');
-  } else {
-    fieldCarro.classList.add('hidden');
-  }
 
   if(typeof getRecommendedVehicleCodigoForBranch !== 'function' || !carros.length) return;
   const applyRecommendation = () => {
@@ -737,6 +725,25 @@ function refreshDriverGate(){
   if(submitBtn) submitBtn.disabled = bloqueado;
 }
 
+// Reseta o formulário inteiro (campos, veículo recomendado, passageiros,
+// avisos, seletores de data e o assistente por etapas) - chamado tanto
+// depois de confirmar uma reserva quanto sempre que a tela "Nova Reserva" é
+// reaberta (ver switchTab em js/auth.js). Sem isto, um rascunho não
+// confirmado ficava preso nos campos na próxima visita, obrigando a mexer em
+// tudo de novo só pra corrigir ou descartar valores antigos.
+function resetReservationForm(){
+  form.reset();
+  carroRecommendedCodigo = null;
+  renderCarroOptions([], '');
+  passageirosWidget.clear();
+  populateDestinoOptions();
+  toggleDestinoOutro();
+  clearAllErrors();
+  refreshRodizioWarning();
+  refreshDatePickers();
+  showMobileReservationStep(1, false);
+}
+
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   confirmation.classList.remove('show');
@@ -765,15 +772,23 @@ form.addEventListener('submit', async function(e){
     return;
   }
 
+  // Busca bloqueios/reservas frescos antes de validar - sem isso, um bloqueio
+  // ou reserva criado por outra pessoa depois que esta tela carregou só seria
+  // percebido pelo servidor no envio final, depois do usuário já ter passado
+  // pela confirmação e pelas regras gerais à toa. Se a atualização falhar
+  // (ex.: rede instável), segue com os dados que já tinha - o servidor ainda
+  // é quem valida de verdade no envio.
+  try{
+    await hydrateDatabaseState();
+  }catch(error){
+    console.error('Falha ao atualizar dados antes de validar a reserva:', error);
+  }
+
   if(!validateForm()){
-    const stepOneHasError = ['partida','destino','carro'].some(id =>
-      document.getElementById('error-' + id).textContent
-    );
-    const stepTwoHasError = ['dataIda','dataVolta','horarioRetirada','horarioDevolucao'].some(id =>
+    const stepOneHasError = ['partida','destino','carro','dataIda','dataVolta','horarioRetirada','horarioDevolucao'].some(id =>
       document.getElementById('error-' + id).textContent
     );
     if(stepOneHasError) showMobileReservationStep(1, true);
-    else if(stepTwoHasError) showMobileReservationStep(2, true);
     return;
   }
 
@@ -815,6 +830,11 @@ form.addEventListener('submit', async function(e){
   }catch(error){
     await hydrateDatabaseState();
     setError('horarioRetirada', error.message);
+    // horarioRetirada mora na etapa 1 - sem isto, uma rejeição do servidor
+    // com o usuário já na etapa 2 (motivo/passageiros) deixava o erro
+    // marcado num campo escondido, sem feedback nenhum na tela até a pessoa
+    // clicar em "Voltar" por conta própria e topar com ele.
+    showMobileReservationStep(1, true);
     return;
   }finally{
     if(confirmBtn){
@@ -830,18 +850,8 @@ form.addEventListener('submit', async function(e){
   const qtdConfirmados = getPassageirosConfirmados(reserva);
   const successMessage = 'Reserva ' + getReservationNumberLabel(reserva) + ' confirmada! ' + reserva.partida + ' → ' + reserva.destino + ' de ' + formatDate(reserva.dataIda) + ' ' + reserva.horarioRetirada + ' a ' + formatDate(reserva.dataVolta) + ' ' + reserva.horarioDevolucao + '. Você + ' + qtdConfirmados + (qtdConfirmados === 1 ? ' passageiro confirmado' : ' passageiros confirmados') + '. Vagas restantes: ' + vagasRestantes + '.';
 
-  form.reset();
-  fieldCarro.classList.add('hidden');
-  carroRecommendedCodigo = null;
-  renderCarroOptions([], '');
-  passageirosWidget.clear();
-  populateDestinoOptions();
-  toggleDestinoOutro();
-  clearAllErrors();
-  refreshRodizioWarning();
-  refreshDatePickers();
+  resetReservationForm();
   checkAndShowCompatibleRides();
-  showMobileReservationStep(1, false);
   showCreatedReservationInMyReservations(successMessage);
 });
 

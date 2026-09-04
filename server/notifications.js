@@ -319,13 +319,19 @@ async function notifyOperationReport(client, reservation, phase, actor){
   if(!record) return;
   const hasAvarias = String(record.avarias || '').trim().length > 0;
   const photoCount = Array.isArray(record.fotos) ? record.fotos.length : 0;
-  if(!hasAvarias && !photoCount) return;
+  // "Excesso de sujeira" na devolução conta como avaria/observação pra fins
+  // de notificar o responsável - "limpo" não conta, só as duas opções de
+  // sujeira (ver mesmo critério em reservationHasOperationReport, js/utils.js).
+  const dirtyCondition = record.condicaoLimpeza === 'sujeira_interna' ? 'interna'
+    : (record.condicaoLimpeza === 'sujeira_externa' ? 'externa' : null);
+  if(!hasAvarias && !photoCount && !dirtyCondition) return;
 
   await ensureNotificationsTable(client);
   const recipients = await resolveReservationManagers(client);
   const summary = reservationSummary(reservation);
   const phaseLabel = phase === 'retirada' ? 'retirada' : 'devolução';
   const parts = [];
+  if(dirtyCondition) parts.push(`excesso de sujeira ${dirtyCondition}`);
   if(hasAvarias) parts.push('uma observação');
   if(photoCount) parts.push(photoCount + (photoCount === 1 ? ' foto' : ' fotos'));
   const message = `${actor.nome} registrou ${parts.join(' e ')} na ${phaseLabel} de ${summary.route}.`;
@@ -339,7 +345,7 @@ async function notifyOperationReport(client, reservation, phase, actor){
       message,
       reservationId:String(reservation.id || ''),
       dedupeKey:`operation-report:${reservation.id}:${phase}`,
-      metadata:{ route:summary.route, phase, hasAvarias, photoCount }
+      metadata:{ route:summary.route, phase, hasAvarias, photoCount, dirtyCondition }
     });
   }
 }

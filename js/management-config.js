@@ -11,6 +11,7 @@ function renderAdminSection(section){
   if(section === 'locais') renderBranchManagement();
   if(section === 'veiculos') renderFleetManagement();
   if(section === 'bloqueios') renderBlocksManagement();
+  if(section === 'manutencao') renderMaintenanceManagement();
   if(section === 'auditoria') renderAuditLog();
   if(section === 'relatorios') renderReports();
   if(section === 'regras') renderReservationRules();

@@ -19,11 +19,11 @@
     rel="stylesheet">
   <link rel="stylesheet" href="css/variables.css?v=20260903-1">
   <link rel="stylesheet" href="css/base.css?v=20260903-1">
-  <link rel="stylesheet" href="css/components.css?v=20260903-6">
-  <link rel="stylesheet" href="css/calendar.css?v=20260903-1">
-  <link rel="stylesheet" href="css/admin.css?v=20260903-1">
-  <link rel="stylesheet" href="css/responsive.css?v=20260903-3">
-  <link rel="stylesheet" href="css/themes.css?v=20260903-4">
+  <link rel="stylesheet" href="css/components.css?v=20260903-9">
+  <link rel="stylesheet" href="css/calendar.css?v=20260903-3">
+  <link rel="stylesheet" href="css/admin.css?v=20260903-2">
+  <link rel="stylesheet" href="css/responsive.css?v=20260903-5">
+  <link rel="stylesheet" href="css/themes.css?v=20260903-8">
 </head>
 
 <body>
@@ -161,19 +161,13 @@
       <section class="tab-panel hidden" id="panel-nova">
         <div class="card">
           <h2>Nova Reserva</h2>
-          <div class="form-hint" id="solicitanteHint"></div>
+          <div class="solicitante-card" id="solicitanteHint"></div>
           <div class="notice notice-warning hidden" id="driverGateNotice">
             Para reservar um veículo como motorista é preciso ter uma CNH válida
             cadastrada. Abra <strong>Meu perfil</strong> para cadastrar a sua — sem
             CNH você continua podendo entrar em caronas como passageiro.
           </div>
           <form id="reservaForm" novalidate>
-            <div class="mobile-reservation-progress" id="mobileReservationProgress" aria-label="Progresso da reserva">
-              <span class="active" data-progress-step="1"><strong>1</strong> Trajeto</span>
-              <span data-progress-step="2"><strong>2</strong> Data e horário</span>
-              <span data-progress-step="3"><strong>3</strong> Detalhes</span>
-            </div>
-
             <div class="row mobile-reservation-step" data-reservation-step="1">
               <div class="field" id="field-partida">
                 <label for="partida">Local de Partida</label>
@@ -201,7 +195,7 @@
               </div>
             </div>
 
-            <div class="field hidden mobile-reservation-step" id="field-carro" data-reservation-step="1">
+            <div class="field mobile-reservation-step" id="field-carro" data-reservation-step="1">
               <label for="carro">Veículo</label>
               <select id="carro" name="carro" data-styled-select-manual aria-describedby="error-carro">
                 <option value="">Selecione...</option>
@@ -209,14 +203,7 @@
               <div class="error-msg" role="alert" id="error-carro"></div>
             </div>
 
-            <div class="field mobile-reservation-step" id="field-motivo" data-reservation-step="3">
-              <label for="motivo">Motivo da viagem<span class="required-marker">*</span></label>
-              <textarea id="motivo" name="motivo" rows="3"
-                placeholder="Descreva brevemente o objetivo da viagem" aria-describedby="error-motivo"></textarea>
-              <div class="error-msg" role="alert" id="error-motivo"></div>
-            </div>
-
-            <div class="mobile-reservation-step" data-reservation-step="2">
+            <div class="mobile-reservation-step" data-reservation-step="1">
               <div class="row">
                 <div class="field" id="field-dataIda">
                   <label for="dataIda">Data de Ida</label>
@@ -251,10 +238,17 @@
               </div>
             </div>
 
-            <div class="rodizio-warning hidden mobile-reservation-step" id="rodizioWarning" data-reservation-step="2"
+            <div class="rodizio-warning hidden mobile-reservation-step" id="rodizioWarning" data-reservation-step="1"
               role="status"></div>
 
-            <div class="field mobile-reservation-step" id="field-passageirosConfirmados" data-reservation-step="3">
+            <div class="field mobile-reservation-step" id="field-motivo" data-reservation-step="2">
+              <label for="motivo">Motivo da viagem<span class="required-marker">*</span></label>
+              <textarea id="motivo" name="motivo" rows="3"
+                placeholder="Descreva brevemente o objetivo da viagem" aria-describedby="error-motivo"></textarea>
+              <div class="error-msg" role="alert" id="error-motivo"></div>
+            </div>
+
+            <div class="field mobile-reservation-step" id="field-passageirosConfirmados" data-reservation-step="2">
               <label>Passageiros que vão com você</label>
               <p class="field-hint">Clique num lugar livre do mapa para adicionar, ou no nome de um passageiro para editar/remover.</p>
               <div id="passageirosOccupancyWidget"></div>
@@ -263,9 +257,9 @@
 
             <div class="mobile-wizard-actions">
               <button type="button" class="secondary-btn" id="mobileReservationBackBtn">Voltar</button>
-              <span id="mobileReservationStepLabel" aria-live="polite">Etapa 1 de 3</span>
+              <span id="mobileReservationStepLabel" aria-live="polite">Etapa 1 de 2</span>
               <button type="button" class="submit-btn" id="mobileReservationNextBtn">Próximo</button>
-              <button type="submit" class="submit-btn mobile-reservation-step" data-reservation-step="3">
+              <button type="submit" class="submit-btn mobile-reservation-step" data-reservation-step="2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M3 17 L4.5 11 C5 9 6.5 8 8.5 8 H15.5 C17.5 8 19 9 19.5 11 L21 17" stroke="#fff"
                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
@@ -329,7 +323,12 @@
             <div class="calendar-nav-period">
               <button type="button" class="calendar-nav-btn" id="calPrevBtn"
                 aria-label="Semana anterior">&#8249;</button>
-              <span class="calendar-month-label" id="calMonthLabel"></span>
+              <button type="button" class="calendar-month-label" id="calMonthLabel" aria-haspopup="true" aria-expanded="false">
+                <span id="calMonthLabelText"></span>
+                <svg class="calendar-month-label-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
               <button type="button" class="calendar-nav-btn" id="calNextBtn"
                 aria-label="Próxima semana">&#8250;</button>
             </div>
@@ -491,6 +490,7 @@
             <button type="button" class="admin-section-btn" data-admin-section="locais">Locais</button>
             <button type="button" class="admin-section-btn" data-admin-section="veiculos">Veículos</button>
             <button type="button" class="admin-section-btn" data-admin-section="bloqueios">Bloqueios</button>
+            <button type="button" class="admin-section-btn" data-admin-section="manutencao">Manutenção</button>
             <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
             <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
             <button type="button" class="admin-section-btn" data-admin-section="regras">Regras</button>
@@ -636,11 +636,15 @@
                 <div class="row admin-filter-row">
                   <div class="field">
                     <label for="blockStart">Data inicial</label>
-                    <input type="date" id="blockStart">
+                    <div class="date-input-wrapper" id="wrap-blockStart">
+                      <input type="date" id="blockStart" readonly autocomplete="off">
+                    </div>
                   </div>
                   <div class="field">
                     <label for="blockEnd">Data final</label>
-                    <input type="date" id="blockEnd">
+                    <div class="date-input-wrapper" id="wrap-blockEnd">
+                      <input type="date" id="blockEnd" readonly autocomplete="off">
+                    </div>
                   </div>
                 </div>
                 <div class="field">
@@ -652,6 +656,54 @@
             </div>
             &nbsp;
             <div id="blocksList" class="management-list"></div>
+          </div>
+
+          <div class="admin-section-panel hidden" id="admin-section-manutencao">
+            <div class="admin-subcard">
+              <form id="maintenanceForm" class="compact-form">
+                <div class="row">
+                  <div class="field">
+                    <label for="maintenanceVehicle">Veículo</label>
+                    <select id="maintenanceVehicle"></select>
+                  </div>
+                  <div class="field">
+                    <label for="maintenanceType">Tipo</label>
+                    <select id="maintenanceType">
+                      <option value="oleo">Troca de óleo</option>
+                      <option value="pneus">Troca de pneus</option>
+                      <option value="revisao">Revisão</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="maintenanceDescription">Descrição</label>
+                  <input type="text" id="maintenanceDescription" maxlength="200"
+                    placeholder="Detalhe adicional (opcional)" autocomplete="off">
+                </div>
+                <div class="row admin-filter-row">
+                  <div class="field">
+                    <label for="maintenanceNextKm">Próxima troca (km)</label>
+                    <input type="number" id="maintenanceNextKm" min="0" step="1" placeholder="Ex.: 50000">
+                  </div>
+                  <div class="field" id="field-maintenanceNextDate">
+                    <label for="maintenanceNextDate">Próxima troca (data)</label>
+                    <div class="date-input-wrapper" id="wrap-maintenanceNextDate">
+                      <input type="date" id="maintenanceNextDate" readonly autocomplete="off">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-hint">Informe a próxima troca por quilometragem e/ou por tempo (data) - o que
+                  vencer primeiro dispara o aviso.</div>
+                <div class="field">
+                  <label for="maintenanceNotes">Observações</label>
+                  <textarea id="maintenanceNotes" rows="2" placeholder="Detalhes do lembrete"></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Cadastrar lembrete</button>
+              </form>
+            </div>
+            &nbsp;
+            <div id="maintenanceList" class="management-list"></div>
           </div>
 
           <div class="admin-section-panel hidden" id="admin-section-auditoria">
@@ -678,11 +730,15 @@
               <div class="row admin-filter-row">
                 <div class="field" id="field-auditPeriod">
                   <label for="auditStart">Data inicial</label>
-                  <input type="date" id="auditStart">
+                  <div class="date-input-wrapper" id="wrap-auditStart">
+                    <input type="date" id="auditStart" readonly autocomplete="off">
+                  </div>
                 </div>
                 <div class="field">
                   <label for="auditEnd">Data final</label>
-                  <input type="date" id="auditEnd">
+                  <div class="date-input-wrapper" id="wrap-auditEnd">
+                    <input type="date" id="auditEnd" readonly autocomplete="off">
+                  </div>
                 </div>
               </div>
               <div class="report-actions">
@@ -737,11 +793,15 @@
               <div class="row">
                 <div class="field">
                   <label for="reportStart">Data inicial</label>
-                  <input type="date" id="reportStart">
+                  <div class="date-input-wrapper" id="wrap-reportStart">
+                    <input type="date" id="reportStart" readonly autocomplete="off">
+                  </div>
                 </div>
                 <div class="field">
                   <label for="reportEnd">Data final</label>
-                  <input type="date" id="reportEnd">
+                  <div class="date-input-wrapper" id="wrap-reportEnd">
+                    <input type="date" id="reportEnd" readonly autocomplete="off">
+                  </div>
                 </div>
               </div>
               <div class="field">
@@ -982,6 +1042,18 @@
                   </div>
                 </div>
                 <div class="field">
+                  <label class="permission-option"><input type="checkbox" id="reminderMaintenanceDueEnabled"> Aviso
+                    de manutenção da frota próxima</label>
+                  <input type="text" id="reminderMaintenanceDueSubject" placeholder="Assunto do e-mail">
+                  <textarea id="reminderMaintenanceDueBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+                  <div class="form-hint">
+                    Enviado a quem tem permissão de frota quando uma troca de óleo, pneus ou outra manutenção
+                    cadastrada em Manutenção se aproxima (por quilometragem ou por data). Tokens próprios deste
+                    aviso: <code>{{tipoManutencao}}</code>, <code>{{mensagem}}</code>, <code>{{proximaKm}}</code>,
+                    <code>{{proximaData}}</code>.
+                  </div>
+                </div>
+                <div class="field">
                   <label class="permission-option"><input type="checkbox" id="reminderPassengerRemovedEnabled"> Aviso
                     a quem foi removido de uma carona</label>
                   <input type="text" id="reminderPassengerRemovedSubject" placeholder="Assunto do e-mail">
@@ -1068,6 +1140,8 @@
                       Reservas</label>
                     <label class="permission-option"><input type="checkbox" id="permissionBranches"> Locais</label>
                     <label class="permission-option"><input type="checkbox" id="permissionFleet"> Veículos</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionMaintenance">
+                      Manutenção</label>
                     <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
                     <label class="permission-option"><input type="checkbox" id="permissionAudit"> Auditoria</label>
                     <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
@@ -1111,6 +1185,7 @@
                   <option value="reservations">Reservas</option>
                   <option value="branches">Locais</option>
                   <option value="fleet">Veículos</option>
+                  <option value="maintenance">Manutenção</option>
                   <option value="blocks">Bloqueios</option>
                   <option value="audit">Auditoria</option>
                   <option value="reports">Relatórios</option>
@@ -1617,6 +1692,8 @@
               Reservas</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionBranches"> Locais</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionMaintenance">
+              Manutenção</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionBlocks"> Bloqueios</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionAudit"> Auditoria</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionReports"> Relatórios</label>
@@ -1755,6 +1832,8 @@
               Reservas</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionBranches"> Locais</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionMaintenance">
+              Manutenção</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionBlocks"> Bloqueios</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionAudit"> Auditoria</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionReports"> Relatórios</label>
@@ -1820,6 +1899,24 @@
             <option value="3/4">3/4</option>
             <option value="Cheio">Cheio</option>
           </select>
+        </div>
+        <div class="field hidden" id="operationCleanlinessField">
+          <label>Condição de limpeza</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="operationCleanliness" id="operationCleanlinessLimpo" value="limpo">
+              Agradável (limpo)
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="operationCleanliness" id="operationCleanlinessInterna" value="sujeira_interna">
+              Excesso de sujeira interna
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="operationCleanliness" id="operationCleanlinessExterna" value="sujeira_externa">
+              Excesso de sujeira externa
+            </label>
+          </div>
+          <div class="error-msg" role="alert" id="error-operationCleanliness"></div>
         </div>
         <div class="field">
           <label for="operationDamages">Avarias e observações</label>
@@ -1901,38 +1998,41 @@
 
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
   <script src="js/cnh-categorias.js?v=20260901-1"></script>
-  <script src="js/config.js?v=20260901-2"></script>
+  <script src="js/config.js?v=20260903-1"></script>
   <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260903-1"></script>
+  <script src="js/utils.js?v=20260903-3"></script>
   <script src="js/styled-select.js?v=20260902-1"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
-  <script src="js/api.js?v=20260902-1"></script>
-  <script src="js/storage.js?v=20260902-1"></script>
+  <script src="js/api.js?v=20260903-1"></script>
+  <script src="js/storage.js?v=20260903-2"></script>
   <script src="js/vehicle-recommendation.js?v=20260902-3"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
-  <script src="js/seat-map.js?v=20260902-1"></script>
-  <script src="js/rides.js?v=20260902-5"></script>
-  <script src="js/reservations.js?v=20260903-1"></script>
-  <script src="js/calendar.js?v=20260902-3"></script>
-  <script src="js/modals.js?v=20260903-1"></script>
-  <script src="js/admin.js?v=20260903-1"></script>
+  <script src="js/seat-map.js?v=20260903-1"></script>
+  <script src="js/rides.js?v=20260903-1"></script>
+  <script src="js/reservations.js?v=20260903-5"></script>
+  <script src="js/calendar.js?v=20260903-2"></script>
+  <script src="js/modals.js?v=20260903-2"></script>
+  <script src="js/admin.js?v=20260903-2"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260826-2"></script>
-  <script src="js/management-config.js?v=20260826-2"></script>
-  <script src="js/management-users.js?v=20260901-2"></script>
-  <script src="js/management-integrations.js?v=20260831-4"></script>
+  <script src="js/management-operations.js?v=20260903-1"></script>
+  <script src="js/management-config.js?v=20260903-1"></script>
+  <script src="js/management-users.js?v=20260903-1"></script>
+  <script src="js/management-integrations.js?v=20260903-1"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
-  <script src="js/management-email-preview.js?v=20260831-3"></script>
-  <script src="js/management-fleet.js?v=20260902-1"></script>
+  <script src="js/management-email-preview.js?v=20260903-1"></script>
+  <script src="js/management-fleet.js?v=20260903-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
+  <!-- Depois de management-fleet.js (populateManagementVehicleSelectors)
+       e de storage.js (getMaintenanceReminders/saveMaintenanceReminders). -->
+  <script src="js/management-maintenance.js?v=20260903-2"></script>
   <script src="js/management-indicators.js?v=20260831-1"></script>
   <script src="js/management-reports.js?v=20260831-1"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
-  <script src="js/driver-license.js?v=20260902-1"></script>
-  <script src="js/auth.js?v=20260903-1"></script>
+  <script src="js/driver-license.js?v=20260903-1"></script>
+  <script src="js/auth.js?v=20260903-6"></script>
   <script src="js/app.js?v=20260903-1"></script>
 
 </body>

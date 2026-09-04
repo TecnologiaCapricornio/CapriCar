@@ -156,6 +156,27 @@ test('nenhuma notificação é criada quando o registro não tem avarias nem fot
   assert.equal(client.inserted.length, 0);
 });
 
+test('gestor é notificado quando a devolução registra excesso de sujeira', async () => {
+  const client = dedupingNotificationClient([manager.id]);
+  const reservation = {
+    ...base,
+    operacao:{ devolucao:{ avarias:'', fotos:[], condicaoLimpeza:'sujeira_interna' } }
+  };
+  await notifyOperationReport(client, reservation, 'devolucao', owner);
+  assert.equal(client.inserted.length, 1);
+  assert.match(client.inserted[0][3], /excesso de sujeira interna/i);
+});
+
+test('condição de limpeza "limpo" não gera notificação sozinha', async () => {
+  const client = dedupingNotificationClient([manager.id]);
+  const reservation = {
+    ...base,
+    operacao:{ devolucao:{ avarias:'', fotos:[], condicaoLimpeza:'limpo' } }
+  };
+  await notifyOperationReport(client, reservation, 'devolucao', owner);
+  assert.equal(client.inserted.length, 0);
+});
+
 test('o próprio autor do registro não recebe notificação sobre a própria ação', async () => {
   const client = dedupingNotificationClient([manager.id]);
   const reservation = { ...base, operacao:{ retirada:{ avarias:'Risco na lateral', fotos:[] } } };

@@ -99,6 +99,12 @@ document.addEventListener('click', function (event) {
   }
 });
 
+const OPERATION_CLEANLINESS_LABELS = {
+  limpo: 'Agradável (limpo)',
+  sujeira_interna: 'Excesso de sujeira interna',
+  sujeira_externa: 'Excesso de sujeira externa'
+};
+
 function renderOperationDetails(reserva) {
   const operacao = reserva.operacao || {};
   const encerramento = reserva.encerramentoAdministrativo;
@@ -106,9 +112,11 @@ function renderOperationDetails(reserva) {
   const renderPhase = (label, data) => {
     if (!data) return '';
     const photos = Array.isArray(data.fotos) ? data.fotos : [];
+    const cleanlinessLabel = OPERATION_CLEANLINESS_LABELS[data.condicaoLimpeza];
     return '<div class="operation-record">' +
       '<strong>' + label + '</strong>' +
       '<span>Km ' + Number(data.quilometragem || 0).toLocaleString('pt-BR') + ' · Combustível: ' + escapeHTML(data.combustivel || '—') + '</span>' +
+      (cleanlinessLabel ? '<span>Condição de limpeza: ' + escapeHTML(cleanlinessLabel) + '</span>' : '') +
       (data.avarias ? '<span>Avarias/observações: ' + escapeHTML(data.avarias) + '</span>' : '') +
       '<span>Registrado por ' + escapeHTML(data.registradoPor || '—') + ' em ' + escapeHTML(formatDateTime(data.registradoEm)) + '</span>' +
       (photos.length ? '<div class="operation-photos">' +
@@ -117,7 +125,7 @@ function renderOperationDetails(reserva) {
       '</div>';
   };
   const summaryText = reservationHasOperationReport(reserva)
-    ? '⚠️ Ver avarias e fotos registradas'
+    ? '⚠️ Ver avarias, fotos ou limpeza registradas'
     : 'Ver retirada e devolução';
   return '<details class="operation-details"><summary>' + summaryText + '</summary>' +
     renderPhase('Retirada', operacao.retirada) +
@@ -214,6 +222,10 @@ async function openOperationModal(reservationId, phase) {
   operationTitle.textContent = phase === 'retirada' ? 'Registrar retirada' : 'Registrar devolução';
   operationSummary.innerHTML = escapeHTML(reserva.partida + ' → ' + reserva.destino) +
     '<br>' + getVehicleDisplayHTML(reserva);
+  // Condição de limpeza só existe na devolução - reset() já limpa a seleção
+  // dos radios, então só falta mostrar/esconder o campo pra fase certa.
+  document.getElementById('operationCleanlinessField').classList.toggle('hidden', phase !== 'devolucao');
+  document.getElementById('error-operationCleanliness').textContent = '';
   if (phase === 'devolucao' && operacao.retirada) {
     document.getElementById('operationKm').min = String(operacao.retirada.quilometragem || 0);
   } else {
@@ -276,6 +288,14 @@ operationForm.addEventListener('submit', async function (e) {
     operationError.textContent = 'A quilometragem final não pode ser menor que a inicial.';
     return;
   }
+  const cleanlinessInput = operationPhase === 'devolucao'
+    ? operationForm.querySelector('input[name="operationCleanliness"]:checked')
+    : null;
+  if (operationPhase === 'devolucao' && !cleanlinessInput) {
+    document.getElementById('error-operationCleanliness').textContent = 'Selecione a condição de limpeza do veículo.';
+    return;
+  }
+  document.getElementById('error-operationCleanliness').textContent = '';
   try {
     const photos = await filesToDataUrls(document.getElementById('operationPhotos').files);
     reserva.operacao = reserva.operacao || {};
@@ -283,6 +303,12 @@ operationForm.addEventListener('submit', async function (e) {
       quilometragem: km,
       combustivel: fuel,
       avarias: document.getElementById('operationDamages').value.trim(),
+      // Só existe na devolução (ver toggle em openOperationModal). "Excesso
+      // de sujeira" conta como avaria/observação pra tudo que já reage a
+      // avarias/fotos (filtro "Somente com registro", notificação ao
+      // responsável) - ver reservationHasOperationReport em js/utils.js e
+      // notifyOperationReport em server/notifications.js.
+      condicaoLimpeza: cleanlinessInput ? cleanlinessInput.value : undefined,
       fotos: photos,
       registradoPor: getCurrentUser().nome,
       registradoEm: new Date().toISOString()

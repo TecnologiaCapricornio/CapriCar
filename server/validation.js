@@ -202,6 +202,40 @@ function validateBlocks(value, vehicles){
   });
 }
 
+const MAINTENANCE_TYPES = ['oleo', 'pneus', 'revisao', 'outro'];
+
+function validateMaintenanceReminders(value, vehicles){
+  assert(Array.isArray(value) && value.length <= 5000, 'Lista de lembretes de manutenção inválida.');
+  ensureUniqueIds(value, 'lembretes de manutenção');
+  const vehicleKeys = new Set((vehicles || []).map(vehicle =>
+    `${String(vehicle.local).toLowerCase()}|${String(vehicle.codigo).toLowerCase()}`
+  ));
+  value.forEach(reminder => {
+    const branch = text(reminder.local, 'o local do lembrete', 120);
+    const car = text(reminder.carro, 'o veículo do lembrete', 40);
+    assert(vehicleKeys.has(`${branch.toLowerCase()}|${car.toLowerCase()}`),
+      'O lembrete referencia um veículo inexistente.');
+    assert(MAINTENANCE_TYPES.includes(String(reminder.tipo)),
+      'Selecione um tipo de manutenção válido.');
+    text(reminder.descricao, 'a descrição da manutenção', 200, reminder.tipo === 'outro');
+    text(reminder.observacoes, 'as observações do lembrete', 2000, false);
+
+    if(reminder.proximaKm != null && reminder.proximaKm !== ''){
+      assert(Number.isInteger(Number(reminder.proximaKm)) && Number(reminder.proximaKm) >= 0,
+        'A próxima troca por quilometragem deve ser um número inteiro positivo.');
+    }
+    if(reminder.proximaData != null && reminder.proximaData !== ''){
+      assert(validDate(reminder.proximaData), 'A data da próxima manutenção é inválida.');
+    }
+    assert(
+      (reminder.proximaKm != null && reminder.proximaKm !== '') ||
+        (reminder.proximaData != null && reminder.proximaData !== ''),
+      'Informe a próxima troca por quilometragem e/ou por tempo (data) - o que vencer primeiro dispara o aviso.'
+    );
+    assert(typeof reminder.ativo === 'boolean', 'O status do lembrete de manutenção é inválido.');
+  });
+}
+
 function reservationRange(reservation){
   return {
     start:new Date(`${reservation.dataIda}T${reservation.horarioRetirada}:00Z`).getTime(),
@@ -213,7 +247,9 @@ function scheduledPickupTimestamp(reservation){
   return Date.parse(`${reservation.dataIda}T${reservation.horarioRetirada}:00-03:00`);
 }
 
-function validateOperation(operation){
+const CLEANLINESS_CONDITIONS = ['limpo', 'sujeira_interna', 'sujeira_externa'];
+
+function validateOperation(operation, previousOperation){
   if(!operation) return;
   assert(operation && typeof operation === 'object' && !Array.isArray(operation), 'Registro operacional inválido.');
   for(const phase of ['retirada', 'devolucao']){
@@ -223,6 +259,22 @@ function validateOperation(operation){
       'A quilometragem deve ser um número inteiro positivo.');
     text(record.combustivel, 'o nível de combustível', 30);
     text(record.avarias, 'as avarias', 4000, false);
+    // "Condição de limpeza" só passou a existir na devolução com esta versão -
+    // só é exigida quando a devolução está sendo registrada agora pela
+    // primeira vez (a reserva ainda não tinha devolução na versão anterior).
+    // Uma devolução antiga, já registrada antes do campo existir, continua
+    // passando mesmo que a reserva seja tocada por outro motivo depois (ex.:
+    // um admin corrigindo o motivo da viagem) - mesma armadilha do "motivo"
+    // logo acima em value.forEach, que por isso também não é obrigatório
+    // retroativamente.
+    const isNewDevolucao = phase === 'devolucao' && !(previousOperation && previousOperation.devolucao);
+    if(isNewDevolucao){
+      assert(CLEANLINESS_CONDITIONS.includes(String(record.condicaoLimpeza || '')),
+        'Selecione a condição de limpeza do veículo.');
+    }else if(record.condicaoLimpeza){
+      assert(CLEANLINESS_CONDITIONS.includes(String(record.condicaoLimpeza)),
+        'Condição de limpeza inválida.');
+    }
     text(record.registradoPor, 'o responsável pelo registro', 120);
     assert(!Number.isNaN(new Date(record.registradoEm).getTime()), 'A data do registro operacional é inválida.');
     const photos = Array.isArray(record.fotos) ? record.fotos : [];
@@ -325,6 +377,22 @@ function validateReservations(value, context){
     }
 
     const previousReservation = currentReservationsById.get(String(reservation.id));
+    // /sync sempre reenvia a COLEÇÃO INTEIRA (ver comentário perto de "next"
+    // em server/routes/reservations.js), não só a reserva alterada - então
+    // toda vez que qualquer pessoa mexe em QUALQUER reserva, esta função
+    // reavalia de novo TODAS as outras. Sem isto, uma reserva já confirmada
+    // ficava presa numa validação retroativa: um bloqueio criado depois (ou
+    // uma regra alterada, ou um veículo desativado, ou a CNH do motorista
+    // vencendo) fazia ela falhar aqui pra sempre, travando o /sync inteiro -
+    // e com isso NENHUMA reserva nova, de ninguém, em veículo nenhum,
+    // conseguia ser criada. isUnchanged identifica esse caso (o objeto é
+    // literalmente o mesmo que já estava salvo, não passou por "changes"
+    // nesta chamada) para pular só as checagens que dependem do estado ATUAL
+    // do mundo (bloqueio, CNH, limites de dias, veículo ativo) - as checagens
+    // estruturais (datas válidas, sem passageiro duplicado) e as de conflito
+    // ENTRE reservas (que protegem reservas novas de colidir com esta)
+    // continuam rodando normalmente.
+    const isUnchanged = !!previousReservation && previousReservation === reservation;
     if(!previousReservation){
       assert(
         !hasPendingReturnForOwner(reservation, context.currentReservations),
@@ -332,9 +400,9 @@ function validateReservations(value, context){
       );
     }
     assert(endDay >= startDay, 'A devolução não pode ocorrer antes da retirada.');
-    assert(historical || endDay - startDay + 1 <= Number(rules.maxConsecutiveDays),
+    assert(historical || isUnchanged || endDay - startDay + 1 <= Number(rules.maxConsecutiveDays),
       `A reserva não pode ultrapassar ${rules.maxConsecutiveDays} dias consecutivos.`);
-    assert(historical || (startDay >= todayDay && startDay <= todayDay + Number(rules.maxAdvanceDays)),
+    assert(historical || isUnchanged || (startDay >= todayDay && startDay <= todayDay + Number(rules.maxAdvanceDays)),
       `A reserva deve começar dentro dos próximos ${rules.maxAdvanceDays} dias.`);
     if(reservation.dataIda === reservation.dataVolta){
       assert(reservation.horarioDevolucao > reservation.horarioRetirada,
@@ -350,7 +418,7 @@ function validateReservations(value, context){
         new Set(historicalPassengerNames).size === historicalPassengerNames.length,
         'Existem passageiros duplicados.'
       );
-      validateOperation(reservation.operacao);
+      validateOperation(reservation.operacao, previousReservation && previousReservation.operacao);
       return;
     }
     const scheduleChanged = !previousReservation ||
@@ -362,34 +430,40 @@ function validateReservations(value, context){
     }
 
     const vehicle = vehicleMap.get(`${branch.toLowerCase()}|${car.toLowerCase()}`);
-    assert(vehicle && vehicle.ativo !== false, 'O veículo selecionado não está disponível.');
+    assert(isUnchanged || (vehicle && vehicle.ativo !== false), 'O veículo selecionado não está disponível.');
     const passengers = Array.isArray(reservation.passageiros) ? reservation.passageiros : [];
     const passengerNames = passengers.map(passenger =>
       text(passenger && passenger.nome, 'o nome do passageiro', 120).toLowerCase()
     );
     assert(new Set(passengerNames).size === passengerNames.length, 'Existem passageiros duplicados.');
-    assert(passengers.length + Number(reservation.passageirosConfirmados || 0) <= Number(vehicle.capacidade),
-      'A quantidade de ocupantes excede a capacidade do veículo.');
-    // Só valida quando o motorista tem conta vinculada E CNH cadastrada -
-    // sem isso não há categoria nenhuma pra comparar (reserva com motorista
-    // digitado à mão, sem conta, continua passando por aqui como sempre).
-    const driverLicense = reservation.criadorUsuarioId
-      ? context.licensesByUserId && context.licensesByUserId.get(String(reservation.criadorUsuarioId))
-      : null;
-    if(driverLicense && driverLicense.categoria){
-      const capacidadeVeiculo = Number(vehicle.capacidade);
-      assert(cnhAtendeCapacidade(driverLicense.categoria, capacidadeVeiculo),
-        `Este veículo (${capacidadeVeiculo} lugares) exige CNH categoria ${cnhCategoriaMinimaPara(capacidadeVeiculo)} ` +
-        `ou superior. A CNH cadastrada é categoria ${driverLicense.categoria}.`);
+    // vehicle pode não existir mais (veículo removido da frota, não só
+    // desativado) numa reserva antiga grandfathered por isUnchanged acima -
+    // as checagens abaixo dependem dos dados do veículo, então só rodam
+    // quando ele ainda existe.
+    if(vehicle){
+      assert(passengers.length + Number(reservation.passageirosConfirmados || 0) <= Number(vehicle.capacidade),
+        'A quantidade de ocupantes excede a capacidade do veículo.');
+      // Só valida quando o motorista tem conta vinculada E CNH cadastrada -
+      // sem isso não há categoria nenhuma pra comparar (reserva com motorista
+      // digitado à mão, sem conta, continua passando por aqui como sempre).
+      const driverLicense = reservation.criadorUsuarioId
+        ? context.licensesByUserId && context.licensesByUserId.get(String(reservation.criadorUsuarioId))
+        : null;
+      if(driverLicense && driverLicense.categoria){
+        const capacidadeVeiculo = Number(vehicle.capacidade);
+        assert(isUnchanged || cnhAtendeCapacidade(driverLicense.categoria, capacidadeVeiculo),
+          `Este veículo (${capacidadeVeiculo} lugares) exige CNH categoria ${cnhCategoriaMinimaPara(capacidadeVeiculo)} ` +
+          `ou superior. A CNH cadastrada é categoria ${driverLicense.categoria}.`);
+      }
     }
-    validateOperation(reservation.operacao);
+    validateOperation(reservation.operacao, previousReservation && previousReservation.operacao);
 
     const blockConflict = blocks.some(block =>
       String(block.local).toLowerCase() === branch.toLowerCase() &&
       String(block.carro).toLowerCase() === car.toLowerCase() &&
       !(reservation.dataVolta < block.dataInicio || reservation.dataIda > block.dataFim)
     );
-    assert(!blockConflict, 'O veículo está bloqueado no período selecionado.');
+    assert(isUnchanged || !blockConflict, 'O veículo está bloqueado no período selecionado.');
 
     const range = reservationRange(reservation);
     const vehicleKey = `${branch.toLowerCase()}|${car.toLowerCase()}`;
@@ -418,8 +492,12 @@ function validateReservations(value, context){
 
     if(startDay >= todayDay && startDay <= todayDay + Number(rules.maxAdvanceDays)){
       const ownerKey = owner.toLowerCase();
+      // O contador incrementa sempre (mesmo pra reservas grandfathered) -
+      // ele ainda precisa contar corretamente contra o limite de quem NÃO
+      // está grandfathered; só o assert (que travaria o /sync inteiro pra
+      // sempre se o limite fosse reduzido depois) é que é pulado aqui.
       ownerCounts.set(ownerKey, (ownerCounts.get(ownerKey) || 0) + 1);
-      assert(ownerCounts.get(ownerKey) <= Number(rules.maxReservationsInWindow),
+      assert(isUnchanged || ownerCounts.get(ownerKey) <= Number(rules.maxReservationsInWindow),
         `Cada usuário pode ter no máximo ${rules.maxReservationsInWindow} reservas no período configurado.`);
     }
   });
@@ -430,6 +508,7 @@ function validateCollection(name, value, context){
   if(name === 'branches') return validateBranches(value);
   if(name === 'vehicles') return validateVehicles(value, context.branches || [], context.currentVehicles || []);
   if(name === 'blocks') return validateBlocks(value, context.vehicles || []);
+  if(name === 'maintenanceReminders') return validateMaintenanceReminders(value, context.vehicles || []);
   if(name === 'reservations') return validateReservations(value, context);
   throw new ValidationError('Coleção desconhecida.', 404);
 }
@@ -441,6 +520,7 @@ module.exports = {
   validateBranches,
   validateVehicles,
   validateBlocks,
+  validateMaintenanceReminders,
   validateReservations,
   decodeImageDataUrl,
   isValidEmail,

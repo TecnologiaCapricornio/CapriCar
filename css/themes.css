@@ -142,10 +142,6 @@ html[data-theme="dark"] .week-calendar-header{
   background:#292c31;
 }
 
-html[data-theme="dark"] .reservation-range-calendar{
-  background:linear-gradient(145deg,#2b2e33,#22252a);
-}
-
 .theme-toggle{
   display:grid;
   place-items:center;
@@ -370,7 +366,6 @@ html[data-theme="light"] input[type="date"],
 html[data-theme="light"] input[type="password"],
 html[data-theme="light"] input[type="number"],
 html[data-theme="light"] input[type="file"],
-html[data-theme="light"] .range-picker-trigger,
 html[data-theme="light"] .styled-select-trigger{
   border-color:rgba(31,45,58,.16);
   background:#f8f9fa;
@@ -423,7 +418,8 @@ html[data-theme="light"] .audit-item,
 html[data-theme="light"] .occupants-block,
 html[data-theme="light"] .occupancy,
 html[data-theme="light"] .reservation-period,
-html[data-theme="light"] .reservation-period > .reservation-moment{
+html[data-theme="light"] .reservation-period > .reservation-moment,
+html[data-theme="light"] .solicitante-card{
   background:#f7f8fa;
   border-color:rgba(31,45,58,.12);
 }
@@ -564,9 +560,7 @@ html[data-theme="light"] .date-popup-clear-btn,
 html[data-theme="light"] .mobile-month-event,
 html[data-theme="light"] .mobile-month-more,
 html[data-theme="light"] .mobile-selection-sheet span,
-html[data-theme="light"] .range-picker-caption,
-html[data-theme="light"] .range-clear-btn,
-html[data-theme="light"] .range-apply-btn{
+html[data-theme="light"] .range-clear-btn{
   font-weight:700;
 }
 
@@ -584,8 +578,7 @@ html[data-theme="light"] .mobile-day-top span,
 html[data-theme="light"] .mobile-selection-cancel,
 html[data-theme="light"] .mobile-selection-confirm,
 html[data-theme="light"] .range-calendar-weekday,
-html[data-theme="light"] .range-calendar-day.range-start span,
-html[data-theme="light"] .range-calendar-day.range-end span{
+html[data-theme="light"] .range-calendar-day.range-start span{
   font-weight:800;
 }
 
@@ -634,14 +627,6 @@ html[data-theme="light"] .passenger-add-btn{
 html[data-theme="light"] .range-calendar-nav,
 html[data-theme="light"] .date-popup-nav-btn{
   color:#214f6e;
-}
-
-html[data-theme="light"] .range-picker-value strong{
-  color:#28323c;
-}
-
-html[data-theme="light"] .range-picker-trigger:not(.has-selection) .range-picker-value strong{
-  color:#707c87;
 }
 
 html[data-theme="light"] .range-calendar-day.unavailable{
@@ -708,12 +693,41 @@ html[data-theme="light"] .modal-overlay{
   background:rgba(39,45,52,.34);
 }
 
-html[data-theme="light"] .reservation-range-calendar,
 html[data-theme="light"] .date-popup.range-style-date-popup,
+html[data-theme="light"] .date-popup.week-picker-popover,
 html[data-theme="light"] .mobile-selection-sheet{
   background:#fff;
   border-color:rgba(31,45,58,.15);
   box-shadow:0 18px 42px rgba(32,43,55,.16);
+}
+
+html[data-theme="light"] .week-picker-panel + .week-picker-panel{
+  border-left-color:rgba(31,45,58,.14);
+}
+
+html[data-theme="light"] .week-picker-row.current{
+  background:rgba(42,100,140,.14);
+}
+
+html[data-theme="light"] .week-picker-row .range-calendar-day.other-month{
+  color:#9aa2aa;
+}
+
+html[data-theme="light"] .week-picker-month-btn{
+  color:#35414c;
+}
+
+html[data-theme="light"] .week-picker-month-btn:hover{
+  background:rgba(42,100,140,.1);
+}
+
+html[data-theme="light"] .calendar-month-label{
+  color:#1f2d3a;
+}
+
+html[data-theme="light"] .calendar-month-label:hover,
+html[data-theme="light"] .calendar-month-label[aria-expanded="true"]{
+  background:rgba(42,100,140,.1);
 }
 
 html[data-theme="light"] .weekly-calendar{
@@ -771,11 +785,6 @@ html[data-theme="light"] .range-calendar-day.other-month{
   color:#9aa2aa;
 }
 
-html[data-theme="light"] .range-calendar-day.in-range{
-  background:rgba(42,100,140,.16);
-  color:#173f5c;
-}
-
 html[data-theme="light"] footer{
   color:#68717c;
 }
@@ -788,6 +797,10 @@ html[data-theme="light"] .user-select-all-label{
 }
 
 html[data-theme="light"] .permission-option{
+  color:#214f6e;
+}
+
+html[data-theme="light"] .radio-option{
   color:#214f6e;
 }
 

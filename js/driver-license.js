@@ -103,6 +103,48 @@ function renderDriveBadge(state){
   cnhDriveBadge.textContent = podeDirigir ? 'Pode dirigir' : 'Apenas passageiro';
 }
 
+// Card "Reservando como" da Nova Reserva - nome de quem está reservando,
+// mais categoria e validade da CNH (quando cadastrada), pra já dar essa
+// informação sem precisar abrir "Meu perfil". Chamado tanto no login
+// (antes da CNH terminar de carregar) quanto sempre que ela muda.
+// solicitanteHint vem de js/auth.js, carregado depois deste arquivo - só é
+// lido dentro de uma função, chamada bem depois de todo script carregado.
+function updateSolicitanteHint(){
+  if(!solicitanteHint) return;
+  const user = getCurrentUser();
+  if(!user){
+    solicitanteHint.innerHTML = '';
+    return;
+  }
+  const avatarHTML = '<span class="avatar">' + escapeHTML(initials(user.nome)) + '</span>';
+  const nameHTML = '<strong>' + escapeHTML(user.nome) + '</strong>';
+
+  // A CNH ainda não terminou de carregar (loadDriverLicense roda em segundo
+  // plano) - mostra só o nome em vez de "não cadastrada" por um instante.
+  if(currentLicenseState === null){
+    solicitanteHint.innerHTML = avatarHTML + '<div class="solicitante-info">' + nameHTML + '</div>';
+    return;
+  }
+
+  const cnh = currentLicenseState.cnh;
+  let tagsHTML;
+  if(!cnh || !cnh.categoria){
+    tagsHTML = '<span class="tag tag-warning">CNH não cadastrada</span>';
+  } else {
+    const categoriaTag = '<span class="tag tag-info">Categoria ' + escapeHTML(cnh.categoria) + '</span>';
+    const validadeTag = cnh.validade
+      ? '<span class="tag ' + (currentLicenseState.status === 'valida' ? 'tag-success' :
+          (currentLicenseState.status === 'vencendo' ? 'tag-warning' : 'tag-danger')) + '">' +
+        (currentLicenseState.status === 'valida' ? 'Válida até ' :
+          (currentLicenseState.status === 'vencendo' ? 'Vence em ' : 'Vencida em ')) +
+        escapeHTML(formatDate(cnh.validade)) + '</span>'
+      : '';
+    tagsHTML = categoriaTag + validadeTag;
+  }
+  solicitanteHint.innerHTML = avatarHTML + '<div class="solicitante-info">' + nameHTML +
+    '<div class="solicitante-tags">' + tagsHTML + '</div></div>';
+}
+
 // Ícone + veículos permitidos da categoria escolhida - atualiza tanto ao
 // carregar uma CNH já salva quanto a cada troca no <select>, antes mesmo de
 // salvar (ver listener mais abaixo).
@@ -154,6 +196,7 @@ function renderLicense(state){
   refreshDatePickers();
   // A trava de "só motorista com CNH" vive em js/reservations.js.
   if(typeof refreshDriverGate === 'function') refreshDriverGate();
+  updateSolicitanteHint();
 }
 
 async function loadDriverLicense(){

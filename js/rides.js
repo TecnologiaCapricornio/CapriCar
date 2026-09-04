@@ -767,7 +767,6 @@ async function joinRide(id){
   confirmation.classList.add('show');
 
   form.reset();
-  fieldCarro.classList.add('hidden');
   carroRecommendedCodigo = null;
   renderCarroOptions([], '');
   populateDestinoOptions();

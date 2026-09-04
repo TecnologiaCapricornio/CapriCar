@@ -23,6 +23,7 @@ function normalizeUserPermissions(permissions){
     reservations:source.reservations === true,
     branches:source.branches === true,
     fleet:source.fleet === true,
+    maintenance:source.maintenance === true,
     blocks:source.blocks === true,
     reports:source.reports === true,
     audit:source.audit === true,
@@ -39,7 +40,7 @@ function normalizeSystemUser(account){
     nome:String(account.nome || account.username || '').trim(),
     email:String(account.email || '').trim(),
     centroCusto:String(account.centroCusto || '').trim(),
-    role:account.role === 'admin' ? 'admin' : (account.role === 'facilities' ? 'facilities' : 'user'),
+    role:account.role === 'admin' ? 'admin' : 'user',
     active:account.active !== false,
     authProvider:account.authProvider === 'entra' ? 'entra' : 'local',
     permissions:normalizeUserPermissions(account.permissions),
@@ -88,11 +89,6 @@ function isAdmin(){
   return !!(user && (user.isAdmin === true || user.role === 'admin'));
 }
 
-function isFacilities(){
-  const user = getCurrentUser();
-  return !!(user && user.role === 'facilities');
-}
-
 function hasManagementPermission(permission){
   if(isAdmin()) return true;
   const user = getCurrentUser();
@@ -100,7 +96,7 @@ function hasManagementPermission(permission){
 }
 
 function canAccessManagement(){
-  return isAdmin() || ['reservations', 'branches', 'fleet', 'blocks', 'reports', 'audit', 'rules', 'users', 'integrations'].some(hasManagementPermission);
+  return isAdmin() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'integrations'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
@@ -113,6 +109,10 @@ function canManageBranches(){
 
 function canManageFleet(){
   return hasManagementPermission('fleet');
+}
+
+function canManageMaintenance(){
+  return hasManagementPermission('maintenance');
 }
 
 function canManageBlocks(){
@@ -146,6 +146,7 @@ function canAccessAdminSection(section){
     locais:'branches',
     veiculos:'fleet',
     bloqueios:'blocks',
+    manutencao:'maintenance',
     relatorios:'reports',
     auditoria:'audit',
     regras:'rules',
@@ -180,7 +181,7 @@ const profileName = document.getElementById('profileName');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','locais','veiculos','bloqueios','relatorios','auditoria','regras','integracoes','usuarios'];
+  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','relatorios','auditoria','regras','integracoes','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');
@@ -192,13 +193,11 @@ function configureManagementPanel(){
   });
   const title = document.getElementById('managementPanelTitle');
   if(title){
-    title.textContent = isAdmin() ? 'Painel de Administração' :
-      (isFacilities() ? 'Painel de Facilities' : 'Painel de Gestão');
+    title.textContent = isAdmin() ? 'Painel de Administração' : 'Painel de Gestão';
   }
   const newReservationBtn = document.getElementById('adminNovaReservaBtn');
   if(newReservationBtn){
-    newReservationBtn.textContent = isAdmin() ? 'Nova reserva (como admin)' :
-      (isFacilities() ? 'Nova reserva (Facilities)' : 'Nova reserva (gestão)');
+    newReservationBtn.textContent = isAdmin() ? 'Nova reserva (como admin)' : 'Nova reserva (gestão)';
   }
 }
 
@@ -221,12 +220,9 @@ function showApp(user){
   avatarInitials.textContent = initials(user.nome);
   profileName.textContent = user.nome;
   profileAvatarLg.textContent = initials(user.nome);
-  solicitanteHint.textContent = 'Reservando como: ' + user.nome;
-  adminTabBtn.textContent = isFacilities() ? 'Facilities' : (isAdmin() ? 'Admin' : 'Gestão');
-  adminTabBtn.setAttribute(
-    'data-mobile-label',
-    isFacilities() ? 'Facilities' : (isAdmin() ? 'Admin' : 'Gestão')
-  );
+  updateSolicitanteHint();
+  adminTabBtn.textContent = isAdmin() ? 'Admin' : 'Gestão';
+  adminTabBtn.setAttribute('data-mobile-label', isAdmin() ? 'Admin' : 'Gestão');
   adminTabBtn.classList.toggle('hidden', !canAccessManagement());
   configureManagementPanel();
   switchTab('minhas');
@@ -493,14 +489,15 @@ function switchTab(tabName){
       // por trás dele.
       showCnhRequiredAlert();
       tabName = 'minhas';
-    } else if(typeof showMobileReservationStep === 'function'){
-      // Reseta o assistente por etapas sempre que a aba é aberta - inclusive
-      // pela barra de abas, não só pelo atalho "+ Nova reserva" (que já
-      // fazia isso à parte). Sem isto, uma etapa avançada numa visita
-      // anterior ficava "presa" no atributo data-mobile-step do formulário,
-      // e o CSS (ver responsive.css) escondia os campos da etapa 1 - como o
-      // de veículo - mesmo já preenchidos e prontos para exibição.
-      showMobileReservationStep(1, false);
+    } else if(typeof resetReservationForm === 'function'){
+      // Reseta o formulário inteiro (campos + assistente por etapas) sempre
+      // que a aba é aberta - inclusive pela barra de abas, não só pelo
+      // atalho "+ Nova reserva". Sem isto, um rascunho não confirmado (ou
+      // uma etapa avançada) ficava preso na próxima visita: os campos
+      // continuavam com os valores antigos, e a etapa "presa" no atributo
+      // data-mobile-step escondia campos já preenchidos (ver
+      // resetReservationForm em js/reservations.js).
+      resetReservationForm();
     }
   }
   appScreen.classList.toggle('calendar-mobile-view', tabName === 'calendario');

@@ -4,6 +4,7 @@ const {
   validateBranches,
   validateVehicles,
   validateBlocks,
+  validateMaintenanceReminders,
   validateReservations
 } = require('../server/validation');
 
@@ -135,6 +136,72 @@ test('recusa reservas do mesmo usuário com horários sobrepostos em veículos d
   assert.doesNotThrow(() => validateReservations(sameDayNoOverlap, ctx));
 });
 
+function maintenanceReminder(overrides){
+  return {
+    id:'m1',
+    local:'São Paulo',
+    carro:'89',
+    tipo:'oleo',
+    descricao:'',
+    proximaKm:50000,
+    proximaData:null,
+    observacoes:'',
+    ativo:true,
+    ...overrides
+  };
+}
+
+test('aceita um lembrete de manutenção válido, por km, por data ou pelos dois', () => {
+  assert.doesNotThrow(() => validateMaintenanceReminders([maintenanceReminder()], vehicles));
+  assert.doesNotThrow(() => validateMaintenanceReminders(
+    [maintenanceReminder({ proximaKm:null, proximaData:isoIn(30) })],
+    vehicles
+  ));
+  assert.doesNotThrow(() => validateMaintenanceReminders(
+    [maintenanceReminder({ proximaData:isoIn(30) })],
+    vehicles
+  ));
+});
+
+test('lembrete de manutenção recusa veículo inexistente', () => {
+  assert.throws(
+    () => validateMaintenanceReminders([maintenanceReminder({ carro:'999' })], vehicles),
+    /veículo inexistente/
+  );
+});
+
+test('lembrete de manutenção exige tipo válido e descrição quando o tipo é "outro"', () => {
+  assert.throws(
+    () => validateMaintenanceReminders([maintenanceReminder({ tipo:'invalido' })], vehicles),
+    /tipo de manutenção/
+  );
+  assert.throws(
+    () => validateMaintenanceReminders([maintenanceReminder({ tipo:'outro', descricao:'' })], vehicles),
+    /descrição da manutenção/
+  );
+  assert.doesNotThrow(() => validateMaintenanceReminders(
+    [maintenanceReminder({ tipo:'outro', descricao:'Alinhamento' })],
+    vehicles
+  ));
+});
+
+test('lembrete de manutenção aceita o tipo "revisão"', () => {
+  assert.doesNotThrow(() => validateMaintenanceReminders(
+    [maintenanceReminder({ tipo:'revisao' })],
+    vehicles
+  ));
+});
+
+test('lembrete de manutenção exige ao menos a perna de km ou de data', () => {
+  assert.throws(
+    () => validateMaintenanceReminders(
+      [maintenanceReminder({ proximaKm:null, proximaData:null })],
+      vehicles
+    ),
+    /próxima troca por quilometragem/
+  );
+});
+
 test('exige placa no cadastro do veículo', () => {
   assert.throws(
     () => validateVehicles([{ ...vehicles[0], placa:'' }], branches),
@@ -204,6 +271,39 @@ test('recusa veículo bloqueado e excesso de ocupantes', () => {
       })
     ], context()),
     /capacidade/
+  );
+});
+
+test('reserva já confirmada não grandfathered por um bloqueio criado depois, mas a mesma reserva enviada de novo (mudada) continua bloqueada', () => {
+  // /sync sempre reenvia a coleção inteira (ver comentário em
+  // server/validation.js perto de isUnchanged) - "não mexida nesta chamada"
+  // é identificado por referência: o mesmo objeto em value e em
+  // currentReservations. Uma reserva legitimamente NOVA sendo criada por
+  // cima de um período já bloqueado continua sendo recusada (ver teste
+  // acima); só a reserva pré-existente intocada é que não pode travar o
+  // /sync inteiro pra sempre.
+  const existing = reservation();
+  const blocked = [{
+    id:'block1',
+    local:'São Paulo',
+    carro:'89',
+    tipo:'Manutenção',
+    dataInicio:isoIn(1),
+    dataFim:isoIn(3),
+    observacoes:''
+  }];
+  assert.doesNotThrow(() => validateReservations(
+    [existing],
+    context({ blocks:blocked, currentReservations:[existing] })
+  ));
+
+  const changed = { ...existing, motivo:'Motivo alterado' };
+  assert.throws(
+    () => validateReservations(
+      [changed],
+      context({ blocks:blocked, currentReservations:[existing] })
+    ),
+    /bloqueado/
   );
 });
 
@@ -319,4 +419,49 @@ test('impede nova reserva enquanto o mesmo usuário tem devolução pendente', (
     administrativelyClosed,
     newReservation
   ], context({ currentReservations:[administrativelyClosed] })));
+});
+
+function withDevolucao(condicaoLimpeza){
+  return {
+    quilometragem:150,
+    combustivel:'Cheio',
+    avarias:'',
+    registradoPor:'Usuário Teste',
+    registradoEm:new Date().toISOString(),
+    fotos:[],
+    ...(condicaoLimpeza === undefined ? {} : { condicaoLimpeza })
+  };
+}
+
+test('devolução nova exige condição de limpeza válida; devolução antiga sem o campo é grandfathered', () => {
+  const semDevolucao = reservation({ status:'concluída' });
+  const registrandoAgora = { ...semDevolucao, operacao:{ devolucao:withDevolucao(undefined) } };
+
+  assert.throws(
+    () => validateReservations([registrandoAgora], context({ currentReservations:[semDevolucao] })),
+    /condição de limpeza/i
+  );
+  assert.throws(
+    () => validateReservations(
+      [{ ...semDevolucao, operacao:{ devolucao:withDevolucao('sujo') } }],
+      context({ currentReservations:[semDevolucao] })
+    ),
+    /condição de limpeza|inválida/i
+  );
+  assert.doesNotThrow(() => validateReservations(
+    [{ ...semDevolucao, operacao:{ devolucao:withDevolucao('sujeira_externa') } }],
+    context({ currentReservations:[semDevolucao] })
+  ));
+
+  // Devolução já existente ANTES do campo existir (sem condicaoLimpeza) -
+  // continua passando mesmo re-sincronizada ou com outro campo editado depois.
+  const devolucaoAntiga = { ...semDevolucao, operacao:{ devolucao:withDevolucao(undefined) } };
+  assert.doesNotThrow(() => validateReservations(
+    [devolucaoAntiga],
+    context({ currentReservations:[devolucaoAntiga] })
+  ));
+  assert.doesNotThrow(() => validateReservations(
+    [{ ...devolucaoAntiga, motivo:'Edição posterior' }],
+    context({ currentReservations:[devolucaoAntiga] })
+  ));
 });

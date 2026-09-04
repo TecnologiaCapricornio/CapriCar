@@ -6,6 +6,7 @@ const USER_DIRECTORY_KEY = 'capricar_diretorio_usuarios';
 const BRANCHES_KEY = 'capricar_locais';
 const VEHICLES_KEY = 'capricar_veiculos';
 const BLOCKS_KEY = 'capricar_bloqueios';
+const MAINTENANCE_KEY = 'capricar_manutencoes';
 const AUDIT_KEY = 'capricar_auditoria';
 const RULES_KEY = 'capricar_regras_reserva';
 

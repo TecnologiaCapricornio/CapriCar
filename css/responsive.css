@@ -5,13 +5,14 @@
 }
 
 /* A Nova Reserva usa o mesmo assistente por etapas em qualquer tamanho de
-   tela. O modal de reserva do admin faz o mesmo quando é o próprio usuário
-   editando a própria reserva (form ganha a classe .self-edit-wizard em
-   js/admin.js) - fora desse caso, ele só usa o assistente em telas pequenas
-   (ver media query abaixo) e mostra todos os campos de uma vez no desktop,
-   então seu .mobile-wizard-actions fica sem grid aqui (ver override mais
-   abaixo). */
-#reservaForm .mobile-reservation-progress,
+   tela, mas sem os cartões 1/2/3 (removidos - a mesma informação já aparece
+   junto dos botões Voltar/Próximo, em #mobileReservationStepLabel). O modal
+   de reserva do admin faz o mesmo quando é o próprio usuário editando a
+   própria reserva (form ganha a classe .self-edit-wizard em js/admin.js;
+   esse ainda mostra os cartões) - fora desse caso, ele só usa o assistente em
+   telas pequenas (ver media query abaixo) e mostra todos os campos de uma vez
+   no desktop, então seu .mobile-wizard-actions fica sem grid aqui (ver
+   override mais abaixo). */
 #adminReservaForm.self-edit-wizard .mobile-reservation-progress{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -19,7 +20,6 @@
   margin:12px 0 18px;
 }
 
-#reservaForm .mobile-reservation-progress span,
 #adminReservaForm.self-edit-wizard .mobile-reservation-progress span{
   display:flex;
   flex-direction:column;
@@ -36,7 +36,6 @@
   text-align:center;
 }
 
-#reservaForm .mobile-reservation-progress strong,
 #adminReservaForm.self-edit-wizard .mobile-reservation-progress strong{
   display:grid;
   place-items:center;
@@ -49,14 +48,12 @@
   font-size:.78rem;
 }
 
-#reservaForm .mobile-reservation-progress span.active,
 #adminReservaForm.self-edit-wizard .mobile-reservation-progress span.active{
   border-color:rgba(101,170,242,.36);
   background:rgba(82,150,218,.09);
   color:var(--texto);
 }
 
-#reservaForm .mobile-reservation-progress span.active strong,
 #adminReservaForm.self-edit-wizard .mobile-reservation-progress span.active strong{
   border-color:#65aaf2;
   background:linear-gradient(135deg,#4f8dcc,#315982);
@@ -65,8 +62,7 @@
 }
 
 #reservaForm[data-mobile-step="1"] .mobile-reservation-step:not([data-reservation-step="1"]),
-#reservaForm[data-mobile-step="2"] .mobile-reservation-step:not([data-reservation-step="2"]),
-#reservaForm[data-mobile-step="3"] .mobile-reservation-step:not([data-reservation-step="3"]){
+#reservaForm[data-mobile-step="2"] .mobile-reservation-step:not([data-reservation-step="2"]){
   display:none !important;
 }
 
@@ -130,7 +126,7 @@
   visibility:hidden;
 }
 
-#reservaForm[data-mobile-step="3"] #mobileReservationNextBtn,
+#reservaForm[data-mobile-step="2"] #mobileReservationNextBtn,
 #adminReservaForm[data-mobile-step="3"] #adminReservationNextBtn{
   display:none;
 }
@@ -520,10 +516,6 @@
     border-radius:18px;
   }
 
-  .range-picker-trigger{
-    padding-inline:11px;
-  }
-
   .range-calendar-topline{
     gap:10px;
   }
@@ -537,10 +529,6 @@
     grid-template-columns:repeat(3,minmax(0,1fr));
     gap:5px;
     margin:18px 0 22px;
-  }
-
-  #reservaForm .mobile-reservation-progress{
-    margin:12px 0 14px;
   }
 
   .mobile-reservation-progress span{
@@ -578,8 +566,7 @@
   }
 
   #reservaForm[data-mobile-step="1"] .mobile-reservation-step:not([data-reservation-step="1"]),
-  #reservaForm[data-mobile-step="2"] .mobile-reservation-step:not([data-reservation-step="2"]),
-  #reservaForm[data-mobile-step="3"] .mobile-reservation-step:not([data-reservation-step="3"]){
+  #reservaForm[data-mobile-step="2"] .mobile-reservation-step:not([data-reservation-step="2"]){
     display:none !important;
   }
 
@@ -621,7 +608,7 @@
     visibility:hidden;
   }
 
-  #reservaForm[data-mobile-step="3"] #mobileReservationNextBtn,
+  #reservaForm[data-mobile-step="2"] #mobileReservationNextBtn,
   #adminReservaForm[data-mobile-step="3"] #adminReservationNextBtn{
     display:none;
   }

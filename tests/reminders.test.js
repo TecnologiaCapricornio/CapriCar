@@ -7,6 +7,15 @@ const {
   reservationTokens,
   plateBadgeEmailHTML
 } = require('../server/reminders');
+const {
+  maintenanceMilestoneFor,
+  latestOdometerReading,
+  maintenanceReminderStatus,
+  maintenanceReminderLabel,
+  maintenanceStatusMessage,
+  MAINTENANCE_KM_MILESTONES,
+  MAINTENANCE_DATE_MILESTONES
+} = require('../server/reminders');
 
 const owner = { id:'11111111-1111-4111-8111-111111111111', nome:'Motorista' };
 const base = {
@@ -137,4 +146,88 @@ test('são exatamente 4 avisos ao longo de toda a vida da CNH', () => {
 test('formatDateBR aceita string ISO e Date do banco', () => {
   assert.equal(formatDateBR('2026-10-15'), '15/10/2026');
   assert.equal(formatDateBR(new Date('2026-10-15T00:00:00Z')), '15/10/2026');
+});
+
+/* ===== Lembretes de manutenção ===== */
+
+test('maintenanceMilestoneFor marca vencido em zero ou negativo, e usa o menor marco que cobre o restante', () => {
+  assert.equal(maintenanceMilestoneFor(0, MAINTENANCE_KM_MILESTONES), 'vencido');
+  assert.equal(maintenanceMilestoneFor(-50, MAINTENANCE_KM_MILESTONES), 'vencido');
+  assert.equal(maintenanceMilestoneFor(1000, MAINTENANCE_KM_MILESTONES), '1000');
+  assert.equal(maintenanceMilestoneFor(700, MAINTENANCE_KM_MILESTONES), '1000');
+  assert.equal(maintenanceMilestoneFor(500, MAINTENANCE_KM_MILESTONES), '500');
+  assert.equal(maintenanceMilestoneFor(201, MAINTENANCE_KM_MILESTONES), '500');
+  assert.equal(maintenanceMilestoneFor(200, MAINTENANCE_KM_MILESTONES), '200');
+  assert.equal(maintenanceMilestoneFor(1, MAINTENANCE_KM_MILESTONES), '200');
+});
+
+test('maintenanceMilestoneFor devolve null acima do maior marco, e null sem valor conhecido', () => {
+  assert.equal(maintenanceMilestoneFor(1001, MAINTENANCE_KM_MILESTONES), null);
+  assert.equal(maintenanceMilestoneFor(5000, MAINTENANCE_KM_MILESTONES), null);
+  assert.equal(maintenanceMilestoneFor(null, MAINTENANCE_KM_MILESTONES), null);
+  assert.equal(maintenanceMilestoneFor(16, MAINTENANCE_DATE_MILESTONES), null);
+  assert.equal(maintenanceMilestoneFor(15, MAINTENANCE_DATE_MILESTONES), '15');
+});
+
+const veiculoBase = { partida:'São Paulo', carro:'89' };
+
+test('latestOdometerReading usa a devolução mais recente, não a soma das viagens', () => {
+  const reservations = [
+    { ...veiculoBase, operacao:{ devolucao:{ quilometragem:1000, registradoEm:'2026-08-01T12:00:00Z' } } },
+    { ...veiculoBase, operacao:{ devolucao:{ quilometragem:1500, registradoEm:'2026-08-10T12:00:00Z' } } },
+    { ...veiculoBase, operacao:{ devolucao:{ quilometragem:1200, registradoEm:'2026-08-05T12:00:00Z' } } }
+  ];
+  assert.equal(latestOdometerReading('São Paulo', '89', reservations), 1500);
+});
+
+test('latestOdometerReading ignora reservas de outro veículo e devolve null sem nenhuma leitura', () => {
+  const reservations = [
+    { partida:'São Carlos', carro:'89', operacao:{ devolucao:{ quilometragem:9999, registradoEm:'2026-08-10T12:00:00Z' } } },
+    { ...veiculoBase, carro:'45', operacao:{ devolucao:{ quilometragem:9999, registradoEm:'2026-08-10T12:00:00Z' } } },
+    { ...veiculoBase, operacao:{ retirada:{ quilometragem:100, registradoEm:'2026-08-10T12:00:00Z' } } }
+  ];
+  assert.equal(latestOdometerReading('São Paulo', '89', reservations), null);
+  assert.equal(latestOdometerReading('São Paulo', '89', []), null);
+});
+
+test('maintenanceReminderStatus só calcula a perna de km quando o km atual é conhecido', () => {
+  const reminder = { proximaKm:50000, proximaData:null };
+  assert.equal(maintenanceReminderStatus(reminder, null, '2026-08-01').km, null);
+  const status = maintenanceReminderStatus(reminder, 49500, '2026-08-01');
+  assert.deepEqual(status.km, { restante:500, marco:'500' });
+  assert.equal(status.data, null);
+});
+
+test('maintenanceReminderStatus calcula a perna de data independentemente do km', () => {
+  const reminder = { proximaKm:null, proximaData:'2026-08-15' };
+  const status = maintenanceReminderStatus(reminder, null, '2026-08-10');
+  assert.equal(status.km, null);
+  assert.deepEqual(status.data, { restante:5, marco:'7' });
+});
+
+test('maintenanceReminderStatus com as duas pernas vencidas ao mesmo tempo', () => {
+  const reminder = { proximaKm:50000, proximaData:'2026-08-01' };
+  const status = maintenanceReminderStatus(reminder, 50200, '2026-08-05');
+  assert.equal(status.km.marco, 'vencido');
+  assert.equal(status.data.marco, 'vencido');
+});
+
+test('maintenanceReminderLabel usa o rótulo do tipo, ou a descrição quando o tipo é "outro"', () => {
+  assert.equal(maintenanceReminderLabel({ tipo:'oleo' }), 'Troca de óleo');
+  assert.equal(maintenanceReminderLabel({ tipo:'pneus' }), 'Troca de pneus');
+  assert.equal(maintenanceReminderLabel({ tipo:'outro', descricao:'Alinhamento e balanceamento' }),
+    'Alinhamento e balanceamento');
+});
+
+test('maintenanceStatusMessage descreve as duas pernas e usa "venceu" quando qualquer uma delas vence', () => {
+  const reminder = { tipo:'oleo' };
+  const vencido = maintenanceReminderStatus({ proximaKm:1000, proximaData:null }, 1200, '2026-08-01');
+  const mensagemVencida = maintenanceStatusMessage(reminder, vencido, 'Volkswagen Polo');
+  assert.match(mensagemVencida, /venceu/);
+  assert.match(mensagemVencida, /200 km além do previsto/);
+
+  const proximo = maintenanceReminderStatus({ proximaKm:1000, proximaData:null }, 700, '2026-08-01');
+  const mensagemProxima = maintenanceStatusMessage(reminder, proximo, 'Volkswagen Polo');
+  assert.match(mensagemProxima, /está próxima/);
+  assert.match(mensagemProxima, /faltam 300 km/);
 });

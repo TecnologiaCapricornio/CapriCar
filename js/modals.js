@@ -618,7 +618,11 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
     const firstWeekday = new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay();
     const totalDays = daysInMonth(viewYear, viewMonth);
     const prevMonthDays = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1);
-    const totalCells = 42;
+    // Só as semanas que o mês realmente usa (5 ou 6) - sem isso, um mês que
+    // cabe em 5 semanas ainda reservava uma 6ª linha inteira de dias do mês
+    // seguinte (escondida com visibility:hidden, que preserva o espaço),
+    // deixando um vão vazio entre os dias e a legenda.
+    const totalCells = Math.ceil((firstWeekday + totalDays) / 7) * 7;
 
     for(let i = 0; i < totalCells; i++){
       const offset = i - firstWeekday + 1;
@@ -763,13 +767,7 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
 }
 
 document.addEventListener('click', function(e){
-  // datePickers também guarda controllers de um seletor de período (range)
-  // mais antigo, que não expõe wrapperEl/popup e já cuida do próprio
-  // clique-fora sozinho (ver acima) - pular esses aqui, senão o forEach
-  // quebra no meio e os controllers seguintes (ex.: os do "Editar minha
-  // reserva") nunca chegam a ser fechados.
   datePickers.forEach(p => {
-    if(!p.wrapperEl || !p.popup) return;
     if(!p.wrapperEl.contains(e.target) && !p.popup.contains(e.target)){
       p.close();
     }
@@ -862,6 +860,29 @@ createDatePicker(
   document.getElementById('wrap-adminFiltroData'),
   null,
   { title:'Escolha a data', subtitle:'Selecione uma data para filtrar', allowPast:true, showBlockedLegend:false }
+);
+
+// Períodos de filtro (bloqueios, auditoria, relatórios) - mesmo estilo do
+// campo único acima, sem data mínima/máxima nem datas bloqueadas: são
+// filtros sobre dados já existentes, não uma nova reserva.
+[
+  ['blockStart', 'wrap-blockStart'], ['blockEnd', 'wrap-blockEnd'],
+  ['auditStart', 'wrap-auditStart'], ['auditEnd', 'wrap-auditEnd'],
+  ['reportStart', 'wrap-reportStart'], ['reportEnd', 'wrap-reportEnd']
+].forEach(([inputId, wrapId]) => {
+  createDatePicker(document.getElementById(inputId), document.getElementById(wrapId), null, {
+    allowPast:true,
+    showBlockedLegend:false
+  });
+});
+
+// Próxima manutenção: mesma restrição de dataIda (sem allowPast) - um
+// lembrete de manutenção não faz sentido com data já passada.
+createDatePicker(
+  document.getElementById('maintenanceNextDate'),
+  document.getElementById('wrap-maintenanceNextDate'),
+  null,
+  { title:'Escolha a data da manutenção', subtitle:'Selecione a data da próxima manutenção' }
 );
 
 function getAdminUnavailableDates(){

@@ -150,7 +150,8 @@ async function hydrateDatabaseState(){
     branches:BRANCHES_KEY,
     vehicles:VEHICLES_KEY,
     blocks:BLOCKS_KEY,
-    rules:RULES_KEY
+    rules:RULES_KEY,
+    maintenanceReminders:MAINTENANCE_KEY
   };
 
   for(const [collection, key] of Object.entries(mapping)){

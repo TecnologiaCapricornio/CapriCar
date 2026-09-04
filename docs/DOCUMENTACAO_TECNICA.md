@@ -140,17 +140,17 @@ administrador.
 
 ## 4. Perfis e permissões
 
-| Recurso | Usuário comum | Facilities | Administrador |
-|---|---:|---:|---:|
-| Criar e consultar as próprias reservas | Sim | Sim | Sim |
-| Entrar em caronas | Sim | Sim | Sim |
-| Gerenciar reservas | Opcional | Sim | Sim |
-| Gerenciar locais e veículos | Opcional | Sim | Sim |
-| Gerenciar bloqueios | Opcional | Sim | Sim |
-| Consultar relatórios | Opcional | Sim | Sim |
-| Alterar regras globais | Não | Não | Sim |
-| Criar, editar e excluir usuários | Não | Não | Sim |
-| Consultar auditoria completa | Não | Não | Sim |
+| Recurso | Usuário comum | Administrador |
+|---|---:|---:|
+| Criar e consultar as próprias reservas | Sim | Sim |
+| Entrar em caronas | Sim | Sim |
+| Gerenciar reservas | Opcional | Sim |
+| Gerenciar locais e veículos | Opcional | Sim |
+| Gerenciar bloqueios | Opcional | Sim |
+| Consultar relatórios | Opcional | Sim |
+| Alterar regras globais | Não | Sim |
+| Criar, editar e excluir usuários | Não | Sim |
+| Consultar auditoria completa | Não | Sim |
 
 Contas criadas pelo painel recebem o papel técnico `user` e podem ganhar
 permissões individuais:
@@ -368,7 +368,6 @@ SESSION_TTL_HOURS=12
 SESSION_COOKIE_SECURE=false
 
 ADMIN_INITIAL_PASSWORD=SENHA_INICIAL_DO_ADMIN
-FACILITIES_INITIAL_PASSWORD=SENHA_INICIAL_DO_FACILITIES
 
 BACKUP_DIR=backups
 BACKUP_RETENTION_DAYS=30
@@ -403,7 +402,6 @@ Saúde: `http://localhost:3000/api/health`.
 | `SESSION_TTL_HOURS` | Não | Duração da sessão |
 | `SESSION_COOKIE_SECURE` | Não | `true` somente com HTTPS |
 | `ADMIN_INITIAL_PASSWORD` | Primeira carga | Senha inicial admin |
-| `FACILITIES_INITIAL_PASSWORD` | Primeira carga | Senha inicial Facilities |
 | `BACKUP_DIR` | Não | Pasta de backup |
 | `BACKUP_RETENTION_DAYS` | Não | Retenção local |
 | `PG_DUMP_PATH` | Não | Caminho do `pg_dump` |
@@ -720,11 +718,11 @@ Recomendações:
 | Responsabilidade | Papel recomendado |
 |---|---|
 | Usuários e permissões | Administrador |
-| Frota e bloqueios | Facilities |
+| Frota e bloqueios | Gestor de frota designado |
 | PostgreSQL e backup | Infraestrutura/TI |
 | HTTPS e proxy | Infraestrutura/TI |
 | Atualizações | Desenvolvimento |
-| Testes de negócio | Facilities e usuários-chave |
+| Testes de negócio | Usuários-chave |
 | Auditoria | Responsável designado |
 
 ## 20. Checklist de entrega

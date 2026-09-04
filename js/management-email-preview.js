@@ -32,6 +32,7 @@ const REMINDER_LABELS = {
   passengerJoined:'Aviso ao motorista de passageiro na carona',
   rideWatchMatch:'Aviso de carona monitorada disponível',
   cnhExpiring:'Aviso de CNH vencendo ou vencida',
+  maintenanceDue:'Aviso de manutenção da frota próxima',
   passengerRemoved:'Aviso a quem foi removido de uma carona',
   passengerLeft:'Aviso ao motorista quando alguém sai da carona'
 };
@@ -91,7 +92,10 @@ const PREVIEW_TOKENS = {
   diasRestantes:'30',
   outraParte:'Renan Guedes',
   motivo:'Preciso do lugar para levar equipamento.',
-  blocoMotivo:previewMotivoBloco('Preciso do lugar para levar equipamento.', 'Renan Guedes')
+  blocoMotivo:previewMotivoBloco('Preciso do lugar para levar equipamento.', 'Renan Guedes'),
+  tipoManutencao:'Troca de óleo',
+  proximaKm:'50.000',
+  proximaData:'15/09/2026'
 };
 
 // Mesma substituição de server/reminders.js:renderTemplate - token

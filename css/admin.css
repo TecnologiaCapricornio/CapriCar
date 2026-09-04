@@ -268,6 +268,38 @@
   accent-color:var(--azul-claro);
 }
 
+.radio-group{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.radio-option{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:42px;
+  padding:9px 11px;
+  border:1px solid rgba(111,168,216,.2);
+  border-radius:10px;
+  background:rgba(111,168,216,.07);
+  color:#d7e9f7;
+  cursor:pointer;
+}
+
+.radio-option:has(input:checked){
+  border-color:var(--azul-claro);
+  background:rgba(111,168,216,.16);
+}
+
+.radio-option input{
+  width:17px;
+  height:17px;
+  margin:0;
+  flex-shrink:0;
+  accent-color:var(--azul-claro);
+}
+
 .user-form-actions{
   display:flex;
   justify-content:flex-end;
