@@ -207,6 +207,22 @@ function validateAdminMobileReservationStep(step){
       valid = false;
     }
     if(!aCarroSelect.value){ setAdminFieldError('carro', 'Selecione o veículo.'); valid = false; }
+    // Mesma lógica do submit (linha ~442): só dá pra checar aqui quando quem
+    // dirige é quem está logado (edição da própria reserva). Precisa rodar já
+    // na etapa 1 (onde fica o campo do carro) - senão o usuário preenche
+    // data/horário/motivo/passageiros à toa antes de descobrir, só na
+    // confirmação final, que não pode usar aquele veículo.
+    if(aCarroSelect.value && reservationEditMode === 'self' && typeof cnhAtendeCapacidade === 'function'){
+      const vehicle = getVehicle(partida, aCarroSelect.value);
+      const licenseState = typeof getLicenseState === 'function' ? getLicenseState() : null;
+      const categoria = licenseState && licenseState.cnh ? licenseState.cnh.categoria : '';
+      if(vehicle && !cnhAtendeCapacidade(categoria, vehicle.capacidade)){
+        const minima = cnhCategoriaMinimaPara(vehicle.capacidade);
+        setAdminFieldError('carro', 'Este veículo (' + vehicle.capacidade + ' lugares) exige CNH categoria ' + minima +
+          ' ou superior.' + (categoria ? ' Sua CNH é categoria ' + categoria + '.' : ' Cadastre sua CNH em "Meu perfil".'));
+        valid = false;
+      }
+    }
     return valid;
   }
 
