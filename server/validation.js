@@ -327,7 +327,7 @@ function validateOperation(operation, previousOperation, vehicle){
       assert(
         operation.retirada.quilometragemDivergente === true ||
           Number(operation.retirada.quilometragem) >= esperado,
-        `A quilometragem informada é menor que o odômetro atual do veículo (${esperado} km).`
+        `A quilometragem informada é menor que o odômetro atual do veículo: ${esperado} km.`
       );
     }
   }

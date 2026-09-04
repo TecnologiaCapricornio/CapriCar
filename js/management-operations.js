@@ -303,10 +303,10 @@ operationForm.addEventListener('submit', async function (e) {
     operationError.textContent = 'Informe quilometragem e combustível.';
     return;
   }
-  const cleanlinessInput = operationPhase === 'devolucao'
-    ? operationForm.querySelector('input[name="operationCleanliness"]:checked')
-    : null;
-  if (operationPhase === 'devolucao' && !cleanlinessInput) {
+  const cleanlinessValue = operationPhase === 'devolucao'
+    ? document.getElementById('operationCleanliness').value
+    : '';
+  if (operationPhase === 'devolucao' && !cleanlinessValue) {
     document.getElementById('error-operationCleanliness').textContent = 'Selecione a condição de limpeza do veículo.';
     return;
   }
@@ -321,8 +321,8 @@ operationForm.addEventListener('submit', async function (e) {
   if (operationPhase === 'devolucao' && reserva.operacao && reserva.operacao.retirada &&
     km < Number(reserva.operacao.retirada.quilometragem || 0)) {
     const confirmado = await showSiteConfirm(
-      'A quilometragem informada (' + km.toLocaleString('pt-BR') + ' km) é menor que a registrada na retirada (' +
-      Number(reserva.operacao.retirada.quilometragem).toLocaleString('pt-BR') + ' km). Confirma mesmo assim?',
+      'A quilometragem informada · ' + km.toLocaleString('pt-BR') + ' km · é menor que a registrada na retirada: ' +
+      Number(reserva.operacao.retirada.quilometragem).toLocaleString('pt-BR') + ' km. Confirma mesmo assim?',
       { title: 'Quilometragem menor que a retirada', confirmText: 'Confirmar' }
     );
     if (!confirmado) return;
@@ -335,8 +335,8 @@ operationForm.addEventListener('submit', async function (e) {
       : null;
     if (odometroAtual != null && km < odometroAtual) {
       const confirmado = await showSiteConfirm(
-        'A quilometragem informada (' + km.toLocaleString('pt-BR') + ' km) é menor que o odômetro atual do veículo (' +
-        odometroAtual.toLocaleString('pt-BR') + ' km). Confirma mesmo assim?',
+        'A quilometragem informada · ' + km.toLocaleString('pt-BR') + ' km · é menor que o odômetro atual do veículo: ' +
+        odometroAtual.toLocaleString('pt-BR') + ' km. Confirma mesmo assim?',
         { title: 'Quilometragem menor que o odômetro do veículo', confirmText: 'Confirmar' }
       );
       if (!confirmado) return;
@@ -356,7 +356,7 @@ operationForm.addEventListener('submit', async function (e) {
       // avarias/fotos (filtro "Somente com registro", notificação ao
       // responsável) - ver reservationHasOperationReport em js/utils.js e
       // notifyOperationReport em server/notifications.js.
-      condicaoLimpeza: cleanlinessInput ? cleanlinessInput.value : undefined,
+      condicaoLimpeza: cleanlinessValue || undefined,
       quilometragemDivergente: quilometragemDivergente || undefined,
       fotos: photos,
       registradoPor: getCurrentUser().nome,
