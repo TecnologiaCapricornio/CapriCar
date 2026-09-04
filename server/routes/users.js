@@ -11,7 +11,7 @@ router.use(requirePermission('users'));
 
 const USER_SELECT = `
   SELECT id, username, display_name, email, role, active, auth_provider,
-         can_manage_reservations, can_manage_branches, can_manage_fleet,
+         can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports, can_view_audit,
          can_manage_rules, can_manage_users, can_manage_integrations,
          cost_center, created_at, updated_at
@@ -24,6 +24,7 @@ function normalizePermissions(value){
     reservations:permissions.reservations === true,
     branches:permissions.branches === true,
     fleet:permissions.fleet === true,
+    maintenance:permissions.maintenance === true,
     blocks:permissions.blocks === true,
     reports:permissions.reports === true,
     audit:permissions.audit === true,
@@ -44,8 +45,8 @@ async function audit(client, actorId, action, entityId, details){
 const MAX_BULK_IDS = 2000;
 
 const PERMISSION_LABELS = {
-  reservations:'Reservas', branches:'Locais', fleet:'Veículos', blocks:'Bloqueios',
-  reports:'Relatórios', audit:'Auditoria', rules:'Regras', users:'Usuários',
+  reservations:'Reservas', branches:'Locais', fleet:'Veículos', maintenance:'Manutenção',
+  blocks:'Bloqueios', reports:'Relatórios', audit:'Auditoria', rules:'Regras', users:'Usuários',
   integrations:'Integrações'
 };
 
@@ -109,6 +110,7 @@ async function deleteUserCore(client, actorId, targetId, justification){
             can_manage_reservations = FALSE,
             can_manage_branches = FALSE,
             can_manage_fleet = FALSE,
+            can_manage_maintenance = FALSE,
             can_manage_blocks = FALSE,
             can_view_reports = FALSE,
             can_view_audit = FALSE,
@@ -144,17 +146,18 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
         SET can_manage_reservations = $2,
             can_manage_branches = $3,
             can_manage_fleet = $4,
-            can_manage_blocks = $5,
-            can_view_reports = $6,
-            can_view_audit = $7,
-            can_manage_rules = $8,
-            can_manage_users = $9,
-            can_manage_integrations = $10
+            can_manage_maintenance = $5,
+            can_manage_blocks = $6,
+            can_view_reports = $7,
+            can_view_audit = $8,
+            can_manage_rules = $9,
+            can_manage_users = $10,
+            can_manage_integrations = $11
       WHERE id = $1`,
     [
       targetId,
-      permissions.reservations, permissions.branches, permissions.fleet, permissions.blocks,
-      permissions.reports, permissions.audit, permissions.rules, permissions.users,
+      permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
+      permissions.blocks, permissions.reports, permissions.audit, permissions.rules, permissions.users,
       permissions.integrations
     ]
   );
@@ -330,14 +333,16 @@ router.post('/', async (req, res) => {
     const inserted = await client.query(
       `INSERT INTO users (
          username, display_name, email, password_hash, role, active,
-         can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_blocks, can_view_reports,
+         can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
+         can_manage_blocks, can_view_reports,
          can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations,
          cost_center
-       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULLIF($14, ''))
+       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NULLIF($15, ''))
        RETURNING *`,
       [
         username, displayName, email || null, passwordHash,
-        permissions.reservations, permissions.branches, permissions.fleet, permissions.blocks, permissions.reports,
+        permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
+        permissions.blocks, permissions.reports,
         permissions.audit, permissions.rules, permissions.users, permissions.integrations,
         costCenter
       ]
@@ -399,6 +404,7 @@ router.patch('/:id', async (req, res) => {
       reservations:current.can_manage_reservations,
       branches:current.can_manage_branches,
       fleet:current.can_manage_fleet,
+      maintenance:current.can_manage_maintenance,
       blocks:current.can_manage_blocks,
       reports:current.can_view_reports,
       audit:current.can_view_audit,
@@ -415,13 +421,14 @@ router.patch('/:id', async (req, res) => {
               can_manage_reservations = CASE WHEN role = 'admin' THEN TRUE ELSE $6 END,
               can_manage_branches = CASE WHEN role = 'admin' THEN TRUE ELSE $7 END,
               can_manage_fleet = CASE WHEN role = 'admin' THEN TRUE ELSE $8 END,
-              can_manage_blocks = CASE WHEN role = 'admin' THEN TRUE ELSE $9 END,
-              can_view_reports = CASE WHEN role = 'admin' THEN TRUE ELSE $10 END,
-              can_view_audit = CASE WHEN role = 'admin' THEN TRUE ELSE $11 END,
-              can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $12 END,
-              can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $13 END,
-              can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $14 END,
-              cost_center = $15
+              can_manage_maintenance = CASE WHEN role = 'admin' THEN TRUE ELSE $9 END,
+              can_manage_blocks = CASE WHEN role = 'admin' THEN TRUE ELSE $10 END,
+              can_view_reports = CASE WHEN role = 'admin' THEN TRUE ELSE $11 END,
+              can_view_audit = CASE WHEN role = 'admin' THEN TRUE ELSE $12 END,
+              can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $13 END,
+              can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $14 END,
+              can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $15 END,
+              cost_center = $16
         WHERE id = $1
         RETURNING *`,
       [
@@ -429,6 +436,7 @@ router.patch('/:id', async (req, res) => {
         isAdminAccount || permissions.reservations,
         isAdminAccount || permissions.branches,
         isAdminAccount || permissions.fleet,
+        isAdminAccount || permissions.maintenance,
         isAdminAccount || permissions.blocks,
         isAdminAccount || permissions.reports,
         isAdminAccount || permissions.audit,
@@ -511,6 +519,7 @@ router.delete('/:id', async (req, res) => {
               can_manage_reservations = FALSE,
               can_manage_branches = FALSE,
               can_manage_fleet = FALSE,
+              can_manage_maintenance = FALSE,
               can_manage_blocks = FALSE,
               can_view_reports = FALSE,
               can_view_audit = FALSE,

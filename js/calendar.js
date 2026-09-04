@@ -42,6 +42,7 @@ const calendarVehicleStyledSelect = createStyledSelect(calendarVehicleSelect, {
 const calendarVehicleLegend = document.getElementById('calendarVehicleLegend');
 const calendarGrid = document.getElementById('calendarGrid');
 const calMonthLabel = document.getElementById('calMonthLabel');
+const calMonthLabelText = document.getElementById('calMonthLabelText');
 const calendarDragHint = document.querySelector('.calendar-drag-hint');
 const calendarDayDetails = document.getElementById('calendarDayDetails');
 const calPrevBtn = document.getElementById('calPrevBtn');
@@ -304,6 +305,214 @@ function goToCurrentCalendarWeek(){
   renderMainCalendar();
 }
 
+/* =========================================================
+   Seletor de semana - clicar no título ("30 de Ago – 05 de Set") abre um
+   popover com um mês em miniatura (linha da semana atual destacada) e um
+   ano com todos os meses, como no Teams, para pular direto pra outra
+   semana/mês/ano sem clicar em "anterior" várias vezes. Só no desktop -
+   no mobile o título já troca de comportamento (mês/dia) e o calendário
+   inteiro já é o próprio seletor.
+   ========================================================= */
+let weekPickerViewYear = null;
+let weekPickerViewMonth = null;
+const weekPickerPopup = document.createElement('div');
+weekPickerPopup.className = 'date-popup week-picker-popover';
+document.body.appendChild(weekPickerPopup);
+
+function buildWeekPickerMonthPanel(){
+  const firstWeekday = new Date(Date.UTC(weekPickerViewYear, weekPickerViewMonth, 1)).getUTCDay();
+  const totalDays = daysInMonth(weekPickerViewYear, weekPickerViewMonth);
+  const prevMonthDays = daysInMonth(weekPickerViewYear, weekPickerViewMonth === 0 ? 11 : weekPickerViewMonth - 1);
+  const totalCells = Math.ceil((firstWeekday + totalDays) / 7) * 7;
+  const today = todayISO();
+
+  let html = '<div class="range-calendar-header">' +
+      '<button type="button" class="range-calendar-nav" data-week-picker-nav="month-prev" aria-label="Mês anterior">‹</button>' +
+      '<strong>' + MESES[weekPickerViewMonth] + ' de ' + weekPickerViewYear + '</strong>' +
+      '<button type="button" class="range-calendar-nav" data-week-picker-nav="month-next" aria-label="Próximo mês">›</button>' +
+    '</div>' +
+    '<div class="week-picker-grid"><div class="week-picker-row">';
+
+  DIAS_SEMANA.forEach(dia => {
+    html += '<span class="range-calendar-weekday">' + dia.charAt(0) + '</span>';
+  });
+  html += '</div>';
+
+  function dayAtOffset(offset){
+    if(offset < 1){
+      return {
+        day: prevMonthDays + offset,
+        monthIndex: weekPickerViewMonth === 0 ? 11 : weekPickerViewMonth - 1,
+        year: weekPickerViewMonth === 0 ? weekPickerViewYear - 1 : weekPickerViewYear,
+        otherMonth: true
+      };
+    }
+    if(offset > totalDays){
+      return {
+        day: offset - totalDays,
+        monthIndex: weekPickerViewMonth === 11 ? 0 : weekPickerViewMonth + 1,
+        year: weekPickerViewMonth === 11 ? weekPickerViewYear + 1 : weekPickerViewYear,
+        otherMonth: true
+      };
+    }
+    return { day: offset, monthIndex: weekPickerViewMonth, year: weekPickerViewYear, otherMonth: false };
+  }
+
+  for(let i = 0; i < totalCells; i++){
+    if(i % 7 === 0){
+      const rowStart = dayAtOffset(i - firstWeekday + 1);
+      const rowStartISO = isoFromParts(rowStart.year, rowStart.monthIndex, rowStart.day);
+      html += '<div class="week-picker-row' + (rowStartISO === calWeekStartISO ? ' current' : '') + '">';
+    }
+
+    const cell = dayAtOffset(i - firstWeekday + 1);
+    const iso = isoFromParts(cell.year, cell.monthIndex, cell.day);
+    const classes = 'range-calendar-day' + (cell.otherMonth ? ' other-month' : '') + (iso === today ? ' today' : '');
+    html += '<button type="button" class="' + classes + '" data-week-picker-day="' + iso + '">' +
+      '<span>' + cell.day + '</span></button>';
+
+    if(i % 7 === 6) html += '</div>';
+  }
+
+  return html + '</div>';
+}
+
+function buildWeekPickerYearPanel(){
+  let html = '<div class="range-calendar-header">' +
+      '<button type="button" class="range-calendar-nav" data-week-picker-nav="year-prev" aria-label="Ano anterior">‹</button>' +
+      '<strong>' + weekPickerViewYear + '</strong>' +
+      '<button type="button" class="range-calendar-nav" data-week-picker-nav="year-next" aria-label="Próximo ano">›</button>' +
+    '</div>' +
+    '<div class="week-picker-months">';
+  MESES.forEach((mes, index) => {
+    html += '<button type="button" class="week-picker-month-btn' + (index === weekPickerViewMonth ? ' active' : '') + '"' +
+      ' data-week-picker-month="' + index + '">' + mes.slice(0, 3) + '</button>';
+  });
+  return html + '</div>';
+}
+
+function renderWeekPicker(){
+  weekPickerPopup.innerHTML =
+    '<div class="week-picker-panel">' + buildWeekPickerMonthPanel() + '</div>' +
+    '<div class="week-picker-panel">' + buildWeekPickerYearPanel() + '</div>';
+}
+
+function positionWeekPicker(){
+  const rect = calMonthLabel.getBoundingClientRect();
+  const margin = 8;
+  const gap = 6;
+  const popupWidth = weekPickerPopup.offsetWidth || 560;
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+
+  let left = rect.left + rect.width / 2 - popupWidth / 2;
+  if(left + popupWidth > viewportW - margin) left = viewportW - popupWidth - margin;
+  if(left < margin) left = margin;
+
+  const spaceBelow = viewportH - rect.bottom - gap - margin;
+  const spaceAbove = rect.top - gap - margin;
+  const openBelow = spaceBelow >= spaceAbove;
+  const available = Math.max(160, openBelow ? spaceBelow : spaceAbove);
+
+  weekPickerPopup.style.maxHeight = available + 'px';
+  weekPickerPopup.style.overflowY = 'auto';
+
+  const popupHeight = Math.min(weekPickerPopup.scrollHeight, available);
+  const top = openBelow ? rect.bottom + gap : Math.max(margin, rect.top - gap - popupHeight);
+
+  weekPickerPopup.style.top = top + 'px';
+  weekPickerPopup.style.left = left + 'px';
+}
+
+function openWeekPicker(){
+  const parts = calWeekStartISO.split('-').map(Number);
+  weekPickerViewYear = parts[0];
+  weekPickerViewMonth = parts[1] - 1;
+  renderWeekPicker();
+  weekPickerPopup.classList.add('show');
+  calMonthLabel.setAttribute('aria-expanded', 'true');
+  positionWeekPicker();
+  window.addEventListener('scroll', positionWeekPicker, true);
+  window.addEventListener('resize', positionWeekPicker);
+}
+
+function closeWeekPicker(){
+  weekPickerPopup.classList.remove('show');
+  calMonthLabel.setAttribute('aria-expanded', 'false');
+  window.removeEventListener('scroll', positionWeekPicker, true);
+  window.removeEventListener('resize', positionWeekPicker);
+}
+
+function refreshWeekPicker(){
+  if(!weekPickerPopup.classList.contains('show')) return;
+  renderWeekPicker();
+}
+
+calMonthLabel.addEventListener('click', function(e){
+  e.stopPropagation();
+  if(isMobileCalendar()) return;
+  if(weekPickerPopup.classList.contains('show')) closeWeekPicker();
+  else openWeekPicker();
+});
+
+weekPickerPopup.addEventListener('click', function(e){
+  // O popover é renderizado de novo após cada ação (nav/mês/dia). Sem
+  // interromper a propagação, o alvo do clique deixa de existir no DOM
+  // (innerHTML trocado) antes do listener global de "clique fora" (mais
+  // abaixo) rodar - aí popup.contains(e.target) dá falso e ele fecha o
+  // popover sozinho, mesmo clicando em algo dentro dele (mesmo problema já
+  // resolvido do mesmo jeito no date-popup de dia único, em js/modals.js).
+  e.stopPropagation();
+
+  const nav = e.target.closest('[data-week-picker-nav]');
+  if(nav){
+    const action = nav.getAttribute('data-week-picker-nav');
+    if(action === 'month-prev'){
+      weekPickerViewMonth--;
+      if(weekPickerViewMonth < 0){ weekPickerViewMonth = 11; weekPickerViewYear--; }
+    } else if(action === 'month-next'){
+      weekPickerViewMonth++;
+      if(weekPickerViewMonth > 11){ weekPickerViewMonth = 0; weekPickerViewYear++; }
+    } else if(action === 'year-prev'){
+      weekPickerViewYear--;
+    } else if(action === 'year-next'){
+      weekPickerViewYear++;
+    }
+    renderWeekPicker();
+    positionWeekPicker();
+    return;
+  }
+
+  const monthBtn = e.target.closest('[data-week-picker-month]');
+  if(monthBtn){
+    weekPickerViewMonth = Number(monthBtn.getAttribute('data-week-picker-month'));
+    renderWeekPicker();
+    positionWeekPicker();
+    return;
+  }
+
+  const dayBtn = e.target.closest('[data-week-picker-day]');
+  if(dayBtn){
+    calWeekStartISO = startOfCalendarWeek(dayBtn.getAttribute('data-week-picker-day'));
+    clearCalendarSelection();
+    renderMainCalendar();
+    closeWeekPicker();
+  }
+});
+
+document.addEventListener('click', function(e){
+  if(!weekPickerPopup.classList.contains('show')) return;
+  if(!calMonthLabel.contains(e.target) && !weekPickerPopup.contains(e.target)){
+    closeWeekPicker();
+  }
+});
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && weekPickerPopup.classList.contains('show')){
+    closeWeekPicker();
+  }
+});
+
 function buildWeekHeader(){
   let html = '<div class="week-header-corner"><span>GMT-03</span></div>';
   const today = todayISO();
@@ -413,7 +622,7 @@ function buildDayColumn(iso){
 }
 
 function buildMobileMonthCalendar(){
-  calMonthLabel.textContent = MESES[mobileViewMonth] + ' de ' + mobileViewYear;
+  calMonthLabelText.textContent = MESES[mobileViewMonth] + ' de ' + mobileViewYear;
   const firstWeekday = new Date(Date.UTC(mobileViewYear, mobileViewMonth, 1)).getUTCDay();
   const totalDays = daysInMonth(mobileViewYear, mobileViewMonth);
   const previousMonth = mobileViewMonth === 0 ? 11 : mobileViewMonth - 1;
@@ -481,7 +690,7 @@ function formatMobileDayTitle(iso){
 
 function buildMobileDayCalendar(){
   const parts = mobileSelectedISO.split('-').map(Number);
-  calMonthLabel.textContent = MESES[parts[1] - 1] + ' de ' + parts[0];
+  calMonthLabelText.textContent = MESES[parts[1] - 1] + ' de ' + parts[0];
   const info = getSelectedCarInfo();
   const branchLabel = info ? info.local : calSelectedBranch;
   return '<div class="mobile-day-calendar">' +
@@ -586,7 +795,8 @@ function renderMainCalendar(){
   calendarDragHint.textContent = getSelectedCarInfo()
     ? 'Clique em um horário ou arraste na mesma coluna para selecionar o período da reserva.'
     : 'Selecione um veículo específico no filtro acima para criar uma reserva por aqui.';
-  calMonthLabel.textContent = formatWeekLabel(calWeekStartISO);
+  calMonthLabelText.textContent = formatWeekLabel(calWeekStartISO);
+  refreshWeekPicker();
   let html = '<div class="week-calendar-header">' + buildWeekHeader() + '</div>' +
     '<div class="week-calendar-body">' + buildTimeAxis() + '<div class="week-days">';
   for(let index = 0; index < WEEK_DAYS; index++){

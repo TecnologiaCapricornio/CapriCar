@@ -8,7 +8,7 @@ const { getBranchDeletionBlockers } = require('../branch-deletion');
 const { listAllReservations } = require('../reservations-store');
 
 const router = express.Router();
-const COLLECTIONS = ['branches', 'vehicles', 'blocks', 'rules'];
+const COLLECTIONS = ['branches', 'vehicles', 'blocks', 'rules', 'maintenanceReminders'];
 
 function todaySaoPaulo(){
   return new Intl.DateTimeFormat('en-CA', {
@@ -35,6 +35,9 @@ function requireCollectionAccess(req, res, next){
   }
   if(name === 'rules' && !userCanManage(req.user, 'rules')){
     return res.status(403).json({ error:'Sem permissão para alterar as regras.' });
+  }
+  if(name === 'maintenanceReminders' && !userCanManage(req.user, 'maintenance')){
+    return res.status(403).json({ error:'Sem permissão para alterar os lembretes de manutenção.' });
   }
   next();
 }
@@ -67,7 +70,7 @@ router.get('/bootstrap', async (req, res) => {
   const usersResult = userCanManage(req.user, 'users')
     ? await query(
       `SELECT id, username, display_name AS nome, email, role, active, auth_provider,
-              can_manage_reservations, can_manage_branches, can_manage_fleet,
+              can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
               can_manage_blocks, can_view_reports, can_view_audit,
               can_manage_rules, can_manage_users, can_manage_integrations
          FROM users
@@ -106,6 +109,7 @@ router.get('/bootstrap', async (req, res) => {
         reservations:row.can_manage_reservations,
         branches:row.can_manage_branches,
         fleet:row.can_manage_fleet,
+        maintenance:row.can_manage_maintenance,
         blocks:row.can_manage_blocks,
         reports:row.can_view_reports,
         audit:row.can_view_audit,

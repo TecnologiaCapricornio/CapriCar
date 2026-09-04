@@ -306,8 +306,7 @@ function openAdminReservaModal(reservaId, mode){
   adminReservaForm.classList.toggle('self-edit-wizard', reservationEditMode === 'self');
 
   if(reservaId == null){
-    adminReservaTitle.textContent = isAdmin() ? 'Nova reserva (como admin)' :
-      (isFacilities() ? 'Nova reserva (Facilities)' : 'Nova reserva (gestão)');
+    adminReservaTitle.textContent = isAdmin() ? 'Nova reserva (como admin)' : 'Nova reserva (gestão)';
     aNomeInput.value = '';
     aNomeInput.dataset.userId = '';
     aNomeAutocomplete.refresh();

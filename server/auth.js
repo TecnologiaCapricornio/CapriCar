@@ -59,6 +59,7 @@ function permissionsFromRow(row){
     reservations:row.can_manage_reservations === true,
     branches:row.can_manage_branches === true,
     fleet:row.can_manage_fleet === true,
+    maintenance:row.can_manage_maintenance === true,
     blocks:row.can_manage_blocks === true,
     reports:row.can_view_reports === true,
     audit:row.can_view_audit === true,

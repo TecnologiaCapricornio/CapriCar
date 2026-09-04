@@ -83,7 +83,6 @@ jobs:
       # ADMIN_INITIAL_PASSWORD precisa bater com CAPRICAR_TEST_ADMIN_PASSWORD -
       # é a senha que o teste de integração usa para logar como admin.
       ADMIN_INITIAL_PASSWORD: ci-only-admin-password
-      FACILITIES_INITIAL_PASSWORD: ci-only-facilities-password
 
     steps:
       - uses: actions/checkout@v4

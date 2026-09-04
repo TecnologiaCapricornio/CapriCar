@@ -69,7 +69,12 @@ function seatStates(tipo, capacidade, ocupantes){
    ========================================================= */
 const SEAT_SVG_UNIT = 38, SEAT_SVG_GAP = 9, SEAT_SVG_ROW_GAP = 11, SEAT_SVG_PAD = 20,
   SEAT_SVG_AISLE = 20, SEAT_SVG_AISLE_INSET = 4, SEAT_SVG_WHEEL_W = 13, SEAT_SVG_WHEEL_H = 26,
-  SEAT_SVG_NOSE = 30, SEAT_SVG_TAIL = 18, SEAT_SVG_MIRROR = 8;
+  // TAIL precisa ser maior que o rx:26 do car-body (ver bodyRect abaixo) - com
+  // menos espaço reto que o próprio raio do canto, a curva parecia "cortada"
+  // rente ao último banco em vez de arredondar com folga (mesmo em capacidades
+  // pequenas). NOSE já tinha folga de sobra (30 > 26); TAIL foi alinhado ao
+  // mesmo padrão.
+  SEAT_SVG_NOSE = 30, SEAT_SVG_TAIL = 34, SEAT_SVG_MIRROR = 8;
 
 // Posição x de cada COLUNA da fileira padrão (porFileira[1]), corredor
 // incluso - fixa, não depende de quantos lugares a fileira atual realmente

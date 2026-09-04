@@ -79,6 +79,17 @@ function saveVehicleBlocks(list){
     : Promise.resolve();
 }
 
+function getMaintenanceReminders(){
+  return readCollection(MAINTENANCE_KEY, []);
+}
+
+function saveMaintenanceReminders(list){
+  writeCollection(MAINTENANCE_KEY, list);
+  return typeof queueCollectionSync === 'function'
+    ? queueCollectionSync('maintenanceReminders', list)
+    : Promise.resolve();
+}
+
 function getReservationRules(){
   const defaults = DEFAULT_RESERVATION_RULES;
   try{
@@ -301,9 +312,17 @@ function getVehicleCapacity(reserva){
   return vehicle && Number(vehicle.capacidade) > 0 ? Number(vehicle.capacidade) : CAPACIDADE_MAXIMA;
 }
 
+// Comparação de local/carro é case-insensitive (String().toLowerCase()), igual
+// ao check equivalente no servidor (ver blockConflict em server/validation.js) -
+// sem isso, uma diferença de maiúsculas/minúsculas entre o que este formulário
+// tem selecionado e como o bloqueio foi salvo deixava passar aqui um conflito
+// que o servidor rejeitava, só avisando a pessoa depois de já ter confirmado
+// as regras gerais da viagem.
 function findVehicleBlocks(partida, carro, dataIda, dataVolta, excludeId){
+  const localLower = String(partida).toLowerCase();
+  const carroLower = String(carro).toLowerCase();
   return getVehicleBlocks().filter(block => {
-    if(block.local !== partida || String(block.carro) !== String(carro)) return false;
+    if(String(block.local).toLowerCase() !== localLower || String(block.carro).toLowerCase() !== carroLower) return false;
     if(excludeId != null && String(block.id) === String(excludeId)) return false;
     return !(dataVolta < block.dataInicio || dataIda > block.dataFim);
   });

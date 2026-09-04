@@ -423,6 +423,13 @@ function populateManagementVehicleSelectors(){
     reportVehicle.innerHTML = '<option value="">Todos</option>' + vehicleOptions;
     reportVehicle.value = current;
   }
+
+  const maintenanceVehicle = document.getElementById('maintenanceVehicle');
+  if(maintenanceVehicle){
+    const current = maintenanceVehicle.value;
+    maintenanceVehicle.innerHTML = '<option value="">Selecione...</option>' + vehicleOptions;
+    maintenanceVehicle.value = current;
+  }
 }
 
 function renderBranchManagement(){

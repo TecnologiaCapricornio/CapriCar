@@ -6,11 +6,12 @@ CREATE TABLE IF NOT EXISTS users (
   display_name VARCHAR(120) NOT NULL,
   password_hash TEXT NOT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user'
-    CHECK (role IN ('admin', 'facilities', 'user')),
+    CHECK (role IN ('admin', 'user')),
   active BOOLEAN NOT NULL DEFAULT TRUE,
   can_manage_reservations BOOLEAN NOT NULL DEFAULT FALSE,
   can_manage_branches BOOLEAN NOT NULL DEFAULT FALSE,
   can_manage_fleet BOOLEAN NOT NULL DEFAULT FALSE,
+  can_manage_maintenance BOOLEAN NOT NULL DEFAULT FALSE,
   can_manage_blocks BOOLEAN NOT NULL DEFAULT FALSE,
   can_view_reports BOOLEAN NOT NULL DEFAULT FALSE,
   can_view_audit BOOLEAN NOT NULL DEFAULT FALSE,
@@ -54,8 +55,11 @@ CREATE TABLE IF NOT EXISTS vehicles (
   plate VARCHAR(10),
   brand VARCHAR(120) NOT NULL,
   model VARCHAR(120) NOT NULL,
+  -- Teto de 48 pra caber o maior tipo (onibus - ver VEHICLE_CAPACITY_LIMITS
+  -- em server/validation.js). A checagem PRECISA por tipo é só na aplicação;
+  -- aqui é rede de segurança contra gravação direta na coluna.
   capacity SMALLINT NOT NULL DEFAULT 5
-    CHECK (capacity BETWEEN 1 AND 20),
+    CHECK (capacity BETWEEN 1 AND 48),
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -175,6 +179,10 @@ CREATE TABLE IF NOT EXISTS vehicle_operations (
   odometer_km BIGINT NOT NULL CHECK (odometer_km >= 0),
   fuel_level VARCHAR(20) NOT NULL,
   damages_notes TEXT,
+  -- Condição de limpeza do veículo, registrada na devolução (retirada não usa
+  -- esta coluna - fica NULL).
+  cleanliness_condition VARCHAR(20)
+    CHECK (cleanliness_condition IS NULL OR cleanliness_condition IN ('limpo', 'sujeira_interna', 'sujeira_externa')),
   recorded_by UUID NOT NULL REFERENCES users(id),
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (reservation_id, phase)

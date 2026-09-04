@@ -9,6 +9,7 @@ const { sendTestMail } = require('../mailer');
 const {
   sweepEmailReminders,
   sweepDriverLicenseReminders,
+  sweepMaintenanceReminders,
   getEmailReminderSettings
 } = require('../reminders');
 const { getCalendarSyncSettings, sendTestCalendarEvent } = require('../calendar-sync');
@@ -195,7 +196,7 @@ router.put('/email-reminders', async (req, res) => {
   const body = req.body || {};
   const types = [
     'reservationUpcoming', 'pickupOverdue', 'returnOverdue',
-    'passengerJoined', 'rideWatchMatch', 'cnhExpiring',
+    'passengerJoined', 'rideWatchMatch', 'cnhExpiring', 'maintenanceDue',
     'passengerRemoved', 'passengerLeft'
   ];
   const next = {};
@@ -220,7 +221,8 @@ router.post('/email-reminders/run-now', async (req, res) => {
   try{
     const summary = await sweepEmailReminders();
     const cnh = await sweepDriverLicenseReminders();
-    res.json({ ...summary, cnh });
+    const manutencao = await sweepMaintenanceReminders();
+    res.json({ ...summary, cnh, manutencao });
   }catch(error){
     res.status(500).json({ error:'Falha ao executar a varredura de lembretes: ' + error.message });
   }

@@ -66,10 +66,111 @@ function cnhMilestoneFor(diasRestantes){
   return marco === undefined ? null : String(marco);
 }
 
+/* =========================================================
+   Lembretes de manutenção (troca de óleo, pneus etc.)
+
+   Cada lembrete tem até duas "pernas" independentes - uma por
+   quilometragem, outra por data - e dispara pelo que vencer primeiro.
+   O km só é conhecido quando o veículo já tem alguma devolução registrada
+   com odômetro (ver latestOdometerReading); sem isso, essa perna fica de
+   fora e só a data (se cadastrada) é avaliada.
+   ========================================================= */
+const MAINTENANCE_KM_MILESTONES = [200, 500, 1000];
+const MAINTENANCE_DATE_MILESTONES = [3, 7, 15];
+
+const MAINTENANCE_TYPE_LABELS = {
+  oleo:'Troca de óleo',
+  pneus:'Troca de pneus',
+  revisao:'Revisão'
+};
+
+function maintenanceReminderLabel(reminder){
+  return MAINTENANCE_TYPE_LABELS[reminder && reminder.tipo] ||
+    String(reminder && reminder.descricao || 'Manutenção').trim();
+}
+
+// Mesma lógica de "menor marco que ainda cobre o restante" de
+// cnhMilestoneFor, generalizada para km e dias ao mesmo tempo (o valor de
+// `remaining` já vem no sinal certo: negativo/zero = vencido).
+function maintenanceMilestoneFor(remaining, milestones){
+  if(remaining == null) return null;
+  if(remaining <= 0) return 'vencido';
+  const marco = milestones.find(m => m >= remaining);
+  return marco === undefined ? null : String(marco);
+}
+
+function utcMidnightISODate(iso){
+  const [ano, mes, dia] = String(iso).slice(0, 10).split('-').map(Number);
+  return Date.UTC(ano, mes - 1, dia);
+}
+
+function daysRemaining(targetISO, todayISODate){
+  return Math.round((utcMidnightISODate(targetISO) - utcMidnightISODate(todayISODate)) / 86400000);
+}
+
+// Maior leitura de odômetro já registrada numa devolução deste veículo -
+// mesmo critério do motor de recomendação (js/vehicle-recommendation.js:
+// vehicleRecommendationStats): não soma as viagens, usa a leitura mais
+// recente, que já é cumulativa. Sem nenhuma devolução com odômetro
+// registrada ainda (veículo novo, por exemplo), devolve null.
+function latestOdometerReading(local, carro, reservations){
+  let km = null;
+  let registradoEm = null;
+  (reservations || []).forEach(reservation => {
+    if(reservation.partida !== local || String(reservation.carro) !== String(carro)) return;
+    const devolucao = reservation.operacao && reservation.operacao.devolucao;
+    if(!devolucao || !devolucao.registradoEm || !Number.isFinite(Number(devolucao.quilometragem))) return;
+    const data = new Date(devolucao.registradoEm);
+    if(isNaN(data.getTime())) return;
+    if(!registradoEm || data > registradoEm){
+      registradoEm = data;
+      km = Number(devolucao.quilometragem);
+    }
+  });
+  return km;
+}
+
+// Estado de um lembrete de manutenção numa referência (km atual do veículo,
+// se conhecido, e a data de hoje). `status.km`/`status.data` só existem
+// quando o lembrete tem essa perna cadastrada E ela é avaliável (km exige
+// leitura de odômetro conhecida).
+function maintenanceReminderStatus(reminder, currentKm, todayISODate){
+  const status = { km:null, data:null };
+  if(reminder.proximaKm != null && currentKm != null){
+    const restante = Number(reminder.proximaKm) - Number(currentKm);
+    status.km = { restante, marco:maintenanceMilestoneFor(restante, MAINTENANCE_KM_MILESTONES) };
+  }
+  if(reminder.proximaData){
+    const restante = daysRemaining(reminder.proximaData, todayISODate);
+    status.data = { restante, marco:maintenanceMilestoneFor(restante, MAINTENANCE_DATE_MILESTONES) };
+  }
+  return status;
+}
+
+// Texto único cobrindo as duas pernas quando aplicável - evita mandar dois
+// avisos separados (km e data) no mesmo dia para o mesmo lembrete.
+function maintenanceStatusMessage(reminder, status, veiculoNome){
+  const label = maintenanceReminderLabel(reminder);
+  const partes = [];
+  if(status.km){
+    partes.push(status.km.restante <= 0
+      ? `${Math.abs(status.km.restante)} km além do previsto`
+      : `faltam ${status.km.restante} km`);
+  }
+  if(status.data){
+    if(status.data.restante < 0) partes.push(`${Math.abs(status.data.restante)} dia(s) atrasada`);
+    else if(status.data.restante === 0) partes.push('vence hoje');
+    else partes.push(`faltam ${status.data.restante} dia(s)`);
+  }
+  const vencido = (status.km && status.km.restante <= 0) || (status.data && status.data.restante <= 0);
+  const veiculo = veiculoNome || 'veículo';
+  return `${label} do ${veiculo} ${vencido ? 'venceu' : 'está próxima'}${partes.length ? ' — ' + partes.join(' · ') : ''}.`;
+}
+
 const DEFAULT_TEMPLATES = {
   reservationUpcoming:{
     enabled:false,
-    subject:'🚗 Sua reserva #{{numeroReserva}} começa em breve',
+    subject:'🚗 CapriCar - Sua reserva #{{numeroReserva}} começa em breve',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -126,7 +227,7 @@ const DEFAULT_TEMPLATES = {
   },
   pickupOverdue:{
     enabled:false,
-    subject:'🔑 Retirada pendente — reserva #{{numeroReserva}}',
+    subject:'🔑 CapriCar - Retirada pendente — reserva #{{numeroReserva}}',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -183,7 +284,7 @@ const DEFAULT_TEMPLATES = {
   },
   returnOverdue:{
     enabled:false,
-    subject:'⏰ Devolução pendente — reserva #{{numeroReserva}}',
+    subject:'⏰ CapriCar - Devolução pendente — reserva #{{numeroReserva}}',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -240,7 +341,7 @@ const DEFAULT_TEMPLATES = {
   },
   passengerJoined:{
     enabled:false,
-    subject:'👥 {{passageiros}} entrou na sua carona — reserva #{{numeroReserva}}',
+    subject:'👥 CapriCar - {{passageiros}} entrou na sua carona — reserva #{{numeroReserva}}',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -298,7 +399,7 @@ const DEFAULT_TEMPLATES = {
   },
   rideWatchMatch:{
     enabled:false,
-    subject:'🚗 Uma carona que você monitora apareceu — {{origem}} → {{destino}}',
+    subject:'🚗 CapriCar - Uma carona que você monitora apareceu — {{origem}} → {{destino}}',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -356,7 +457,7 @@ const DEFAULT_TEMPLATES = {
   },
   cnhExpiring:{
     enabled:false,
-    subject:'🪪 Sua CNH {{situacaoCurta}} — renove para continuar dirigindo',
+    subject:'🪪 CapriCar - Sua CNH {{situacaoCurta}} — renove para continuar dirigindo',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -398,9 +499,62 @@ const DEFAULT_TEMPLATES = {
   </td></tr>
 </table>`
   },
+  maintenanceDue:{
+    enabled:false,
+    subject:'🔧 CapriCar - {{tipoManutencao}} próxima — {{veiculo}}',
+    body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
+      <tr><td style="background-color:#fdf3e3;padding:24px 32px;border-radius:12px 12px 0 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:52px;height:52px;background-color:#f7e3c1;border-radius:26px;text-align:center;font-size:24px;line-height:52px;">🔧</td>
+          <td style="padding-left:14px;vertical-align:middle;">
+            <div style="color:#8a5a00;font-size:18px;font-weight:700;">{{tipoManutencao}} próxima</div>
+            <div style="color:#a9843c;font-size:12px;margin-top:2px;">CapriCar</div>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:26px 32px 8px 32px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#3c4753;line-height:1.55;">Olá, {{nome}}. {{mensagem}}</p>
+      </td></tr>
+      <tr><td style="padding:0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eef1f5;border-radius:8px;">
+          <tr style="background-color:#fbfcfd;">
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;width:38%;">Veículo</td>
+            <td style="padding:13px 18px;">
+              <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+                <td style="vertical-align:middle;font-size:14px;color:#3c4753;font-weight:600;padding-right:10px;">{{veiculo}}</td>
+                <td style="vertical-align:middle;">{{placaBadge}}</td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;border-top:1px solid #eef1f5;">Próxima troca (km)</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;border-top:1px solid #eef1f5;">{{proximaKm}}</td>
+          </tr>
+          <tr>
+            <td style="padding:13px 18px;font-size:13px;color:#8a95a3;border-top:1px solid #eef1f5;">Próxima troca (data)</td>
+            <td style="padding:13px 18px;font-size:14px;color:#3c4753;font-weight:600;border-top:1px solid #eef1f5;">{{proximaData}}</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 32px 28px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="background-color:#fdf6ea;border-left:3px solid #e0b464;border-radius:4px;padding:12px 16px;font-size:13px;color:#7a5a1f;">
+            💡 Atualize o lembrete em Painel de Administração &gt; Manutenção assim que o serviço for feito.
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="background-color:#fafbfc;padding:16px 32px;border-top:1px solid #f0f3f6;border-radius:0 0 12px 12px;">
+        <p style="margin:0;font-size:12px;color:#a7b0bc;">Você está recebendo isso porque tem permissão de frota no CapriCar.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`
+  },
   passengerRemoved:{
     enabled:false,
-    subject:'🚫 {{outraParte}} removeu você da carona {{origem}} → {{destino}}',
+    subject:'🚫 CapriCar - {{outraParte}} removeu você da carona {{origem}} → {{destino}}',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -445,7 +599,7 @@ const DEFAULT_TEMPLATES = {
   },
   passengerLeft:{
     enabled:false,
-    subject:'🚶 {{outraParte}} saiu da sua carona {{origem}} → {{destino}}',
+    subject:'🚶 CapriCar - {{outraParte}} saiu da sua carona {{origem}} → {{destino}}',
     body:`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f5f9;padding:32px 16px;font-family:'Segoe UI',Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;border:1px solid #e6ebf1;">
@@ -709,6 +863,109 @@ async function sweepDriverLicenseReminders(){
   return summary;
 }
 
+// Varredura de manutenção da frota. Orientada a LEMBRETE (coleção
+// maintenanceReminders em application_state, cadastrada pelo Painel de
+// Administração > Manutenção) - percorre os lembretes ativos, resolve o
+// km atual do veículo a partir das reservas já persistidas e avisa quem
+// tem permissão de frota (admin ou can_manage_fleet) quando algum marco é
+// cruzado. Igual ao CNH, a notificação do sino sempre sai; o e-mail é
+// condicionado ao tipo "maintenanceDue" estar habilitado em
+// Integrações > Lembretes.
+async function sweepMaintenanceReminders(){
+  const summary = { scanned:0, notified:0, sent:0, skipped:0, failed:0 };
+
+  const state = await query(
+    `SELECT collection_name, value FROM application_state WHERE collection_name = ANY($1::text[])`,
+    [['maintenanceReminders', 'vehicles']]
+  );
+  const values = Object.fromEntries(state.rows.map(row => [row.collection_name, row.value]));
+  const reminders = (Array.isArray(values.maintenanceReminders) ? values.maintenanceReminders : [])
+    .filter(reminder => reminder && reminder.ativo !== false);
+  if(!reminders.length) return summary;
+
+  const managersResult = await query(
+    `SELECT id, email, display_name FROM users
+      WHERE active = TRUE AND deleted_at IS NULL AND (role = 'admin' OR can_manage_fleet = TRUE)`
+  );
+  if(!managersResult.rows.length) return summary;
+
+  const vehicles = Array.isArray(values.vehicles) ? values.vehicles : [];
+  const reservations = await listAllReservations();
+  const hoje = todayISO();
+  const settings = await getEmailReminderSettings();
+  const emailConfig = settings.maintenanceDue;
+
+  for(const reminder of reminders){
+    const currentKm = reminder.proximaKm != null
+      ? latestOdometerReading(reminder.local, reminder.carro, reservations)
+      : null;
+    const status = maintenanceReminderStatus(reminder, currentKm, hoje);
+    const marco = (status.km && status.km.marco) || (status.data && status.data.marco);
+    if(!marco) continue;
+    summary.scanned++;
+
+    const vehicle = vehicles.find(v =>
+      v.local === reminder.local && String(v.codigo) === String(reminder.carro));
+    const veiculoNome = vehicle
+      ? (`${(vehicle.marca || '').trim()} ${(vehicle.modelo || '').trim()}`.trim() || 'Veículo')
+      : String(reminder.carro || 'Veículo');
+    const mensagem = maintenanceStatusMessage(reminder, status, veiculoNome);
+    const dedupeKey = `maint:${reminder.id}:${status.km ? status.km.marco : '-'}:` +
+      `${status.data ? status.data.marco : '-'}:${reminder.proximaKm ?? ''}:${reminder.proximaData ?? ''}`;
+
+    for(const manager of managersResult.rows){
+      let criada = false;
+      try{
+        criada = await withTransaction(async client => {
+          await ensureNotificationsTable(client);
+          return insertNotification(client, {
+            userId:String(manager.id),
+            type:'maintenance_due',
+            title:`${maintenanceReminderLabel(reminder)} próxima`,
+            message:mensagem,
+            reservationId:null,
+            dedupeKey,
+            metadata:{
+              reminderId:reminder.id, local:reminder.local, carro:reminder.carro,
+              proximaKm:reminder.proximaKm, proximaData:reminder.proximaData
+            }
+          });
+        });
+      }catch(error){
+        console.error('Falha ao notificar manutenção próxima:', error.message);
+      }
+      if(criada) summary.notified++;
+
+      if(!emailConfig || !emailConfig.enabled || !manager.email){ summary.skipped++; continue; }
+      if(await alreadySent(manager.id, dedupeKey)){ summary.skipped++; continue; }
+
+      const tokens = {
+        nome:manager.display_name,
+        veiculo:veiculoNome,
+        placaBadge:plateBadgeEmailHTML(vehicle && vehicle.placa),
+        tipoManutencao:maintenanceReminderLabel(reminder),
+        mensagem,
+        proximaKm:reminder.proximaKm != null ? String(reminder.proximaKm) : 'Não informada',
+        proximaData:reminder.proximaData ? formatDateBR(reminder.proximaData) : 'Não informada'
+      };
+      try{
+        await sendMail({
+          to:manager.email,
+          subject:renderTemplate(emailConfig.subject, tokens),
+          html:renderTemplate(emailConfig.body, tokens)
+        });
+        await recordOutcome(manager.id, 'maintenanceDue', null, dedupeKey, 'sent', null);
+        summary.sent++;
+      }catch(error){
+        await recordOutcome(manager.id, 'maintenanceDue', null, dedupeKey, 'failed', error.message);
+        summary.failed++;
+      }
+    }
+  }
+
+  return summary;
+}
+
 // Dispara na hora (não pelo sweep periódico) quando um passageiro entra
 // numa carona - avisa o motorista por e-mail, se esse tipo estiver
 // habilitado em Integrações > Lembretes. Nunca deve interromper o fluxo de
@@ -781,6 +1038,7 @@ async function sendPassengerRemovalEmail(task){
 module.exports = {
   sweepEmailReminders,
   sweepDriverLicenseReminders,
+  sweepMaintenanceReminders,
   getEmailReminderSettings,
   DEFAULT_TEMPLATES,
   pendingReminders,
@@ -792,5 +1050,13 @@ module.exports = {
   plateBadgeEmailHTML,
   blocoMotivoHTML,
   sendPassengerJoinedEmail,
-  sendPassengerRemovalEmail
+  sendPassengerRemovalEmail,
+  MAINTENANCE_KM_MILESTONES,
+  MAINTENANCE_DATE_MILESTONES,
+  MAINTENANCE_TYPE_LABELS,
+  maintenanceReminderLabel,
+  maintenanceMilestoneFor,
+  latestOdometerReading,
+  maintenanceReminderStatus,
+  maintenanceStatusMessage
 };

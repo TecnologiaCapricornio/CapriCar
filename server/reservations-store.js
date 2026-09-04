@@ -265,10 +265,10 @@ async function upsertOperation(client, reservationId, phase, record, actor){
   }else{
     const inserted = await client.query(
       `INSERT INTO vehicle_operations
-         (reservation_id, phase, odometer_km, fuel_level, damages_notes, recorded_by, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
+         (reservation_id, phase, odometer_km, fuel_level, damages_notes, cleanliness_condition, recorded_by, recorded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id`,
       [reservationId, dbPhase, Number(record.quilometragem), String(record.combustivel || ''),
-        String(record.avarias || ''), actor.id]
+        String(record.avarias || ''), record.condicaoLimpeza || null, actor.id]
     );
     operationId = inserted.rows[0].id;
   }
@@ -440,6 +440,7 @@ function fullDto(row, data){
       quilometragem:Number(operation.odometer_km),
       combustivel:operation.fuel_level,
       avarias:operation.damages_notes || '',
+      ...(operation.cleanliness_condition ? { condicaoLimpeza:operation.cleanliness_condition } : {}),
       registradoPor:operation.recorded_by_name,
       registradoEm:operation.recorded_at,
       fotos:(data.photos.get(String(operation.id)) || []).map(photo => ({

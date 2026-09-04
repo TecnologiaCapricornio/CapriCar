@@ -434,6 +434,43 @@
     margin-bottom:18px;
   }
 
+  /* Card "Reservando como" da Nova Reserva - avatar, nome e o status da CNH
+     (categoria + validade) em etiquetas, no lugar de um aviso de texto
+     corrido. Fica vazio (e escondido via :empty) antes do login. */
+  .solicitante-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 14px;
+    background:rgba(111,168,216,.08);
+    border:1px solid rgba(111,168,216,.18);
+    border-radius:var(--radius-sm);
+    margin-bottom:18px;
+  }
+
+  .solicitante-card:empty{
+    display:none;
+  }
+
+  .solicitante-info{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    min-width:0;
+  }
+
+  .solicitante-info strong{
+    color:var(--texto);
+    font-size:var(--fs-sm);
+    font-weight:700;
+  }
+
+  .solicitante-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+
   .form-hint::before{
     content:"ℹ️ ";
   }
@@ -1560,7 +1597,7 @@
 
   /* ---- Modal de confirmação para entrar na carona ---- */
   .modal-card.join-confirm-card{
-    max-width:380px;
+    max-width:560px;
     text-align:left;
   }
 
@@ -1754,14 +1791,6 @@
 
   .join-confirm-route{
     margin-top:-4px;
-  }
-
-  /* O cartão de confirmação é bem mais estreito que os cards de listagem
-     (.reservation-item) de onde .reservation-period foi herdado - manter as
-     duas colunas (Ida | Volta) lado a lado aqui espreme "data" e "hora" até
-     o ícone colidir com o texto. Empilhar verticalmente evita isso. */
-  .join-confirm-route .reservation-period{
-    grid-template-columns:1fr;
   }
 
   .join-confirm-actions{
@@ -2385,6 +2414,11 @@
   /* Dentro do bloco o mapa não precisa da própria moldura. */
   .occupancy .seat-map{
     margin:0;
+    /* Só embaixo: o gap:10px do .occupancy já separa bem a linha de cima
+       (etiquetas) do desenho, mas o carro é o elemento mais alto do quadro -
+       com só esse gap, o traço que separa dos ocupantes ficava colado na
+       curva de baixo do desenho, como se estivesse cortado. */
+    margin-bottom:14px;
     padding:0;
     border:0;
     background:none;

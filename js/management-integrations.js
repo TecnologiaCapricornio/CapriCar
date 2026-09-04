@@ -65,6 +65,11 @@ const REMINDER_FIELDS = {
     subject:document.getElementById('reminderCnhExpiringSubject'),
     body:document.getElementById('reminderCnhExpiringBody')
   },
+  maintenanceDue:{
+    enabled:document.getElementById('reminderMaintenanceDueEnabled'),
+    subject:document.getElementById('reminderMaintenanceDueSubject'),
+    body:document.getElementById('reminderMaintenanceDueBody')
+  },
   passengerRemoved:{
     enabled:document.getElementById('reminderPassengerRemovedEnabled'),
     subject:document.getElementById('reminderPassengerRemovedSubject'),

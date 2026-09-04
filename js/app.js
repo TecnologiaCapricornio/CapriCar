@@ -24,7 +24,7 @@ function markRequiredFields(){
     'partida', 'destino', 'carro', 'dataIda', 'dataVolta',
     'horarioRetirada', 'horarioDevolucao',
     'branchName', 'vehicleBranch', 'vehiclePlate', 'vehicleBrand', 'vehicleModel', 'vehicleCapacity',
-    'blockVehicle', 'blockType', 'blockRangePickerTrigger',
+    'blockVehicle', 'blockType', 'blockStart', 'blockEnd',
     'ruleMaxConsecutiveDays', 'ruleMaxAdvanceDays', 'ruleMaxReservations', 'ruleReservationBufferMinutes',
     'userAccountName', 'userAccountUsername', 'userAccountPassword',
     'qDestino', 'qDataVolta', 'qHorarioRetirada', 'qHorarioDevolucao',

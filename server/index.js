@@ -13,7 +13,7 @@ const reservationRoutes = require('./routes/reservations');
 const settingsRoutes = require('./routes/settings');
 const rideWatchRoutes = require('./routes/ride-watches');
 const profileRoutes = require('./routes/profile');
-const { sweepEmailReminders, sweepDriverLicenseReminders } = require('./reminders');
+const { sweepEmailReminders, sweepDriverLicenseReminders, sweepMaintenanceReminders } = require('./reminders');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -126,6 +126,16 @@ async function runReminderSweep(){
     }
   }catch(error){
     console.error('Falha na varredura de vencimento de CNH:', error);
+  }
+
+  // Idem: manutenção da frota é uma terceira varredura independente.
+  try{
+    const manutencao = await sweepMaintenanceReminders();
+    if(manutencao.notified || manutencao.sent || manutencao.failed){
+      console.log('Avisos de manutenção da frota:', manutencao);
+    }
+  }catch(error){
+    console.error('Falha na varredura de manutenção da frota:', error);
   }finally{
     sweepRunning = false;
   }

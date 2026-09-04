@@ -11,7 +11,11 @@ function reservationHasOperationReport(reservation){
     const record = reservation && reservation.operacao && reservation.operacao[phase];
     if(!record) return false;
     return String(record.avarias || '').trim().length > 0 ||
-      (Array.isArray(record.fotos) && record.fotos.length > 0);
+      (Array.isArray(record.fotos) && record.fotos.length > 0) ||
+      // "Excesso de sujeira" na devolução conta como avaria/observação pra
+      // tudo que já reage a avarias/fotos (ver js/management-operations.js) -
+      // "limpo" não conta, só as duas opções de sujeira.
+      record.condicaoLimpeza === 'sujeira_interna' || record.condicaoLimpeza === 'sujeira_externa';
   });
 }
 
@@ -354,11 +358,16 @@ function isReservationCompleted(reservation){
 // já existentes do mesmo carro (mesma partida + mesmo número de carro). Permite
 // excluir uma reserva pelo id (usado ao editar) — não utilizado atualmente, mas
 // mantém a função genérica.
+// Comparação de local/carro é case-insensitive, igual ao check de conflito no
+// servidor (ver server/validation.js) - mesmo raciocínio de findVehicleBlocks,
+// em js/storage.js.
 function findConflictingReservations(partida, carro, dataIda, dataVolta, horarioRetirada, horarioDevolucao, excludeId){
   const candidata = { dataIda: dataIda, dataVolta: dataVolta, horarioRetirada: horarioRetirada, horarioDevolucao: horarioDevolucao };
+  const localLower = String(partida).toLowerCase();
+  const carroLower = String(carro).toLowerCase();
   return getReservations().filter(r => {
     if(isReservationCompleted(r)) return false;
-    if(r.partida !== partida || r.carro !== carro) return false;
+    if(String(r.partida).toLowerCase() !== localLower || String(r.carro).toLowerCase() !== carroLower) return false;
     if(excludeId != null && String(r.id) === String(excludeId)) return false;
     return reservasConflitam(candidata, r);
   });
