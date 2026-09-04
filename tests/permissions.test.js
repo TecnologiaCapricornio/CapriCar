@@ -44,7 +44,7 @@ function loadPermissions() {
 test('administrador mantém acesso a todas as seções', () => {
   const app = loadPermissions();
   app.setCurrentUser({ nome: 'admin', role: 'admin', isAdmin: true });
-  ['reservas', 'locais', 'veiculos', 'bloqueios', 'manutencao', 'auditoria', 'relatorios', 'regras', 'usuarios'].forEach(section => {
+  ['reservas', 'locais', 'veiculos', 'bloqueios', 'manutencao', 'auditoria', 'regras', 'usuarios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
 });
@@ -58,7 +58,7 @@ test('usuário com permissões de frota acessa somente as áreas marcadas (sem p
     role: 'user',
     permissions: { reservations: true, branches: true, fleet: true, blocks: true, reports: true }
   });
-  ['reservas', 'locais', 'veiculos', 'bloqueios', 'relatorios'].forEach(section => {
+  ['reservas', 'locais', 'veiculos', 'bloqueios'].forEach(section => {
     assert.equal(app.canAccessAdminSection(section), true);
   });
   // "Manutenção" tem permissão própria (can_manage_maintenance), separada de
@@ -76,6 +76,25 @@ test('usuário com permissões de frota acessa somente as áreas marcadas (sem p
   assert.equal(app.canManageRules(), false);
   assert.equal(app.canManageUsers(), false);
   assert.equal(app.isAdmin(), false);
+});
+
+// Os indicadores/relatório/exportação que antes ficavam na aba própria
+// "Relatórios" agora moram dentro de "Reservas" (ver renderAdminSection em
+// js/management-config.js) - por isso a permissão "reports", sozinha, já
+// precisa liberar essa aba, mesmo sem "reservations".
+test('permissão de relatórios, sozinha, dá acesso à aba Reservas (onde os indicadores/exportação agora moram)', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({
+    nome: 'Analista de relatórios',
+    role: 'user',
+    permissions: { reports: true }
+  });
+  assert.equal(app.canAccessAdminSection('reservas'), true);
+  assert.equal(app.canViewReports(), true);
+  assert.equal(app.canManageReservations(), false);
+  // As demais seções continuam exigindo sua permissão própria.
+  assert.equal(app.canAccessAdminSection('locais'), false);
+  assert.equal(app.canAccessAdminSection('veiculos'), false);
 });
 
 test('permissão de manutenção é independente da permissão de veículos', () => {

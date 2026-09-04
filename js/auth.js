@@ -141,13 +141,19 @@ function canManageIntegrations(){
 
 function canAccessAdminSection(section){
   if(isAdmin()) return true;
+  // "reservas" reúne a lista operacional (permissão "reservations") e os
+  // indicadores/relatório/exportação que antes ficavam numa aba própria
+  // (permissão "reports") - qualquer uma das duas dá acesso à aba; dentro
+  // dela, cada bloco continua checando sua própria permissão (ver
+  // renderAdminTab em js/admin.js e renderReports em js/management-reports.js).
+  if(section === 'reservas'){
+    return hasManagementPermission('reservations') || hasManagementPermission('reports');
+  }
   const permissionBySection = {
-    reservas:'reservations',
     locais:'branches',
     veiculos:'fleet',
     bloqueios:'blocks',
     manutencao:'maintenance',
-    relatorios:'reports',
     auditoria:'audit',
     regras:'rules',
     usuarios:'users',
@@ -181,7 +187,7 @@ const profileName = document.getElementById('profileName');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','relatorios','auditoria','regras','integracoes','usuarios'];
+  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','auditoria','regras','integracoes','usuarios'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');
