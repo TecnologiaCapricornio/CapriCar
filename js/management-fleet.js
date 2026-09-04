@@ -15,6 +15,7 @@ const vehicleCapacityInput = document.getElementById('vehicleCapacity');
 const vehicleTypeSelect = document.getElementById('vehicleType');
 const vehicleRentedInput = document.getElementById('vehicleRented');
 const vehicleCostCenterInput = document.getElementById('vehicleCostCenter');
+const vehicleOdometerInput = document.getElementById('vehicleOdometer');
 const vehiclesList = document.getElementById('vehiclesList');
 const fleetEditModal = document.getElementById('fleetEditModal');
 const fleetEditForm = document.getElementById('fleetEditForm');
@@ -572,8 +573,16 @@ if(vehicleForm){
     const capacidade = Number(vehicleCapacityInput.value);
     const tipoSelecionado = vehicleTypeSelect ? vehicleTypeSelect.value : 'carro';
     const capacidadeMaxima = seatLayoutFor(tipoSelecionado).capacidadeMaxima;
+    const odometerRaw = vehicleOdometerInput ? vehicleOdometerInput.value.trim() : '';
     if(!local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > capacidadeMaxima){
       await showSiteAlert('Preencha local, placa, marca, modelo e uma capacidade entre 1 e ' + capacidadeMaxima + '.', {
+        title:'Revise os dados do veículo',
+        type:'warning'
+      });
+      return;
+    }
+    if(odometerRaw && (!Number.isInteger(Number(odometerRaw)) || Number(odometerRaw) < 0)){
+      await showSiteAlert('O odômetro atual deve ser um número inteiro positivo.', {
         title:'Revise os dados do veículo',
         type:'warning'
       });
@@ -598,6 +607,7 @@ if(vehicleForm){
       tipo: vehicleTypeSelect ? vehicleTypeSelect.value : 'carro',
       alugado: vehicleRentedInput ? vehicleRentedInput.checked : false,
       centroCusto: vehicleCostCenterInput ? vehicleCostCenterInput.value.trim() : '',
+      odometroAtual: odometerRaw ? Number(odometerRaw) : undefined,
       ativo: true
     };
     list.push(vehicle);
