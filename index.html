@@ -1629,6 +1629,14 @@
               </label>
             </div>
           </div>
+          <div class="field">
+            <label for="fleetEditVehicleOdometer">Odômetro atual (km)</label>
+            <input type="number" id="fleetEditVehicleOdometer" min="0" step="1" placeholder="Ex.: 45000"
+              autocomplete="off">
+            <div class="form-hint">
+              Atualizado automaticamente a cada retirada/devolução. Edite aqui para corrigir uma divergência.
+            </div>
+          </div>
         </div>
         <div class="error-msg fleet-edit-error" role="alert" id="fleetEditError"></div>
         <div class="fleet-edit-actions">
@@ -1888,6 +1896,7 @@
         <div class="field">
           <label for="operationKm">Quilometragem</label>
           <input type="number" id="operationKm" min="0" step="1" required>
+          <div class="form-hint" id="operationKmHint"></div>
         </div>
         <div class="field">
           <label for="operationFuel">Nível de combustível</label>
@@ -2000,7 +2009,7 @@
   <script src="js/cnh-categorias.js?v=20260901-1"></script>
   <script src="js/config.js?v=20260903-1"></script>
   <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260903-3"></script>
+  <script src="js/utils.js?v=20260904-1"></script>
   <script src="js/styled-select.js?v=20260902-1"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
   <script src="js/api.js?v=20260903-1"></script>
@@ -2015,14 +2024,14 @@
   <script src="js/modals.js?v=20260903-2"></script>
   <script src="js/admin.js?v=20260903-2"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260903-1"></script>
+  <script src="js/management-operations.js?v=20260904-1"></script>
   <script src="js/management-config.js?v=20260903-1"></script>
   <script src="js/management-users.js?v=20260903-1"></script>
   <script src="js/management-integrations.js?v=20260903-1"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
   <script src="js/management-email-preview.js?v=20260903-1"></script>
-  <script src="js/management-fleet.js?v=20260903-1"></script>
+  <script src="js/management-fleet.js?v=20260904-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <!-- Depois de management-fleet.js (populateManagementVehicleSelectors)
        e de storage.js (getMaintenanceReminders/saveMaintenanceReminders). -->

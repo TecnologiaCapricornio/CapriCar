@@ -252,25 +252,34 @@ async function replacePassengers(client, reservationId, passengers){
   }
 }
 
+// Devolve { inserted, quilometragem } - "inserted" diz se este chamado criou
+// o registro agora (uma fase só pode ser gravada uma vez; chamadas
+// seguintes com a mesma fase caem no ramo "existing" e não alteram nada além
+// das fotos). Quem chama usa isso para só atualizar o odômetro do veículo
+// (ver updateVehicleOdometer) quando o valor é realmente novo.
 async function upsertOperation(client, reservationId, phase, record, actor){
-  if(!record) return;
+  if(!record) return { inserted:false, quilometragem:null };
   const dbPhase = phase === 'retirada' ? 'pickup' : 'return';
   const existing = await client.query(
     'SELECT id FROM vehicle_operations WHERE reservation_id = $1 AND phase = $2',
     [reservationId, dbPhase]
   );
   let operationId;
+  let inserted = false;
   if(existing.rows[0]){
     operationId = existing.rows[0].id;
   }else{
-    const inserted = await client.query(
+    const inserted_ = await client.query(
       `INSERT INTO vehicle_operations
-         (reservation_id, phase, odometer_km, fuel_level, damages_notes, cleanliness_condition, recorded_by, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id`,
+         (reservation_id, phase, odometer_km, fuel_level, damages_notes, cleanliness_condition,
+          odometer_discrepancy_confirmed, recorded_by, recorded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`,
       [reservationId, dbPhase, Number(record.quilometragem), String(record.combustivel || ''),
-        String(record.avarias || ''), record.condicaoLimpeza || null, actor.id]
+        String(record.avarias || ''), record.condicaoLimpeza || null,
+        record.quilometragemDivergente === true, actor.id]
     );
-    operationId = inserted.rows[0].id;
+    operationId = inserted_.rows[0].id;
+    inserted = true;
   }
   const currentPhotos = await client.query(
     'SELECT COUNT(*)::int AS total FROM operation_photos WHERE operation_id = $1',
@@ -296,6 +305,34 @@ async function upsertOperation(client, reservationId, phase, record, actor){
     );
     count++;
   }
+  return { inserted, quilometragem:Number(record.quilometragem) };
+}
+
+// Atualiza o "odômetro atual" do veículo (cadastro em application_state,
+// coleção "vehicles") para o último valor informado numa retirada ou
+// devolução - é sempre o último, mesmo que menor que o anterior (ver
+// server/routes/*.js: um valor menor só chega aqui depois de o usuário
+// confirmar a divergência). O admin também pode editar esse campo direto no
+// cadastro do veículo (tela de frota) para corrigir um valor incorreto.
+async function updateVehicleOdometer(client, reservation, km){
+  const kmValue = Number(km);
+  if(!Number.isFinite(kmValue)) return;
+  const locked = await client.query(
+    `SELECT value FROM application_state WHERE collection_name = 'vehicles' FOR UPDATE`
+  );
+  if(!locked.rows[0]) return;
+  const vehicles = Array.isArray(locked.rows[0].value) ? locked.rows[0].value : [];
+  const idx = vehicles.findIndex(item =>
+    normalizeName(item.local) === normalizeName(reservation.partida) &&
+    normalizeName(item.codigo) === normalizeName(reservation.carro)
+  );
+  if(idx === -1) return;
+  vehicles[idx] = { ...vehicles[idx], odometroAtual:kmValue };
+  await client.query(
+    `UPDATE application_state SET value = $1::jsonb, revision = revision + 1, updated_at = NOW()
+      WHERE collection_name = 'vehicles'`,
+    [JSON.stringify(vehicles)]
+  );
 }
 
 async function findVehicleFromState(client, reservation, fleet){
@@ -375,8 +412,10 @@ async function persistReservation(client, reservation, actor, options){
   }
   await replacePassengers(client, reservationId, reservation.passageiros);
   const operationActor = actor || requester;
-  await upsertOperation(client, reservationId, 'retirada', reservation.operacao && reservation.operacao.retirada, operationActor);
-  await upsertOperation(client, reservationId, 'devolucao', reservation.operacao && reservation.operacao.devolucao, operationActor);
+  const retiradaResult = await upsertOperation(client, reservationId, 'retirada', reservation.operacao && reservation.operacao.retirada, operationActor);
+  const devolucaoResult = await upsertOperation(client, reservationId, 'devolucao', reservation.operacao && reservation.operacao.devolucao, operationActor);
+  if(retiradaResult.inserted) await updateVehicleOdometer(client, reservation, retiradaResult.quilometragem);
+  if(devolucaoResult.inserted) await updateVehicleOdometer(client, reservation, devolucaoResult.quilometragem);
   return { id:reservationId, legacyId, reservationNumber };
 }
 
@@ -441,6 +480,7 @@ function fullDto(row, data){
       combustivel:operation.fuel_level,
       avarias:operation.damages_notes || '',
       ...(operation.cleanliness_condition ? { condicaoLimpeza:operation.cleanliness_condition } : {}),
+      ...(operation.odometer_discrepancy_confirmed ? { quilometragemDivergente:true } : {}),
       registradoPor:operation.recorded_by_name,
       registradoEm:operation.recorded_at,
       fotos:(data.photos.get(String(operation.id)) || []).map(photo => ({

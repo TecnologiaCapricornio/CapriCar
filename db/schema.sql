@@ -183,6 +183,10 @@ CREATE TABLE IF NOT EXISTS vehicle_operations (
   -- esta coluna - fica NULL).
   cleanliness_condition VARCHAR(20)
     CHECK (cleanliness_condition IS NULL OR cleanliness_condition IN ('limpo', 'sujeira_interna', 'sujeira_externa')),
+  -- Usuário confirmou uma quilometragem menor que o esperado (ver migration
+  -- 028) mesmo depois do aviso - dispara notificação para quem gerencia a
+  -- frota em vez de bloquear o registro.
+  odometer_discrepancy_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
   recorded_by UUID NOT NULL REFERENCES users(id),
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (reservation_id, phase)

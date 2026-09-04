@@ -116,6 +116,7 @@ function renderOperationDetails(reserva) {
     return '<div class="operation-record">' +
       '<strong>' + label + '</strong>' +
       '<span>Km ' + Number(data.quilometragem || 0).toLocaleString('pt-BR') + ' · Combustível: ' + escapeHTML(data.combustivel || '—') + '</span>' +
+      (data.quilometragemDivergente ? '<span>⚠️ Quilometragem informada abaixo do esperado - verificar odômetro in loco</span>' : '') +
       (cleanlinessLabel ? '<span>Condição de limpeza: ' + escapeHTML(cleanlinessLabel) + '</span>' : '') +
       (data.avarias ? '<span>Avarias/observações: ' + escapeHTML(data.avarias) + '</span>' : '') +
       '<span>Registrado por ' + escapeHTML(data.registradoPor || '—') + ' em ' + escapeHTML(formatDateTime(data.registradoEm)) + '</span>' +
@@ -226,10 +227,18 @@ async function openOperationModal(reservationId, phase) {
   // dos radios, então só falta mostrar/esconder o campo pra fase certa.
   document.getElementById('operationCleanlinessField').classList.toggle('hidden', phase !== 'devolucao');
   document.getElementById('error-operationCleanliness').textContent = '';
+  // Só um lembrete visual do valor esperado agora - não trava mais o campo
+  // (min dinâmico), porque um dígito a mais digitado por engano deixava a
+  // pessoa impedida de registrar a operação. Ver a confirmação de divergência
+  // no submit, abaixo.
+  const kmHint = document.getElementById('operationKmHint');
   if (phase === 'devolucao' && operacao.retirada) {
-    document.getElementById('operationKm').min = String(operacao.retirada.quilometragem || 0);
+    kmHint.textContent = 'Quilometragem na retirada: ' + Number(operacao.retirada.quilometragem || 0).toLocaleString('pt-BR') + ' km.';
   } else {
-    document.getElementById('operationKm').min = '0';
+    const vehicle = getVehicle(reserva.partida, reserva.carro);
+    kmHint.textContent = vehicle && vehicle.odometroAtual != null && vehicle.odometroAtual !== ''
+      ? 'Odômetro atual do veículo: ' + Number(vehicle.odometroAtual).toLocaleString('pt-BR') + ' km.'
+      : '';
   }
   operationModal.classList.remove('hidden');
 }
@@ -268,6 +277,16 @@ function filesToDataUrls(files) {
 
 operationForm.addEventListener('submit', async function (e) {
   e.preventDefault();
+  // Busca bloqueios/reservas frescos antes de validar - mesmo raciocínio do
+  // envio da reserva (ver js/reservations.js): sem isso, o odômetro atual do
+  // veículo usado na comparação abaixo poderia estar desatualizado. Se a
+  // atualização falhar, segue com os dados que já tinha - o servidor ainda é
+  // quem valida de verdade no envio.
+  try {
+    await hydrateDatabaseState();
+  } catch (error) {
+    console.error('Falha ao atualizar dados antes de validar a operação:', error);
+  }
   const list = getReservations();
   const idx = list.findIndex(r => String(r.id) === String(operationReservationId));
   if (idx === -1) return;
@@ -284,10 +303,6 @@ operationForm.addEventListener('submit', async function (e) {
     operationError.textContent = 'Informe quilometragem e combustível.';
     return;
   }
-  if (operationPhase === 'devolucao' && reserva.operacao && reserva.operacao.retirada && km < Number(reserva.operacao.retirada.quilometragem || 0)) {
-    operationError.textContent = 'A quilometragem final não pode ser menor que a inicial.';
-    return;
-  }
   const cleanlinessInput = operationPhase === 'devolucao'
     ? operationForm.querySelector('input[name="operationCleanliness"]:checked')
     : null;
@@ -296,6 +311,39 @@ operationForm.addEventListener('submit', async function (e) {
     return;
   }
   document.getElementById('error-operationCleanliness').textContent = '';
+
+  // Quilometragem menor que o esperado não bloqueia mais o registro (um
+  // dígito a mais digitado por engano deixava a pessoa impedida de concluir a
+  // retirada/devolução) - em vez disso, confirma com quem está preenchendo e,
+  // se confirmado, avisa quem cuida da frota pra verificar o odômetro in loco
+  // (ver server/notifications.js e server/validation.js).
+  let quilometragemDivergente = false;
+  if (operationPhase === 'devolucao' && reserva.operacao && reserva.operacao.retirada &&
+    km < Number(reserva.operacao.retirada.quilometragem || 0)) {
+    const confirmado = await showSiteConfirm(
+      'A quilometragem informada (' + km.toLocaleString('pt-BR') + ' km) é menor que a registrada na retirada (' +
+      Number(reserva.operacao.retirada.quilometragem).toLocaleString('pt-BR') + ' km). Confirma mesmo assim?',
+      { title: 'Quilometragem menor que a retirada', confirmText: 'Confirmar' }
+    );
+    if (!confirmado) return;
+    quilometragemDivergente = true;
+  }
+  if (operationPhase === 'retirada') {
+    const vehicle = getVehicle(reserva.partida, reserva.carro);
+    const odometroAtual = vehicle && vehicle.odometroAtual != null && vehicle.odometroAtual !== ''
+      ? Number(vehicle.odometroAtual)
+      : null;
+    if (odometroAtual != null && km < odometroAtual) {
+      const confirmado = await showSiteConfirm(
+        'A quilometragem informada (' + km.toLocaleString('pt-BR') + ' km) é menor que o odômetro atual do veículo (' +
+        odometroAtual.toLocaleString('pt-BR') + ' km). Confirma mesmo assim?',
+        { title: 'Quilometragem menor que o odômetro do veículo', confirmText: 'Confirmar' }
+      );
+      if (!confirmado) return;
+      quilometragemDivergente = true;
+    }
+  }
+
   try {
     const photos = await filesToDataUrls(document.getElementById('operationPhotos').files);
     reserva.operacao = reserva.operacao || {};
@@ -309,6 +357,7 @@ operationForm.addEventListener('submit', async function (e) {
       // responsável) - ver reservationHasOperationReport em js/utils.js e
       // notifyOperationReport em server/notifications.js.
       condicaoLimpeza: cleanlinessInput ? cleanlinessInput.value : undefined,
+      quilometragemDivergente: quilometragemDivergente || undefined,
       fotos: photos,
       registradoPor: getCurrentUser().nome,
       registradoEm: new Date().toISOString()
