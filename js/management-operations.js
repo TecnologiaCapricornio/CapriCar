@@ -368,9 +368,9 @@ operationForm.addEventListener('submit', async function (e) {
     closeOperationModal();
     renderMyReservations();
     if (canManageReservations()) renderAdminTab();
-    // Indicadores/relatório vivem na mesma aba "Reservas" agora - sem isto,
+    // Os indicadores da frota aparecem na mesma aba "Reservas" - sem isto,
     // km/concluídas ficavam desatualizados na tela até trocar de aba e voltar.
-    if (typeof canViewReports === 'function' && canViewReports() && typeof renderReports === 'function') renderReports();
+    if (typeof canViewReports === 'function' && canViewReports() && typeof renderIndicators === 'function') renderIndicators();
   } catch (error) {
     operationError.textContent = error.message;
   }

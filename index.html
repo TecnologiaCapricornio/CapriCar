@@ -21,9 +21,9 @@
   <link rel="stylesheet" href="css/base.css?v=20260903-1">
   <link rel="stylesheet" href="css/components.css?v=20260903-9">
   <link rel="stylesheet" href="css/calendar.css?v=20260903-3">
-  <link rel="stylesheet" href="css/admin.css?v=20260904-2">
+  <link rel="stylesheet" href="css/admin.css?v=20260908-1">
   <link rel="stylesheet" href="css/responsive.css?v=20260903-5">
-  <link rel="stylesheet" href="css/themes.css?v=20260904-2">
+  <link rel="stylesheet" href="css/themes.css?v=20260908-1">
 </head>
 
 <body>
@@ -492,6 +492,7 @@
             <button type="button" class="admin-section-btn" data-admin-section="bloqueios">Bloqueios</button>
             <button type="button" class="admin-section-btn" data-admin-section="manutencao">Manutenção</button>
             <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
+            <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
             <button type="button" class="admin-section-btn" data-admin-section="regras">Regras</button>
             <button type="button" class="admin-section-btn" data-admin-section="integracoes">Integrações</button>
             <button type="button" class="admin-section-btn" data-admin-section="usuarios">Usuários</button>
@@ -542,87 +543,6 @@
 
             <div class="reservations-list" id="adminReservationsList">
               <div class="empty-state">Nenhuma reserva encontrada.</div>
-            </div>
-
-            <h3 class="admin-subsection-title">Relatório e exportação</h3>
-            <div class="rides-filters report-filters">
-              <div class="row">
-                <div class="field">
-                  <label for="reportBranch">Local</label>
-                  <select id="reportBranch">
-                    <option value="">Todas</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="reportVehicle">Veículo</label>
-                  <select id="reportVehicle">
-                    <option value="">Todos</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="reportUser">Usuário</label>
-                  <input type="text" id="reportUser" placeholder="Todos">
-                </div>
-              </div>
-              <div class="row">
-                <div class="field">
-                  <label for="reportStart">Data inicial</label>
-                  <div class="date-input-wrapper" id="wrap-reportStart">
-                    <input type="date" id="reportStart" readonly autocomplete="off">
-                  </div>
-                </div>
-                <div class="field">
-                  <label for="reportEnd">Data final</label>
-                  <div class="date-input-wrapper" id="wrap-reportEnd">
-                    <input type="date" id="reportEnd" readonly autocomplete="off">
-                  </div>
-                </div>
-              </div>
-              <div class="field">
-                <label class="permission-option">
-                  <input type="checkbox" id="reportComRegistro"> Somente com observações/avarias ou fotos registradas
-                </label>
-              </div>
-            </div>
-            <div id="reportSummary" class="report-summary"></div>
-            <div class="report-actions">
-              <button type="button" class="submit-btn export-btn" id="exportExcelBtn">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path>
-                  <path d="M14 3v4h4"></path>
-                  <path d="M8 12h8"></path>
-                  <path d="M8 15.5h8"></path>
-                  <path d="M11.3 10.5v8"></path>
-                </svg>
-                Exportar Excel
-              </button>
-              <button type="button" class="submit-btn export-btn" id="exportPdfBtn">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path>
-                  <path d="M14 3v4h4"></path>
-                  <path d="M9 13h6"></path>
-                  <path d="M9 16.5h6"></path>
-                  <path d="M9 9.5h2"></path>
-                </svg>
-                Exportar PDF
-              </button>
-            </div>
-            <div class="table-wrap">
-              <table class="report-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Período</th>
-                    <th>Local</th>
-                    <th>Veículo</th>
-                    <th>Usuário</th>
-                    <th>Motivo</th>
-                    <th>Km</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="reportTableBody"></tbody>
-              </table>
             </div>
           </div>
 
@@ -853,6 +773,88 @@
             </div>
             &nbsp;
             <div id="auditList" class="audit-list"></div>
+          </div>
+
+          <div class="admin-section-panel hidden" id="admin-section-relatorios">
+            <div class="rides-filters report-filters">
+              <div class="row">
+                <div class="field">
+                  <label for="reportBranch">Local</label>
+                  <select id="reportBranch">
+                    <option value="">Todas</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="reportVehicle">Veículo</label>
+                  <select id="reportVehicle">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="reportUser">Usuário</label>
+                  <input type="text" id="reportUser" placeholder="Todos">
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="reportStart">Data inicial</label>
+                  <div class="date-input-wrapper" id="wrap-reportStart">
+                    <input type="date" id="reportStart" readonly autocomplete="off">
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="reportEnd">Data final</label>
+                  <div class="date-input-wrapper" id="wrap-reportEnd">
+                    <input type="date" id="reportEnd" readonly autocomplete="off">
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label class="permission-option">
+                  <input type="checkbox" id="reportComRegistro"> Somente com observações/avarias ou fotos registradas
+                </label>
+              </div>
+            </div>
+            <div id="reportSummary" class="report-summary"></div>
+            <div class="report-actions">
+              <button type="button" class="submit-btn export-btn" id="exportExcelBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path>
+                  <path d="M14 3v4h4"></path>
+                  <path d="M8 12h8"></path>
+                  <path d="M8 15.5h8"></path>
+                  <path d="M11.3 10.5v8"></path>
+                </svg>
+                Exportar Excel
+              </button>
+              <button type="button" class="submit-btn export-btn" id="exportPdfBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path>
+                  <path d="M14 3v4h4"></path>
+                  <path d="M9 13h6"></path>
+                  <path d="M9 16.5h6"></path>
+                  <path d="M9 9.5h2"></path>
+                </svg>
+                Exportar PDF
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Período</th>
+                    <th>Local</th>
+                    <th>Veículo</th>
+                    <th>Usuário</th>
+                    <th>Motivo</th>
+                    <th>Km</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reportTableBody"></tbody>
+              </table>
+            </div>
           </div>
 
           <div class="admin-section-panel hidden" id="admin-section-regras">
@@ -2019,8 +2021,8 @@
   <script src="js/modals.js?v=20260903-2"></script>
   <script src="js/admin.js?v=20260904-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260904-3"></script>
-  <script src="js/management-config.js?v=20260904-1"></script>
+  <script src="js/management-operations.js?v=20260908-1"></script>
+  <script src="js/management-config.js?v=20260908-1"></script>
   <script src="js/management-users.js?v=20260903-1"></script>
   <script src="js/management-integrations.js?v=20260903-1"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
@@ -2032,11 +2034,11 @@
        e de storage.js (getMaintenanceReminders/saveMaintenanceReminders). -->
   <script src="js/management-maintenance.js?v=20260903-2"></script>
   <script src="js/management-indicators.js?v=20260904-1"></script>
-  <script src="js/management-reports.js?v=20260831-1"></script>
+  <script src="js/management-reports.js?v=20260908-1"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
   <script src="js/driver-license.js?v=20260903-1"></script>
-  <script src="js/auth.js?v=20260904-1"></script>
+  <script src="js/auth.js?v=20260908-1"></script>
   <script src="js/app.js?v=20260903-1"></script>
 
 </body>

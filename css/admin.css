@@ -69,13 +69,6 @@
   color:#fff;
 }
 
-.admin-subsection-title{
-  margin:28px 0 16px;
-  padding-top:24px;
-  border-top:1px solid rgba(111,168,216,.2);
-  color:#fff;
-}
-
 .admin-subcard-header{
   display:flex;
   flex-wrap:wrap;

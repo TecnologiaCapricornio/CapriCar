@@ -375,9 +375,13 @@ function buildPrintableReport(list){
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
     '<title>Relatório CapriCar - ' + printableCell(todayISO()) + '</title>' +
     '<style>' +
-      '@page{size:A4 landscape;margin:12mm}' +
+      '@page{size:A4 landscape;margin:6mm}' +
       '*{box-sizing:border-box}' +
-      'body{margin:0;color:#172b3d;background:#fff;font:11px Arial,sans-serif}' +
+      // O espaçamento das bordas fica no padding do body, não só no @page -
+      // o Chrome pode ignorar a margem do @page se o diálogo de impressão
+      // estiver com "Margens: Nenhuma" (lembrado de uma impressão anterior),
+      // e aí o conteúdo saía colado nas bordas mesmo com @page definido.
+      'body{margin:0;padding:10mm 14mm;color:#172b3d;background:#fff;font:11px Arial,sans-serif}' +
       '.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid #3a6a95}' +
       '.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:11px;background:#1e3a5a;color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px}' +
       'h1{margin:0;color:#1e3a5a;font-size:21px}h2{margin:22px 0 9px;color:#1e3a5a;font-size:14px}' +
@@ -400,7 +404,7 @@ function buildPrintableReport(list){
       '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #dbe5ed;color:#7b8d9c;text-align:right;font-size:9px}' +
       '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '</style></head><body>' +
-      '<header class="header"><div class="brand"><div class="mark">CC</div><div><h1>Relatório de utilização</h1>' +
+      '<header class="header"><div class="brand"><div><h1>Relatório de utilização</h1>' +
         '<div class="subtitle">CapriCar · Gestão de veículos e reservas</div></div></div>' +
         '<div class="meta"><strong>Emitido em</strong><br>' + printableCell(generatedAt) + '</div></header>' +
       '<div class="filters"><strong>Filtros:</strong> ' + printableCell(reportFilterText()) + '</div>' +
