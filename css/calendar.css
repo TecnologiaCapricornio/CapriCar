@@ -419,82 +419,6 @@
     content:"";
   }
 
-  .calendar-grid{
-    display:grid;
-    grid-template-columns:repeat(7, 1fr);
-    gap:6px;
-  }
-
-  .calendar-weekday{
-    text-align:center;
-    font-size:var(--fs-2xs);
-    font-weight:600;
-    color:#8fbadb;
-    padding-bottom:4px;
-  }
-
-  .calendar-day{
-    position:relative;
-    min-height:54px;
-    border-radius:var(--radius-sm);
-    border:1px solid var(--card-border);
-    background:rgba(255,255,255,0.03);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
-    padding:6px 2px 5px;
-    font-size:0.8rem;
-    color:var(--texto);
-    transition:background .15s ease;
-  }
-
-  .calendar-day.other-month{
-    opacity:0.3;
-  }
-
-  .calendar-day.today{
-    border-color:var(--azul-claro);
-    border-width:2px;
-  }
-
-  .calendar-day.has-reservation{
-    background:rgba(111,168,216,0.18);
-    border-color:var(--azul-claro);
-    cursor:pointer;
-    font-weight:600;
-  }
-
-  .calendar-day.has-reservation:hover{
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
-    color:#fff;
-  }
-
-  .calendar-day.has-reservation:hover .day-badge{
-    background:#fff;
-    color:var(--azul-royal);
-  }
-
-  .calendar-day.selected-day{
-    box-shadow:0 0 0 2px #fff inset;
-  }
-
-  .day-number{
-    font-size:0.8rem;
-  }
-
-  .day-badge{
-    margin-top:3px;
-    background:var(--azul-claro);
-    color:#fff;
-    font-size:var(--fs-2xs);
-    font-weight:600;
-    padding:1px 6px;
-    border-radius:10px;
-    min-width:16px;
-    text-align:center;
-  }
-
   .calendar-legend{
     display:flex;
     gap:16px;
@@ -623,19 +547,6 @@
     cursor:not-allowed;
   }
 
-  .calendar-day.partially-reserved{
-    background:linear-gradient(145deg,rgba(111,168,216,.22),rgba(45,84,118,.14));
-  }
-
-  .calendar-day.fully-reserved{
-    background:linear-gradient(145deg,rgba(239,91,106,.25),rgba(130,47,61,.17));
-    border-color:rgba(239,91,106,.72);
-  }
-
-  .calendar-day.fully-reserved .day-badge{
-    background:#d95666;
-  }
-
   /* ---- Ações do dia selecionado no calendário por carro ---- */
   .day-actions{
     margin-top:12px;
@@ -670,17 +581,6 @@
   .date-popup.show{
     display:block;
     animation:fadeIn .2s ease;
-  }
-
-  .date-popup-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:8px;
-    font-weight:600;
-    color:#fff;
-    font-size:0.88rem;
-    text-transform:capitalize;
   }
 
   .date-popup-nav-btn{
@@ -769,21 +669,6 @@
 .legend-today{
   background:transparent;
   border:2px solid var(--azul-claro);
-}
-
-.date-popup-blocked-dot{
-  display:inline-block;
-  width:8px;
-  height:8px;
-  border-radius:2px;
-  background:rgba(239,91,106,0.18);
-  border:1px solid var(--vermelho);
-  margin-right:4px;
-}
-
-.legend-full{
-  background:rgba(239,91,106,.25);
-  border:1px solid rgba(239,91,106,.78);
 }
 
 .legend-selection{
@@ -1468,18 +1353,6 @@
   justify-content:flex-end;
 }
 
-.range-calendar-day.partially-unavailable span::after{
-  content:"";
-  position:absolute;
-  right:4px;
-  bottom:3px;
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:var(--vermelho);
-  box-shadow:0 0 0 2px rgba(239,91,106,.15);
-}
-
 .range-calendar-day.today span{
   box-shadow:inset 0 0 0 1.5px var(--azul-claro);
 }
@@ -1518,10 +1391,6 @@
 
 .range-legend-dot.unavailable{
   background:var(--vermelho);
-}
-
-.range-legend-dot.partially-unavailable{
-  background:#d88919;
 }
 
 .range-calendar-actions{
