@@ -248,6 +248,11 @@ Aba exclusiva da permissão `integrations`, com sub-áreas independentes:
   execução manual;
 - **Sincronização com o calendário (Outlook)**: liga/desliga a criação
   automática de eventos no Outlook para cada reserva, com botão de teste.
+  Numa implantação nova, antes de qualquer configuração salva nesta tela,
+  fica habilitada por padrão — só tem efeito de fato quando o SSO estiver
+  configurado e a reserva for criada por um usuário logado via Entra ID; sem
+  isso, é um no-op silencioso (ver `resolveCalendarSyncEnabled` em
+  `server/calendar-sync.js`).
 
 Essas configurações substituem as variáveis `ENTRA_*`/SMTP do `.env` quando
 preenchidas pela tela — ver seção 9.

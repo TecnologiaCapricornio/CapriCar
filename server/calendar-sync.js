@@ -1,10 +1,21 @@
 const { query } = require('./db');
 const { graphRequest } = require('./graph-client');
 
+// Implantação nova, ninguém salvou essa tela ainda ("stored" ausente) -
+// fica habilitada por padrão (a sincronização em si só faz algo quando o
+// SSO estiver configurado e existir usuário logado via Entra ID criando
+// reserva, ver resolveCalendarOwner abaixo; sem isso é um no-op silencioso).
+// Depois da primeira vez que o admin salvar a tela de Integrações, mesmo
+// sem mudar nada, o valor explícito passa a valer.
+function resolveCalendarSyncEnabled(stored) {
+  if (!stored) return true;
+  return stored.enabled === true;
+}
+
 async function getCalendarSyncSettings() {
   const result = await query("SELECT value FROM application_state WHERE collection_name = 'calendarSync'");
   const stored = result.rows[0] && result.rows[0].value;
-  return { enabled: !!(stored && stored.enabled === true) };
+  return { enabled: resolveCalendarSyncEnabled(stored) };
 }
 
 // Devolve o e-mail corporativo de um usuário só quando ele fez login via
@@ -166,6 +177,7 @@ async function sendTestCalendarEvent(upn) {
 
 module.exports = {
   getCalendarSyncSettings,
+  resolveCalendarSyncEnabled,
   resolveCalendarOwner,
   resolveVehicle,
   buildEventPayload,
