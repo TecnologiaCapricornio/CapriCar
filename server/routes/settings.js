@@ -114,12 +114,17 @@ router.put('/entra-sso', async (req, res) => {
   });
 });
 
+function resolveMethod(value){
+  return value === 'graph' ? 'graph' : 'smtp';
+}
+
 router.get('/smtp', async (req, res) => {
   const stored = await readCollection('smtp');
   if(!stored){
-    return res.json({ host:'', port:587, security:'starttls', username:'', fromName:'', fromAddress:'', passwordConfigured:false });
+    return res.json({ method:'smtp', host:'', port:587, security:'starttls', username:'', fromName:'', fromAddress:'', passwordConfigured:false });
   }
   res.json({
+    method:resolveMethod(stored.method),
     host:stored.host || '',
     port:stored.port || 587,
     security:stored.security || 'starttls',
@@ -131,17 +136,28 @@ router.get('/smtp', async (req, res) => {
 });
 
 router.put('/smtp', async (req, res) => {
+  const method = resolveMethod(req.body && req.body.method);
+  const fromName = String(req.body && req.body.fromName || '').trim();
+  const fromAddress = String(req.body && req.body.fromAddress || '').trim();
+  if(!fromAddress || !isValidEmail(fromAddress)) return res.status(400).json({ error:'Informe um e-mail de remetente válido.' });
+
+  // Via Microsoft 365, o "remetente" é a caixa que o app envia como (não
+  // precisa de host/porta/usuário/senha - a autenticação é a mesma do App
+  // Registration do SSO, com a permissão de aplicativo Mail.Send).
+  if(method === 'graph'){
+    await writeCollection('smtp', { method, fromName, fromAddress }, req.user.id,
+      'E-mail atualizado: envio via Microsoft 365 (Graph)');
+    return res.json({ method, fromName, fromAddress, host:'', port:587, security:'starttls', username:'', passwordConfigured:false });
+  }
+
   const host = String(req.body && req.body.host || '').trim();
   const port = Number(req.body && req.body.port);
   const security = ['ssl', 'starttls', 'none'].includes(req.body && req.body.security) ? req.body.security : 'starttls';
   const username = String(req.body && req.body.username || '').trim();
-  const fromName = String(req.body && req.body.fromName || '').trim();
-  const fromAddress = String(req.body && req.body.fromAddress || '').trim();
   const password = String(req.body && req.body.password || '').trim();
 
   if(!host || host.length > 200) return res.status(400).json({ error:'Informe um host SMTP válido.' });
   if(!Number.isInteger(port) || port < 1 || port > 65535) return res.status(400).json({ error:'Informe uma porta entre 1 e 65535.' });
-  if(!fromAddress || !isValidEmail(fromAddress)) return res.status(400).json({ error:'Informe um e-mail de remetente válido.' });
 
   const current = await readCollection('smtp');
   let passwordEncrypted = current && current.passwordEncrypted;
@@ -153,24 +169,36 @@ router.put('/smtp', async (req, res) => {
     }
   }
 
-  await writeCollection('smtp', { host, port, security, username, fromName, fromAddress, passwordEncrypted }, req.user.id,
+  await writeCollection('smtp', { method, host, port, security, username, fromName, fromAddress, passwordEncrypted }, req.user.id,
     `SMTP atualizado: host, porta, segurança${password ? ', senha' : ''}`);
-  res.json({ host, port, security, username, fromName, fromAddress, passwordConfigured:!!passwordEncrypted });
+  res.json({ method, host, port, security, username, fromName, fromAddress, passwordConfigured:!!passwordEncrypted });
 });
 
 router.post('/smtp/test', async (req, res) => {
+  const method = resolveMethod(req.body && req.body.method);
+  const fromName = String(req.body && req.body.fromName || '').trim();
+  const fromAddress = String(req.body && req.body.fromAddress || '').trim();
+  const testRecipient = String(req.body && req.body.testRecipient || '').trim();
+
+  if(!fromAddress || !isValidEmail(fromAddress)) return res.status(400).json({ error:'Informe um e-mail de remetente válido.' });
+  if(!testRecipient || !isValidEmail(testRecipient)) return res.status(400).json({ error:'Informe um destinatário de teste válido.' });
+
+  if(method === 'graph'){
+    try{
+      await sendTestMail({ method, fromName, fromAddress }, testRecipient);
+      return res.json({ ok:true });
+    }catch(error){
+      return res.status(502).json({ error:'Não foi possível enviar o e-mail de teste: ' + error.message });
+    }
+  }
+
   const host = String(req.body && req.body.host || '').trim();
   const port = Number(req.body && req.body.port);
   const security = ['ssl', 'starttls', 'none'].includes(req.body && req.body.security) ? req.body.security : 'starttls';
   const username = String(req.body && req.body.username || '').trim();
-  const fromName = String(req.body && req.body.fromName || '').trim();
-  const fromAddress = String(req.body && req.body.fromAddress || '').trim();
-  const testRecipient = String(req.body && req.body.testRecipient || '').trim();
   let password = String(req.body && req.body.password || '').trim();
 
   if(!host || !Number.isInteger(port)) return res.status(400).json({ error:'Preencha host e porta antes de testar.' });
-  if(!fromAddress || !isValidEmail(fromAddress)) return res.status(400).json({ error:'Informe um e-mail de remetente válido.' });
-  if(!testRecipient || !isValidEmail(testRecipient)) return res.status(400).json({ error:'Informe um destinatário de teste válido.' });
 
   if(!password){
     const current = await readCollection('smtp');
@@ -180,7 +208,7 @@ router.post('/smtp/test', async (req, res) => {
   }
 
   try{
-    await sendTestMail({ host, port, security, username, password, fromName, fromAddress }, testRecipient);
+    await sendTestMail({ method, host, port, security, username, password, fromName, fromAddress }, testRecipient);
     res.json({ ok:true });
   }catch(error){
     res.status(502).json({ error:'Não foi possível enviar o e-mail de teste: ' + error.message });

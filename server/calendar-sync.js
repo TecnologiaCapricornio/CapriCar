@@ -1,12 +1,21 @@
 const { query } = require('./db');
-const { getGraphAppToken } = require('./sso');
+const { graphRequest } = require('./graph-client');
 
-const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+// Implantação nova, ninguém salvou essa tela ainda ("stored" ausente) -
+// fica habilitada por padrão (a sincronização em si só faz algo quando o
+// SSO estiver configurado e existir usuário logado via Entra ID criando
+// reserva, ver resolveCalendarOwner abaixo; sem isso é um no-op silencioso).
+// Depois da primeira vez que o admin salvar a tela de Integrações, mesmo
+// sem mudar nada, o valor explícito passa a valer.
+function resolveCalendarSyncEnabled(stored) {
+  if (!stored) return true;
+  return stored.enabled === true;
+}
 
 async function getCalendarSyncSettings() {
   const result = await query("SELECT value FROM application_state WHERE collection_name = 'calendarSync'");
   const stored = result.rows[0] && result.rows[0].value;
-  return { enabled: !!(stored && stored.enabled === true) };
+  return { enabled: resolveCalendarSyncEnabled(stored) };
 }
 
 // Devolve o e-mail corporativo de um usuário só quando ele fez login via
@@ -110,25 +119,6 @@ function buildEventPayload(reservation, attendees) {
   };
 }
 
-async function graphRequest(method, path, body) {
-  const token = await getGraphAppToken();
-  const response = await fetch(GRAPH_BASE + path, {
-    method,
-    headers: {
-      Authorization: 'Bearer ' + token,
-      'Content-Type': 'application/json'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error('Microsoft Graph respondeu ' + response.status + ': ' + text.slice(0, 300));
-  }
-  if (response.status === 204) return null;
-  return response.json();
-}
-
 // Ponto único chamado pela rota de sync de reservas (server/routes/reservations.js)
 // após a transação do banco já ter sido confirmada — nunca deve impedir a
 // criação/edição da reserva em si, cabe ao chamador isolar erros num try/catch.
@@ -187,6 +177,7 @@ async function sendTestCalendarEvent(upn) {
 
 module.exports = {
   getCalendarSyncSettings,
+  resolveCalendarSyncEnabled,
   resolveCalendarOwner,
   resolveVehicle,
   buildEventPayload,
