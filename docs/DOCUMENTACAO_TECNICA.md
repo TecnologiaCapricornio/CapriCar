@@ -237,8 +237,12 @@ Aba exclusiva da permissão `integrations`, com sub-áreas independentes:
 - **Login via Microsoft (Entra ID/SSO)**: tenant, client ID/secret, URI de
   redirecionamento, domínios permitidos e o atributo do Entra ID usado como
   centro de custo na importação de usuários;
-- **E-mail (SMTP)**: servidor, porta, credenciais e remetente, com botão de
-  teste de envio;
+- **E-mail**: servidor, porta, credenciais e remetente (método "SMTP"), ou
+  envio via Microsoft 365 usando o mesmo App Registration do SSO, sem
+  usuário/senha (método "Graph" — exige a permissão de aplicativo `Mail.Send`
+  concedida a ele no Azure Portal; funciona mesmo com MFA/Acesso Condicional
+  bloqueando autenticação básica de SMTP). Com botão de teste de envio nos
+  dois métodos;
 - **Lembretes por e-mail**: liga/desliga e edita o assunto/corpo de cada um
   dos modelos usados pela seção 3.10, com pré-visualização e botão de
   execução manual;
@@ -397,8 +401,10 @@ Arquivos:
   vencendo, vencida);
 - `server/notifications.js`: notificações internas — persistência e a regra
   de quando notificar cada evento;
-- `server/mailer.js`: transporte de e-mail (nodemailer) a partir da
-  configuração SMTP salva;
+- `server/mailer.js`: envio de e-mail — via SMTP tradicional (nodemailer) ou
+  via Microsoft Graph (`Mail.Send`), a partir da configuração salva;
+- `server/graph-client.js`: chamada autenticada ao Microsoft Graph
+  (app-only), compartilhada por `mailer.js` e `calendar-sync.js`;
 - `server/reminders.js`: modelos de e-mail e as três varreduras periódicas
   (reserva, CNH vencendo, manutenção);
 - `server/calendar-sync.js`: cria/atualiza/remove eventos no Outlook via

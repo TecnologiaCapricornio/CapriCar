@@ -1,7 +1,5 @@
 const { query } = require('./db');
-const { getGraphAppToken } = require('./sso');
-
-const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+const { graphRequest } = require('./graph-client');
 
 async function getCalendarSyncSettings() {
   const result = await query("SELECT value FROM application_state WHERE collection_name = 'calendarSync'");
@@ -108,25 +106,6 @@ function buildEventPayload(reservation, attendees) {
     // reunião de verdade nesse período - o evento é só um lembrete visual.
     showAs: 'free'
   };
-}
-
-async function graphRequest(method, path, body) {
-  const token = await getGraphAppToken();
-  const response = await fetch(GRAPH_BASE + path, {
-    method,
-    headers: {
-      Authorization: 'Bearer ' + token,
-      'Content-Type': 'application/json'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error('Microsoft Graph respondeu ' + response.status + ': ' + text.slice(0, 300));
-  }
-  if (response.status === 204) return null;
-  return response.json();
 }
 
 // Ponto único chamado pela rota de sync de reservas (server/routes/reservations.js)

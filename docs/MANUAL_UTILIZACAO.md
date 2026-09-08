@@ -261,8 +261,11 @@ variáveis do arquivo `.env` do servidor:
 
 - **Login via Microsoft**: dados do App Registration usado para o SSO e a
   importação de usuários corporativos;
-- **E-mail (SMTP)**: servidor usado para enviar notificações por e-mail,
-  com botão de teste;
+- **E-mail**: como o CapriCar envia as notificações por e-mail. Duas opções:
+  um servidor SMTP tradicional (host, porta, usuário e senha), ou enviar
+  como uma caixa do Microsoft 365 usando o mesmo login configurado acima
+  (sem senha nenhuma — útil quando a conta tem autenticação em duas etapas
+  e a senha normal não funciona para SMTP). Com botão de teste;
 - **Lembretes por e-mail**: liga/desliga e edita o texto de cada modelo de
   e-mail automático, com pré-visualização e um botão para disparar o envio
   manualmente sem esperar a rotina periódica;

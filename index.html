@@ -939,35 +939,52 @@
             </div>
             &nbsp;
             <div class="admin-subcard">
-              <h3>E-mail para envio (SMTP)</h3>
+              <h3>E-mail para envio</h3>
               <div class="form-hint" id="smtpSummary"></div>
               <form id="smtpForm" class="compact-form">
-                <div class="row">
-                  <div class="field">
-                    <label for="smtpHost">Host</label>
-                    <input type="text" id="smtpHost" autocomplete="off" required>
-                  </div>
-                  <div class="field">
-                    <label for="smtpPort">Porta</label>
-                    <input type="number" id="smtpPort" min="1" max="65535" required>
-                  </div>
-                </div>
                 <div class="field">
-                  <label for="smtpSecurity">Segurança</label>
-                  <select id="smtpSecurity">
-                    <option value="starttls">STARTTLS</option>
-                    <option value="ssl">SSL/TLS</option>
-                    <option value="none">Nenhuma</option>
+                  <label for="smtpMethod">Método de envio</label>
+                  <select id="smtpMethod">
+                    <option value="smtp">Servidor SMTP</option>
+                    <option value="graph">Microsoft 365 (Graph)</option>
                   </select>
                 </div>
-                <div class="field">
-                  <label for="smtpUsername">Usuário</label>
-                  <input type="text" id="smtpUsername" autocomplete="off">
+                <div id="smtpServerFields">
+                  <div class="row">
+                    <div class="field">
+                      <label for="smtpHost">Host</label>
+                      <input type="text" id="smtpHost" autocomplete="off">
+                    </div>
+                    <div class="field">
+                      <label for="smtpPort">Porta</label>
+                      <input type="number" id="smtpPort" min="1" max="65535">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="smtpSecurity">Segurança</label>
+                    <select id="smtpSecurity">
+                      <option value="starttls">STARTTLS</option>
+                      <option value="ssl">SSL/TLS</option>
+                      <option value="none">Nenhuma</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="smtpUsername">Usuário</label>
+                    <input type="text" id="smtpUsername" autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label for="smtpPassword">Senha</label>
+                    <input type="password" id="smtpPassword" autocomplete="new-password"
+                      placeholder="Deixe em branco para manter a senha atual">
+                  </div>
                 </div>
-                <div class="field">
-                  <label for="smtpPassword">Senha</label>
-                  <input type="password" id="smtpPassword" autocomplete="new-password"
-                    placeholder="Deixe em branco para manter a senha atual">
+                <div class="form-hint hidden" id="smtpGraphHint">
+                  O envio usa o mesmo aplicativo (App Registration) configurado no login
+                  via Microsoft, acima — é necessário conceder a ele a permissão de
+                  aplicativo <code>Mail.Send</code> (com consentimento de administrador) no
+                  Azure Portal. Não precisa de usuário nem senha: funciona mesmo com MFA ou
+                  autenticação básica bloqueada para SMTP tradicional. A caixa informada em
+                  "E-mail do remetente" abaixo precisa existir nesse mesmo tenant.
                 </div>
                 <div class="row">
                   <div class="field">
@@ -989,7 +1006,7 @@
                 </div>
               </div>
               <div class="user-form-actions">
-                <button type="button" class="secondary-btn" id="smtpTestBtn">Testar conexão</button>
+                <button type="button" class="secondary-btn" id="smtpTestBtn">Testar envio</button>
               </div>
               <div class="error-msg" role="alert" id="smtpTestError"></div>
             </div>
@@ -2024,7 +2041,7 @@
   <script src="js/management-operations.js?v=20260908-1"></script>
   <script src="js/management-config.js?v=20260908-1"></script>
   <script src="js/management-users.js?v=20260903-1"></script>
-  <script src="js/management-integrations.js?v=20260903-1"></script>
+  <script src="js/management-integrations.js?v=20260908-1"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
   <script src="js/management-email-preview.js?v=20260903-1"></script>
