@@ -414,8 +414,6 @@ html[data-theme="light"] textarea::placeholder{
 html[data-theme="light"] .reservation-item,
 html[data-theme="light"] .admin-subcard,
 html[data-theme="light"] .management-item,
-html[data-theme="light"] .audit-item,
-html[data-theme="light"] .occupants-block,
 html[data-theme="light"] .occupancy,
 html[data-theme="light"] .reservation-period,
 html[data-theme="light"] .reservation-period > .reservation-moment,
@@ -477,10 +475,6 @@ html[data-theme="light"] .reservation-vehicle{
   color:#526a7c;
 }
 
-html[data-theme="light"] .reservation-occupants{
-  color:#285f83;
-}
-
 html[data-theme="light"] .tab-btn:not(.active):hover{
   background:#e7eef3;
   color:#173f5c;
@@ -529,10 +523,8 @@ html[data-theme="light"] .reservation-route,
 html[data-theme="light"] .calendar-event-id,
 html[data-theme="light"] .reservation-vehicle,
 html[data-theme="light"] .ride-watch-panel summary,
-html[data-theme="light"] .occupants-title,
 html[data-theme="light"] .styled-select-option[aria-selected="true"],
 html[data-theme="light"] .recommended-badge,
-html[data-theme="light"] .occupants-vagas,
 html[data-theme="light"] .join-confirm-cancel,
 html[data-theme="light"] .cnh-categoria-code,
 html[data-theme="light"] .user-permissions span,
@@ -548,12 +540,8 @@ html[data-theme="light"] .week-header-corner,
 html[data-theme="light"] .week-time-label.full-hour,
 html[data-theme="light"] .week-reservation-event span,
 html[data-theme="light"] .calendar-event-vehicle,
-html[data-theme="light"] .calendar-weekday,
-html[data-theme="light"] .calendar-day.has-reservation,
-html[data-theme="light"] .day-badge,
 html[data-theme="light"] .day-details-title,
 html[data-theme="light"] .car-tab-city,
-html[data-theme="light"] .date-popup-header,
 html[data-theme="light"] .date-popup-weekday,
 html[data-theme="light"] .date-popup-day.selected,
 html[data-theme="light"] .date-popup-clear-btn,
@@ -587,9 +575,7 @@ html[data-theme="light"] .tab-btn.active,
 html[data-theme="light"] .admin-section-btn.active,
 html[data-theme="light"] .reservation-view-btn.active,
 html[data-theme="light"] .reserve-day-btn,
-html[data-theme="light"] .location-filter-btn.active,
-html[data-theme="light"] .range-calendar-day.selected,
-html[data-theme="light"] .calendar-add-btn{
+html[data-theme="light"] .range-calendar-day.selected{
   background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
   color:#fff;
   text-shadow:0 1px 1px rgba(0,0,0,.2);
@@ -617,7 +603,6 @@ html[data-theme="light"] .reservation-actions .edit-btn{
 html[data-theme="light"] .mobile-selection-cancel,
 html[data-theme="light"] .range-clear-btn,
 html[data-theme="light"] .join-confirm-cancel,
-html[data-theme="light"] .occupants-toggle,
 html[data-theme="light"] .passenger-add-btn{
   background:#f1f5f7;
   border-color:#7294ab;
@@ -633,10 +618,6 @@ html[data-theme="light"] .range-calendar-day.unavailable{
   color:#b42335;
 }
 
-html[data-theme="light"] .range-calendar-day.partially-unavailable{
-  color:#2f3a44;
-}
-
 html[data-theme="light"] .confirmation,
 html[data-theme="light"] .reservation-item .operation-status.status-completed,
 html[data-theme="light"] .operation-status,
@@ -644,10 +625,6 @@ html[data-theme="light"] .role-badge.passenger{
   background:#def2e7;
   border-color:#72b994;
   color:#075f39;
-}
-
-html[data-theme="light"] .occupants-vagas{
-  color:#06683d;
 }
 
 html[data-theme="light"] .reservation-item .operation-status.status-waiting,
@@ -848,10 +825,6 @@ html[data-theme="light"] .notification-item-icon.report{
 
 html[data-theme="light"] .reservation-moment-label{
   color:#526a7c;
-}
-
-html[data-theme="light"] .calendar-weekday{
-  color:#526575;
 }
 
 html[data-theme="light"] .mobile-month-day{

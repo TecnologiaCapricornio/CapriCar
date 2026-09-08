@@ -116,14 +116,6 @@
     font-size:0.85rem;
   }
 
-  .login-error{
-    font-size:0.78rem;
-    color:var(--vermelho);
-    min-height:14px;
-    text-align:left;
-    margin-top:-8px;
-  }
-
   .login-divider{
     display:flex;
     align-items:center;

@@ -21,6 +21,7 @@ Antes de iniciar, copie `.env.example` para `.env` e configure o PostgreSQL.
 
 ## Documentação
 
+- [Manual de utilização](docs/MANUAL_UTILIZACAO.md)
 - [Documentação técnica e operacional](docs/DOCUMENTACAO_TECNICA.md)
 - [Backup e restauração](BACKUP.md)
 - [Transferência para outro computador](INSTRUCOES_TRANSFERENCIA.md)

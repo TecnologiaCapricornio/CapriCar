@@ -341,7 +341,7 @@
    variante aqui; nunca cor solta no ponto de uso.
 
    .notice = bloco de aviso    .tag = selo inline
-   Variantes: info | warning | danger | success                       */
+   Variantes: warning | danger                                         */
 
   .notice{
     padding:11px 13px;
@@ -355,13 +355,6 @@
   .notice::before{
     margin-right:3px;
   }
-
-  .notice-info{
-    background:var(--info-surface);
-    border-color:var(--info-border);
-    color:var(--info-text);
-  }
-  .notice-info::before{content:"ℹ️";}
 
   .notice-warning{
     background:var(--warning-surface);
@@ -378,13 +371,6 @@
     font-weight:600;
   }
   .notice-danger::before{content:"⛔";}
-
-  .notice-success{
-    background:var(--success-surface);
-    border-color:var(--success-border);
-    color:var(--success-text);
-  }
-  .notice-success::before{content:"✅";}
 
   .tag{
     display:inline-block;
@@ -909,15 +895,6 @@
     padding-top:2px;
   }
 
-  .reservation-occupants{
-    display:flex;
-    align-items:center;
-    gap:5px;
-    font-size:var(--fs-xs);
-    color:#8fbadb;
-    font-weight:600;
-  }
-
   .reservation-item .operation-status{
     flex-shrink:0;
     margin-top:0;
@@ -1154,42 +1131,6 @@
   }
 
 /* ---- Bloco "Quem já está no carro" ---- */
-  .occupants-block{
-    background:rgba(26,48,80,0.55);
-    border:1px solid rgba(58,106,149,0.35);
-    border-radius:var(--radius-sm);
-    padding:12px 14px;
-    margin:10px 0;
-    backdrop-filter:blur(6px);
-  }
-
-  .occupants-toggle{
-    background:none;
-    border:1px solid rgba(58,106,149,0.45);
-    color:var(--azul-claro);
-    font-size:var(--fs-sm);
-    font-weight:600;
-    padding:7px 14px;
-    border-radius:999px;
-    cursor:pointer;
-    margin:6px 0;
-    transition:filter .2s ease, transform .15s ease;
-  }
-
-  .occupants-toggle:hover{
-    filter:brightness(1.2);
-    transform:translateY(-1px);
-  }
-
-  .occupants-title{
-    font-size:var(--fs-xs);
-    font-weight:600;
-    color:var(--texto-muted);
-    text-transform:uppercase;
-    letter-spacing:.04em;
-    margin-bottom:8px;
-  }
-
   .occupants-chips{
     display:flex;
     flex-wrap:wrap;
@@ -1580,19 +1521,6 @@
     font-size:var(--fs-xs);
     color:var(--texto-muted);
     margin-top:4px;
-  }
-
-  .occupants-empty{
-    font-size:var(--fs-sm);
-    color:var(--texto-muted);
-    font-style:italic;
-    margin-bottom:6px;
-  }
-
-  .occupants-vagas{
-    font-size:var(--fs-sm);
-    font-weight:600;
-    color:var(--verde);
   }
 
   /* ---- Modal de confirmação para entrar na carona ---- */

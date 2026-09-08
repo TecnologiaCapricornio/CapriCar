@@ -51,12 +51,6 @@
   color:#fff;
 }
 
-.admin-grid{
-  display:grid;
-  grid-template-columns:minmax(340px,.85fr) minmax(480px,1.15fr);
-  gap:18px;
-}
-
 .admin-subcard{
   background:rgba(16,34,54,.58);
   border:1px solid rgba(111,168,216,.2);
@@ -89,11 +83,6 @@
   display:flex;
   align-items:center;
   gap:8px;
-}
-
-.rules-card{
-  max-width:680px;
-  margin:0 auto;
 }
 
 .rules-explanation{
@@ -714,16 +703,12 @@
 }
 
 @media (max-width:800px){
-  .admin-grid{
-    grid-template-columns:1fr;
-  }
   .report-summary{
     grid-template-columns:1fr 1fr;
   }
 }
 
 @media (max-width:520px){
-  .admin-grid,
   .report-summary{
     grid-template-columns:1fr;
   }

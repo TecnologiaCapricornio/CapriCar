@@ -243,10 +243,6 @@
     line-height:1.2;
   }
 
-  .admin-grid{
-    grid-template-columns:minmax(0,1fr);
-  }
-
   .report-summary{
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
@@ -434,15 +430,6 @@
   .date-popup.range-style-date-popup{
     width:min(350px,calc(100vw - 28px));
     padding:12px 8px;
-  }
-
-  .calendar-grid{
-    gap:3px;
-  }
-
-  .calendar-day{
-    min-height:46px;
-    border-radius:9px;
   }
 
   .calendar-month-label{
