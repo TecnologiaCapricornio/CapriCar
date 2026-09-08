@@ -177,16 +177,10 @@ function clearAdminFieldErrors(){
 }
 
 function showAdminMobileReservationStep(step, shouldScroll){
-  adminMobileReservationStep = Math.max(1, Math.min(3, Number(step) || 1));
+  adminMobileReservationStep = Math.max(1, Math.min(2, Number(step) || 1));
   adminReservaForm.setAttribute('data-mobile-step', String(adminMobileReservationStep));
-  document.querySelectorAll('#adminReservationProgress [data-admin-progress-step]').forEach(item => {
-    item.classList.toggle(
-      'active',
-      Number(item.getAttribute('data-admin-progress-step')) === adminMobileReservationStep
-    );
-  });
   adminReservationBackBtn.disabled = adminMobileReservationStep === 1;
-  adminReservationStepLabel.textContent = 'Etapa ' + adminMobileReservationStep + ' de 3';
+  adminReservationStepLabel.textContent = 'Etapa ' + adminMobileReservationStep + ' de 2';
   if(shouldScroll && isMobileReservationWizard()){
     adminReservaModal.querySelector('.modal-card').scrollTo({ top:0, behavior:'smooth' });
   }
@@ -194,7 +188,9 @@ function showAdminMobileReservationStep(step, shouldScroll){
 
 function validateAdminMobileReservationStep(step){
   if(step === 1){
-    ['nome','partida','destino','carro'].forEach(id => setAdminFieldError(id, ''));
+    ['nome','partida','destino','carro','dataIda','dataVolta','horarioRetirada','horarioDevolucao']
+      .forEach(id => setAdminFieldError(id, ''));
+    setAdminError('');
     let valid = true;
     const nome = aNomeInput.value.trim();
     const partida = aPartidaSelect.value;
@@ -210,8 +206,8 @@ function validateAdminMobileReservationStep(step){
     // Mesma lógica do submit (linha ~442): só dá pra checar aqui quando quem
     // dirige é quem está logado (edição da própria reserva). Precisa rodar já
     // na etapa 1 (onde fica o campo do carro) - senão o usuário preenche
-    // data/horário/motivo/passageiros à toa antes de descobrir, só na
-    // confirmação final, que não pode usar aquele veículo.
+    // motivo/passageiros à toa antes de descobrir, só na confirmação final,
+    // que não pode usar aquele veículo.
     if(aCarroSelect.value && reservationEditMode === 'self' && typeof cnhAtendeCapacidade === 'function'){
       const vehicle = getVehicle(partida, aCarroSelect.value);
       const licenseState = typeof getLicenseState === 'function' ? getLicenseState() : null;
@@ -223,13 +219,7 @@ function validateAdminMobileReservationStep(step){
         valid = false;
       }
     }
-    return valid;
-  }
 
-  if(step === 2){
-    ['dataIda','dataVolta','horarioRetirada','horarioDevolucao'].forEach(id => setAdminFieldError(id, ''));
-    setAdminError('');
-    let valid = true;
     const dataIda = aDataIdaInput.value;
     const dataVolta = aDataVoltaInput.value;
     const retirada = aHorarioRetiradaSelect.value;
@@ -251,12 +241,7 @@ function validateAdminMobileReservationStep(step){
       valid = false;
     }
     if(dataIda && dataVolta){
-      const ruleValidation = validateReservationRules(
-        aNomeInput.value.trim(),
-        dataIda,
-        dataVolta,
-        adminEditingId
-      );
+      const ruleValidation = validateReservationRules(nome, dataIda, dataVolta, adminEditingId);
       if(!ruleValidation.ok){
         setAdminFieldError(ruleValidation.field, ruleValidation.message);
         valid = false;
@@ -493,14 +478,10 @@ adminReservaForm.addEventListener('submit', async function(e){
 
   if(!valid){
     if(isAdminWizardActive()){
-      const stepOneHasError = ['Nome','Partida','Destino','Carro'].some(suffix =>
-        document.getElementById('error-a' + suffix).textContent
-      );
-      const stepTwoHasError = ['DataIda','DataVolta','HorarioRetirada','HorarioDevolucao'].some(suffix =>
+      const stepOneHasError = ['Nome','Partida','Destino','Carro','DataIda','DataVolta','HorarioRetirada','HorarioDevolucao'].some(suffix =>
         document.getElementById('error-a' + suffix).textContent
       );
       if(stepOneHasError) showAdminMobileReservationStep(1, true);
-      else if(stepTwoHasError) showAdminMobileReservationStep(2, true);
     }
     return;
   }
@@ -510,13 +491,13 @@ adminReservaForm.addEventListener('submit', async function(e){
   if(conflitos.length > 0){
     const msg = reservationConflictPrefix() + buildConflictMessage(conflitos);
     setAdminError(msg);
-    if(isAdminWizardActive()) showAdminMobileReservationStep(2, true);
+    if(isAdminWizardActive()) showAdminMobileReservationStep(1, true);
     return;
   }
   const bloqueios = findVehicleBlocks(partida, carro, dataIda, dataVolta, null);
   if(bloqueios.length > 0){
     setAdminError('Veículo indisponível: ' + bloqueios.map(b => b.tipo + ' (' + formatDate(b.dataInicio) + ' a ' + formatDate(b.dataFim) + ')').join('; '));
-    if(isAdminWizardActive()) showAdminMobileReservationStep(2, true);
+    if(isAdminWizardActive()) showAdminMobileReservationStep(1, true);
     return;
   }
 
