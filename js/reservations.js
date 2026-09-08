@@ -162,6 +162,23 @@ function validateMobileReservationStep(step){
       valid = false;
     }
 
+    // CNH incompatível com o veículo escolhido precisa travar aqui, na etapa 1
+    // (onde fica o campo do carro) - deixar só para a confirmação final faz o
+    // usuário preencher motivo, passageiros etc. à toa antes de descobrir que
+    // não pode seguir com aquele veículo.
+    const carroParaCnh = carroSelect.value;
+    const vehicleParaCnh = carroParaCnh ? getVehicle(partida, carroParaCnh) : null;
+    const licenseStateParaCnh = typeof getLicenseState === 'function' ? getLicenseState() : null;
+    if(carroParaCnh && vehicleParaCnh && licenseStateParaCnh && typeof cnhAtendeCapacidade === 'function'){
+      const categoria = licenseStateParaCnh.cnh ? licenseStateParaCnh.cnh.categoria : '';
+      if(!cnhAtendeCapacidade(categoria, vehicleParaCnh.capacidade)){
+        const minima = cnhCategoriaMinimaPara(vehicleParaCnh.capacidade);
+        setError('carro', 'Este veículo (' + vehicleParaCnh.capacidade + ' lugares) exige CNH categoria ' + minima +
+          ' ou superior.' + (categoria ? ' Sua CNH é categoria ' + categoria + '.' : ' Cadastre sua CNH em "Meu perfil".'));
+        valid = false;
+      }
+    }
+
     const dataIda = dataIdaInput.value;
     const dataVolta = dataVoltaInput.value;
     const retirada = horarioRetiradaSelect.value;
