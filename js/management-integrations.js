@@ -11,6 +11,9 @@ const entraSsoSummary = document.getElementById('entraSsoSummary');
 const entraSsoError = document.getElementById('entraSsoError');
 
 const smtpForm = document.getElementById('smtpForm');
+const smtpMethodInput = document.getElementById('smtpMethod');
+const smtpServerFields = document.getElementById('smtpServerFields');
+const smtpGraphHint = document.getElementById('smtpGraphHint');
 const smtpHostInput = document.getElementById('smtpHost');
 const smtpPortInput = document.getElementById('smtpPort');
 const smtpSecurityInput = document.getElementById('smtpSecurity');
@@ -104,8 +107,20 @@ async function loadEntraSsoForm(){
   entraSsoError.textContent = '';
 }
 
+// Mostra os campos de servidor SMTP (host/porta/segurança/usuário/senha) só
+// no método "smtp" - via Microsoft 365 (Graph) nenhum deles é usado (a
+// autenticação é a mesma do App Registration do SSO, sem senha nenhuma).
+function updateSmtpMethodFields(){
+  const isGraph = smtpMethodInput.value === 'graph';
+  smtpServerFields.classList.toggle('hidden', isGraph);
+  smtpGraphHint.classList.toggle('hidden', !isGraph);
+}
+
+smtpMethodInput.addEventListener('change', updateSmtpMethodFields);
+
 async function loadSmtpForm(){
   const status = await apiRequest('/api/settings/smtp');
+  smtpMethodInput.value = status.method === 'graph' ? 'graph' : 'smtp';
   smtpHostInput.value = status.host || '';
   smtpPortInput.value = status.port || 587;
   smtpSecurityInput.value = status.security || 'starttls';
@@ -116,9 +131,10 @@ async function loadSmtpForm(){
   smtpPasswordInput.placeholder = status.passwordConfigured
     ? 'Deixe em branco para manter a senha atual'
     : 'Nenhuma senha definida';
-  smtpSummary.textContent = status.host
-    ? `Configurado: ${status.host}:${status.port}`
-    : 'E-mail para envio ainda não configurado.';
+  updateSmtpMethodFields();
+  smtpSummary.textContent = status.method === 'graph'
+    ? (status.fromAddress ? `Configurado: envio via Microsoft 365 como ${status.fromAddress}` : 'E-mail para envio ainda não configurado.')
+    : (status.host ? `Configurado: ${status.host}:${status.port}` : 'E-mail para envio ainda não configurado.');
   smtpError.textContent = '';
   smtpTestError.textContent = '';
 }
@@ -195,15 +211,18 @@ smtpForm.addEventListener('submit', async function(e){
   e.preventDefault();
   if(!canManageIntegrations()) return;
   smtpError.textContent = '';
+  const method = smtpMethodInput.value === 'graph' ? 'graph' : 'smtp';
   const host = smtpHostInput.value.trim();
   const port = Number(smtpPortInput.value);
   const fromAddress = smtpFromAddressInput.value.trim();
-  if(!host || !Number.isInteger(port) || !fromAddress){
-    smtpError.textContent = 'Preencha host, porta e o e-mail do remetente.';
+  if(!fromAddress || (method === 'smtp' && (!host || !Number.isInteger(port)))){
+    smtpError.textContent = method === 'graph'
+      ? 'Preencha o e-mail do remetente.'
+      : 'Preencha host, porta e o e-mail do remetente.';
     return;
   }
   const confirmed = await showSiteConfirm(
-    'Confirma a alteração da configuração de e-mail (SMTP)?',
+    'Confirma a alteração da configuração de e-mail?',
     { title:'Confirmar alteração', type:'warning', confirmText:'Salvar', cancelText:'Cancelar' }
   );
   if(!confirmed) return;
@@ -211,6 +230,7 @@ smtpForm.addEventListener('submit', async function(e){
     await apiRequest('/api/settings/smtp', {
       method:'PUT',
       body:{
+        method,
         host, port,
         security:smtpSecurityInput.value,
         username:smtpUsernameInput.value.trim(),
@@ -231,12 +251,15 @@ smtpForm.addEventListener('submit', async function(e){
 smtpTestBtn.addEventListener('click', async function(){
   if(!canManageIntegrations()) return;
   smtpTestError.textContent = '';
+  const method = smtpMethodInput.value === 'graph' ? 'graph' : 'smtp';
   const testRecipient = smtpTestRecipientInput.value.trim();
   const host = smtpHostInput.value.trim();
   const port = Number(smtpPortInput.value);
   const fromAddress = smtpFromAddressInput.value.trim();
-  if(!host || !Number.isInteger(port) || !fromAddress || !testRecipient){
-    smtpTestError.textContent = 'Preencha host, porta, e-mail do remetente e o destinatário do teste.';
+  if(!fromAddress || !testRecipient || (method === 'smtp' && (!host || !Number.isInteger(port)))){
+    smtpTestError.textContent = method === 'graph'
+      ? 'Preencha o e-mail do remetente e o destinatário do teste.'
+      : 'Preencha host, porta, e-mail do remetente e o destinatário do teste.';
     return;
   }
   smtpTestBtn.disabled = true;
@@ -246,6 +269,7 @@ smtpTestBtn.addEventListener('click', async function(){
     await apiRequest('/api/settings/smtp/test', {
       method:'POST',
       body:{
+        method,
         host, port,
         security:smtpSecurityInput.value,
         username:smtpUsernameInput.value.trim(),
@@ -256,7 +280,7 @@ smtpTestBtn.addEventListener('click', async function(){
       }
     });
     await showSiteAlert('E-mail de teste enviado com sucesso para ' + testRecipient + '.', {
-      title:'Conexão SMTP validada', type:'success'
+      title:'Envio de e-mail validado', type:'success'
     });
   }catch(error){
     smtpTestError.textContent = error.message;

@@ -1,3 +1,4 @@
+require('node:dns').setDefaultResultOrder('ipv4first');
 const path = require('node:path');
 const express = require('express');
 const { query, closePool } = require('./db');

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildEventPayload } = require('../server/calendar-sync');
+const { buildEventPayload, resolveCalendarSyncEnabled } = require('../server/calendar-sync');
 
 const reservation = {
   numeroReserva:42,
@@ -49,4 +49,14 @@ test('buildEventPayload escapa HTML no nome do passageiro', () => {
   const payload = buildEventPayload(withUnsafeName);
   assert.doesNotMatch(payload.body.content, /<script>/);
   assert.match(payload.body.content, /&lt;script&gt;/);
+});
+
+test('resolveCalendarSyncEnabled fica habilitada por padrão numa implantação nova (nada salvo ainda)', () => {
+  assert.equal(resolveCalendarSyncEnabled(null), true);
+  assert.equal(resolveCalendarSyncEnabled(undefined), true);
+});
+
+test('resolveCalendarSyncEnabled respeita o valor explícito depois que o admin salva a tela', () => {
+  assert.equal(resolveCalendarSyncEnabled({ enabled:true }), true);
+  assert.equal(resolveCalendarSyncEnabled({ enabled:false }), false);
 });
