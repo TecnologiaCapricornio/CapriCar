@@ -7,7 +7,14 @@ const adminSectionTabs = document.getElementById('adminSectionTabs');
 
 function renderAdminSection(section){
   if(!canAccessAdminSection(section)) return;
-  if(section === 'reservas') renderAdminTab();
+  // "reservas" mostra a lista operacional e os indicadores da frota (mesmos
+  // da aba "Relatórios") - as duas funções continuam cada uma com sua própria
+  // checagem de permissão (canManageReservations/canViewReports), já que a
+  // aba agora é compartilhada por quem tem qualquer uma das duas.
+  if(section === 'reservas'){
+    renderAdminTab();
+    if(typeof renderIndicators === 'function') renderIndicators();
+  }
   if(section === 'locais') renderBranchManagement();
   if(section === 'veiculos') renderFleetManagement();
   if(section === 'bloqueios') renderBlocksManagement();

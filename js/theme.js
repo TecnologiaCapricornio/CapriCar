@@ -1,6 +1,9 @@
 /* Alternância e persistência do tema visual */
 const THEME_STORAGE_KEY = 'capricar_theme';
 
+// Sem preferência salva, o padrão é sempre claro - não segue a preferência do
+// sistema operacional (ver mesmo raciocínio em js/theme-init.js, que já
+// define data-theme antes deste script rodar).
 function getPreferredTheme(){
   try{
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
@@ -10,8 +13,7 @@ function getPreferredTheme(){
   }
 
   const current = document.documentElement.getAttribute('data-theme');
-  if(current === 'light' || current === 'dark') return current;
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  return current === 'dark' ? 'dark' : 'light';
 }
 
 function getActiveTheme(){

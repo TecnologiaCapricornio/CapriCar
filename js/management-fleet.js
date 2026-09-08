@@ -15,6 +15,7 @@ const vehicleCapacityInput = document.getElementById('vehicleCapacity');
 const vehicleTypeSelect = document.getElementById('vehicleType');
 const vehicleRentedInput = document.getElementById('vehicleRented');
 const vehicleCostCenterInput = document.getElementById('vehicleCostCenter');
+const vehicleOdometerInput = document.getElementById('vehicleOdometer');
 const vehiclesList = document.getElementById('vehiclesList');
 const fleetEditModal = document.getElementById('fleetEditModal');
 const fleetEditForm = document.getElementById('fleetEditForm');
@@ -31,6 +32,7 @@ const fleetEditVehicleCapacityInput = document.getElementById('fleetEditVehicleC
 const fleetEditVehicleTypeSelect = document.getElementById('fleetEditVehicleType');
 const fleetEditVehicleCostCenterInput = document.getElementById('fleetEditVehicleCostCenter');
 const fleetEditVehicleRentedInput = document.getElementById('fleetEditVehicleRented');
+const fleetEditVehicleOdometerInput = document.getElementById('fleetEditVehicleOdometer');
 const fleetEditError = document.getElementById('fleetEditError');
 const vehicleDeleteModal = document.getElementById('vehicleDeleteModal');
 const vehicleDeleteForm = document.getElementById('vehicleDeleteForm');
@@ -111,6 +113,9 @@ function openVehicleEditModal(vehicleId){
   fleetEditVehicleTypeSelect.value = vehicle.tipo || 'carro';
   fleetEditVehicleCostCenterInput.value = vehicle.centroCusto || '';
   fleetEditVehicleRentedInput.checked = !!vehicle.alugado;
+  fleetEditVehicleOdometerInput.value = vehicle.odometroAtual != null && vehicle.odometroAtual !== ''
+    ? String(vehicle.odometroAtual)
+    : '';
   fleetEditError.textContent = '';
   fleetEditModal.classList.remove('hidden');
   fleetEditVehiclePlateInput.focus();
@@ -320,9 +325,14 @@ fleetEditForm.addEventListener('submit', function(e){
     const tipo = fleetEditVehicleTypeSelect.value;
     const alugado = fleetEditVehicleRentedInput.checked;
     const centroCusto = fleetEditVehicleCostCenterInput.value.trim();
+    const odometerRaw = fleetEditVehicleOdometerInput.value.trim();
     const capacidadeMaxima = seatLayoutFor(tipo).capacidadeMaxima;
     if(!vehicle || !local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > capacidadeMaxima){
       fleetEditError.textContent = 'Preencha local, placa, marca, modelo e uma capacidade entre 1 e ' + capacidadeMaxima + '.';
+      return;
+    }
+    if(odometerRaw && (!Number.isInteger(Number(odometerRaw)) || Number(odometerRaw) < 0)){
+      fleetEditError.textContent = 'O odômetro atual deve ser um número inteiro positivo.';
       return;
     }
     if(list.some(item =>
@@ -341,6 +351,7 @@ fleetEditForm.addEventListener('submit', function(e){
     vehicle.tipo = tipo;
     vehicle.alugado = alugado;
     vehicle.centroCusto = centroCusto;
+    vehicle.odometroAtual = odometerRaw ? Number(odometerRaw) : undefined;
     saveVehicles(list);
     if(oldLocal !== local){
       const blocksUpdated = getVehicleBlocks();
@@ -479,7 +490,9 @@ function renderFleetManagement(){
     '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
       '<div><strong>' + escapeHTML(getVehicleFullModel(vehicle)) +
         (vehicle.placa ? '<br>' + plateBadgeHTML(vehicle.placa) : '') + '</strong>' +
-      '<small>' + escapeHTML(vehicle.local) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' + (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
+      '<small>' + escapeHTML(vehicle.local) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' +
+        (vehicle.odometroAtual != null && vehicle.odometroAtual !== '' ? Number(vehicle.odometroAtual).toLocaleString('pt-BR') + ' km · ' : '') +
+        (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
       '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
       '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
       '<button type="button" class="delete-btn vehicle-delete-btn" data-id="' + escapeHTML(vehicle.id) + '">Excluir</button></div>' +
@@ -560,8 +573,16 @@ if(vehicleForm){
     const capacidade = Number(vehicleCapacityInput.value);
     const tipoSelecionado = vehicleTypeSelect ? vehicleTypeSelect.value : 'carro';
     const capacidadeMaxima = seatLayoutFor(tipoSelecionado).capacidadeMaxima;
+    const odometerRaw = vehicleOdometerInput ? vehicleOdometerInput.value.trim() : '';
     if(!local || !placa || !marca || !modelo || !Number.isInteger(capacidade) || capacidade < 1 || capacidade > capacidadeMaxima){
       await showSiteAlert('Preencha local, placa, marca, modelo e uma capacidade entre 1 e ' + capacidadeMaxima + '.', {
+        title:'Revise os dados do veículo',
+        type:'warning'
+      });
+      return;
+    }
+    if(odometerRaw && (!Number.isInteger(Number(odometerRaw)) || Number(odometerRaw) < 0)){
+      await showSiteAlert('O odômetro atual deve ser um número inteiro positivo.', {
         title:'Revise os dados do veículo',
         type:'warning'
       });
@@ -586,6 +607,7 @@ if(vehicleForm){
       tipo: vehicleTypeSelect ? vehicleTypeSelect.value : 'carro',
       alugado: vehicleRentedInput ? vehicleRentedInput.checked : false,
       centroCusto: vehicleCostCenterInput ? vehicleCostCenterInput.value.trim() : '',
+      odometroAtual: odometerRaw ? Number(odometerRaw) : undefined,
       ativo: true
     };
     list.push(vehicle);

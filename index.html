@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="icon" type="image/png" href="assets/icone-capricornio.png?v=20260831-1">
   <link rel="apple-touch-icon" href="assets/icone-capricornio.png?v=20260831-1">
-  <script src="js/theme-init.js?v=20260824-1"></script>
+  <script src="js/theme-init.js?v=20260904-1"></script>
   <title>CapriCar | Reserva de Veículos Corporativos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,9 +21,9 @@
   <link rel="stylesheet" href="css/base.css?v=20260903-1">
   <link rel="stylesheet" href="css/components.css?v=20260903-9">
   <link rel="stylesheet" href="css/calendar.css?v=20260903-3">
-  <link rel="stylesheet" href="css/admin.css?v=20260903-2">
+  <link rel="stylesheet" href="css/admin.css?v=20260908-1">
   <link rel="stylesheet" href="css/responsive.css?v=20260903-5">
-  <link rel="stylesheet" href="css/themes.css?v=20260903-8">
+  <link rel="stylesheet" href="css/themes.css?v=20260908-1">
 </head>
 
 <body>
@@ -499,6 +499,8 @@
           </div>
 
           <div class="admin-section-panel" id="admin-section-reservas">
+            <section class="indicators" id="indicatorsPanel" aria-label="Indicadores da frota"></section>
+
             <div class="reservation-view-tabs" aria-label="Filtrar reservas da gestão">
               <button type="button" class="reservation-view-btn active" data-admin-reservation-view="active">
                 Ativas <span id="adminActiveReservationsCount">0</span>
@@ -606,6 +608,11 @@
                       <input type="checkbox" id="vehicleRented"> Veículo alugado
                     </label>
                   </div>
+                </div>
+                <div class="field">
+                  <label for="vehicleOdometer">Odômetro atual (km, opcional)</label>
+                  <input type="number" id="vehicleOdometer" min="0" step="1" placeholder="Ex.: 45000"
+                    autocomplete="off">
                 </div>
                 <button type="submit" class="submit-btn">Adicionar veículo</button>
               </form>
@@ -769,8 +776,6 @@
           </div>
 
           <div class="admin-section-panel hidden" id="admin-section-relatorios">
-            <section class="indicators" id="indicatorsPanel" aria-label="Indicadores da frota"></section>
-
             <div class="rides-filters report-filters">
               <div class="row">
                 <div class="field">
@@ -1629,6 +1634,14 @@
               </label>
             </div>
           </div>
+          <div class="field">
+            <label for="fleetEditVehicleOdometer">Odômetro atual (km)</label>
+            <input type="number" id="fleetEditVehicleOdometer" min="0" step="1" placeholder="Ex.: 45000"
+              autocomplete="off">
+            <div class="form-hint">
+              Atualizado automaticamente a cada retirada/devolução. Edite aqui para corrigir uma divergência.
+            </div>
+          </div>
         </div>
         <div class="error-msg fleet-edit-error" role="alert" id="fleetEditError"></div>
         <div class="fleet-edit-actions">
@@ -1888,6 +1901,7 @@
         <div class="field">
           <label for="operationKm">Quilometragem</label>
           <input type="number" id="operationKm" min="0" step="1" required>
+          <div class="form-hint" id="operationKmHint"></div>
         </div>
         <div class="field">
           <label for="operationFuel">Nível de combustível</label>
@@ -1901,21 +1915,13 @@
           </select>
         </div>
         <div class="field hidden" id="operationCleanlinessField">
-          <label>Condição de limpeza</label>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input type="radio" name="operationCleanliness" id="operationCleanlinessLimpo" value="limpo">
-              Agradável (limpo)
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="operationCleanliness" id="operationCleanlinessInterna" value="sujeira_interna">
-              Excesso de sujeira interna
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="operationCleanliness" id="operationCleanlinessExterna" value="sujeira_externa">
-              Excesso de sujeira externa
-            </label>
-          </div>
+          <label for="operationCleanliness">Condição de limpeza</label>
+          <select id="operationCleanliness" required>
+            <option value="">Selecione...</option>
+            <option value="limpo">Agradável (limpo)</option>
+            <option value="sujeira_interna">Excesso de sujeira interna</option>
+            <option value="sujeira_externa">Excesso de sujeira externa</option>
+          </select>
           <div class="error-msg" role="alert" id="error-operationCleanliness"></div>
         </div>
         <div class="field">
@@ -1999,8 +2005,8 @@
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
   <script src="js/cnh-categorias.js?v=20260901-1"></script>
   <script src="js/config.js?v=20260903-1"></script>
-  <script src="js/theme.js?v=20260804-2"></script>
-  <script src="js/utils.js?v=20260903-3"></script>
+  <script src="js/theme.js?v=20260904-1"></script>
+  <script src="js/utils.js?v=20260904-1"></script>
   <script src="js/styled-select.js?v=20260902-1"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
   <script src="js/api.js?v=20260903-1"></script>
@@ -2010,29 +2016,29 @@
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
   <script src="js/seat-map.js?v=20260903-1"></script>
   <script src="js/rides.js?v=20260903-1"></script>
-  <script src="js/reservations.js?v=20260903-5"></script>
+  <script src="js/reservations.js?v=20260904-1"></script>
   <script src="js/calendar.js?v=20260903-2"></script>
   <script src="js/modals.js?v=20260903-2"></script>
-  <script src="js/admin.js?v=20260903-2"></script>
+  <script src="js/admin.js?v=20260904-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260903-1"></script>
-  <script src="js/management-config.js?v=20260903-1"></script>
+  <script src="js/management-operations.js?v=20260908-1"></script>
+  <script src="js/management-config.js?v=20260908-1"></script>
   <script src="js/management-users.js?v=20260903-1"></script>
   <script src="js/management-integrations.js?v=20260903-1"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
   <script src="js/management-email-preview.js?v=20260903-1"></script>
-  <script src="js/management-fleet.js?v=20260903-1"></script>
+  <script src="js/management-fleet.js?v=20260904-2"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <!-- Depois de management-fleet.js (populateManagementVehicleSelectors)
        e de storage.js (getMaintenanceReminders/saveMaintenanceReminders). -->
   <script src="js/management-maintenance.js?v=20260903-2"></script>
-  <script src="js/management-indicators.js?v=20260831-1"></script>
-  <script src="js/management-reports.js?v=20260831-1"></script>
+  <script src="js/management-indicators.js?v=20260904-1"></script>
+  <script src="js/management-reports.js?v=20260908-1"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
   <script src="js/driver-license.js?v=20260903-1"></script>
-  <script src="js/auth.js?v=20260903-6"></script>
+  <script src="js/auth.js?v=20260908-1"></script>
   <script src="js/app.js?v=20260903-1"></script>
 
 </body>

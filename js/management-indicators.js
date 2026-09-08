@@ -1,5 +1,5 @@
 /* =========================================================
-   Indicadores da frota (aba Relatórios)
+   Indicadores da frota (dentro da aba Reservas, no painel de gestão)
 
    Tudo é calculado a partir do estado que já está carregado no cliente -
    reservas, veículos e usuários. Não há endpoint novo: as consultas

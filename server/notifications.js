@@ -126,6 +126,19 @@ async function resolveReservationManagers(client){
   return result.rows.map(row => String(row.id));
 }
 
+// Diferente de resolveReservationManagers: quem cuida da frota (cadastro de
+// veículos) pode não ser quem cuida de reservas - a divergência de odômetro é
+// sobre o veículo em si (precisa de verificação in loco), então avisa quem
+// tem a permissão "veículos", não quem gerencia reservas.
+async function resolveFleetManagers(client){
+  const result = await client.query(
+    `SELECT id FROM users
+      WHERE active = TRUE AND deleted_at IS NULL
+        AND (role = 'admin' OR can_manage_fleet = TRUE)`
+  );
+  return result.rows.map(row => String(row.id));
+}
+
 // Devolve true quando a notificação foi de fato gravada, e false quando o
 // ON CONFLICT a descartou por já existir. Quem só quer notificar pode ignorar
 // o retorno; quem conta quantas saíram (ex.: a varredura de CNH) precisa
@@ -350,6 +363,34 @@ async function notifyOperationReport(client, reservation, phase, actor){
   }
 }
 
+// Avisa quem gerencia a frota quando alguém confirma uma quilometragem menor
+// que o esperado (menor que a retirada, na devolução; ou menor que o
+// odômetro atual do veículo, na retirada) mesmo depois do aviso no cliente -
+// ver js/management-operations.js e o mesmo "quilometragemDivergente" em
+// server/validation.js. `esperado` é o valor com o qual a informada foi
+// comparada (a quilometragem da retirada, ou o odômetro atual do veículo).
+async function notifyOdometerDiscrepancy(client, reservation, phase, actor, informado, esperado){
+  await ensureNotificationsTable(client);
+  const recipients = await resolveFleetManagers(client);
+  const summary = reservationSummary(reservation);
+  const phaseLabel = phase === 'retirada' ? 'retirada' : 'devolução';
+  const message = `${actor.nome} confirmou ${informado} km na ${phaseLabel} de ${summary.route}, ` +
+    `um valor menor que o esperado (${esperado} km). Verifique o odômetro do veículo in loco.`;
+
+  for(const userId of recipients){
+    if(String(userId) === String(actor.id)) continue;
+    await insertNotification(client, {
+      userId,
+      type:'odometer_discrepancy',
+      title:'Possível divergência no odômetro',
+      message,
+      reservationId:String(reservation.id || ''),
+      dedupeKey:`odometer-discrepancy:${reservation.id}:${phase}`,
+      metadata:{ route:summary.route, phase, informado, esperado }
+    });
+  }
+}
+
 function userParticipates(reservation, user){
   if(String(reservation.criadorUsuarioId || '') === String(user.id)) return true;
   const userName = normalizeName(user.nome);
@@ -427,7 +468,9 @@ module.exports = {
   notifyReservationPassengerAdditions,
   notifyReservationPassengerRemovals,
   notifyOperationReport,
+  notifyOdometerDiscrepancy,
   resolveReservationManagers,
+  resolveFleetManagers,
   reminderTypesForReservation,
   reservationStart,
   reservationEnd,

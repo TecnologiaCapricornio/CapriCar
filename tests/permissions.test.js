@@ -78,6 +78,40 @@ test('usuário com permissões de frota acessa somente as áreas marcadas (sem p
   assert.equal(app.isAdmin(), false);
 });
 
+// Os indicadores da frota (cartões no topo + rotas/veículos mais usados)
+// aparecem tanto na aba "Reservas" quanto na aba "Relatórios" (ver
+// renderAdminSection em js/management-config.js) - por isso a permissão
+// "reports", sozinha, já precisa liberar as duas abas, mesmo sem
+// "reservations". "Relatórios" (filtros, resumo, exportação) continua
+// exigindo "reports" à parte de "reservations".
+test('permissão de relatórios, sozinha, dá acesso a Reservas (indicadores) e a Relatórios', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({
+    nome: 'Analista de relatórios',
+    role: 'user',
+    permissions: { reports: true }
+  });
+  assert.equal(app.canAccessAdminSection('reservas'), true);
+  assert.equal(app.canAccessAdminSection('relatorios'), true);
+  assert.equal(app.canViewReports(), true);
+  assert.equal(app.canManageReservations(), false);
+  // As demais seções continuam exigindo sua permissão própria.
+  assert.equal(app.canAccessAdminSection('locais'), false);
+  assert.equal(app.canAccessAdminSection('veiculos'), false);
+});
+
+test('permissão de reservas, sozinha, não dá acesso à aba Relatórios', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({
+    nome: 'Gestor de reservas',
+    role: 'user',
+    permissions: { reservations: true }
+  });
+  assert.equal(app.canAccessAdminSection('reservas'), true);
+  assert.equal(app.canAccessAdminSection('relatorios'), false);
+  assert.equal(app.canViewReports(), false);
+});
+
 test('permissão de manutenção é independente da permissão de veículos', () => {
   const app = loadPermissions();
   app.setCurrentUser({

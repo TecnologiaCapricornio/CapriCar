@@ -15,7 +15,11 @@ function reservationHasOperationReport(reservation){
       // "Excesso de sujeira" na devolução conta como avaria/observação pra
       // tudo que já reage a avarias/fotos (ver js/management-operations.js) -
       // "limpo" não conta, só as duas opções de sujeira.
-      record.condicaoLimpeza === 'sujeira_interna' || record.condicaoLimpeza === 'sujeira_externa';
+      record.condicaoLimpeza === 'sujeira_interna' || record.condicaoLimpeza === 'sujeira_externa' ||
+      // Quilometragem menor que o esperado, confirmada pelo usuário (ver
+      // notifyOdometerDiscrepancy em server/notifications.js) - também merece
+      // aparecer no filtro "Somente com registro".
+      record.quilometragemDivergente === true;
   });
 }
 

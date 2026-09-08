@@ -16,7 +16,8 @@ const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
   notifyReservationPassengerRemovals,
-  notifyOperationReport
+  notifyOperationReport,
+  notifyOdometerDiscrepancy
 } = require('../notifications');
 const { createOrUpdateCalendarEvent, deleteCalendarEvent, resolveCalendarOwner } = require('../calendar-sync');
 const { sendPassengerJoinedEmail, sendPassengerRemovalEmail } = require('../reminders');
@@ -140,6 +141,18 @@ async function validationContext(client, driverIds){
   };
 }
 
+// Odômetro do veículo ANTES desta sincronização (context.vehicles foi lido no
+// início da transação, antes de qualquer retirada/devolução deste lote ser
+// persistida) - é o valor "esperado" mostrado na notificação de divergência.
+function vehicleOdometerFor(context, reservation){
+  const vehicle = (context.vehicles || []).find(item =>
+    normalizeName(item.local) === normalizeName(reservation.partida) &&
+    normalizeName(item.codigo) === normalizeName(reservation.carro)
+  );
+  const value = Number(vehicle && vehicle.odometroAtual);
+  return Number.isFinite(value) ? value : null;
+}
+
 router.get('/', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({ reservations:await listReservationsForUser(req.user) });
@@ -242,6 +255,22 @@ router.post('/sync', async (req, res) => {
         }
         await notifyOperationReport(client, change.reservation, 'retirada', req.user);
         await notifyOperationReport(client, change.reservation, 'devolucao', req.user);
+        const retiradaRecord = change.reservation.operacao && change.reservation.operacao.retirada;
+        if(retiradaRecord && retiradaRecord.quilometragemDivergente === true){
+          const esperado = vehicleOdometerFor(context, change.reservation);
+          if(esperado != null){
+            await notifyOdometerDiscrepancy(
+              client, change.reservation, 'retirada', req.user, Number(retiradaRecord.quilometragem), esperado
+            );
+          }
+        }
+        const devolucaoRecord = change.reservation.operacao && change.reservation.operacao.devolucao;
+        if(devolucaoRecord && devolucaoRecord.quilometragemDivergente === true && retiradaRecord){
+          await notifyOdometerDiscrepancy(
+            client, change.reservation, 'devolucao', req.user,
+            Number(devolucaoRecord.quilometragem), Number(retiradaRecord.quilometragem)
+          );
+        }
         await client.query(
           `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
            VALUES ($1, $2, 'reserva', $3, $4::jsonb)`,

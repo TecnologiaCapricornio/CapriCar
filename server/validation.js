@@ -176,6 +176,16 @@ function validateVehicles(value, branches, currentVehicles){
       assert(typeof vehicle.alugado === 'boolean', 'O campo "alugado" do veículo é inválido.');
     }
     if(vehicle.centroCusto) text(vehicle.centroCusto, 'o centro de custo do veículo', 60, false);
+    // "Odômetro atual": normalmente mantido pelo próprio sistema a cada
+    // retirada/devolução (ver updateVehicleOdometer em
+    // server/reservations-store.js), mas o admin também pode editá-lo direto
+    // no cadastro pra corrigir uma divergência (ver notifyOdometerDiscrepancy
+    // em server/notifications.js). Opcional: veículos existentes antes deste
+    // campo, ou ainda sem nenhuma operação registrada, não têm valor.
+    if(vehicle.odometroAtual !== undefined && vehicle.odometroAtual !== null && vehicle.odometroAtual !== ''){
+      assert(Number.isInteger(Number(vehicle.odometroAtual)) && Number(vehicle.odometroAtual) >= 0,
+        'O odômetro atual do veículo deve ser um número inteiro positivo.');
+    }
     const key = `${branch.toLowerCase()}|${code.toLowerCase()}`;
     assert(!keys.has(key), 'Já existe um veículo com essa placa.');
     keys.add(key);
@@ -249,7 +259,7 @@ function scheduledPickupTimestamp(reservation){
 
 const CLEANLINESS_CONDITIONS = ['limpo', 'sujeira_interna', 'sujeira_externa'];
 
-function validateOperation(operation, previousOperation){
+function validateOperation(operation, previousOperation, vehicle){
   if(!operation) return;
   assert(operation && typeof operation === 'object' && !Array.isArray(operation), 'Registro operacional inválido.');
   for(const phase of ['retirada', 'devolucao']){
@@ -257,6 +267,10 @@ function validateOperation(operation, previousOperation){
     if(!record) continue;
     assert(Number.isInteger(Number(record.quilometragem)) && Number(record.quilometragem) >= 0,
       'A quilometragem deve ser um número inteiro positivo.');
+    if(record.quilometragemDivergente !== undefined){
+      assert(typeof record.quilometragemDivergente === 'boolean',
+        'A confirmação de divergência de quilometragem é inválida.');
+    }
     text(record.combustivel, 'o nível de combustível', 30);
     text(record.avarias, 'as avarias', 4000, false);
     // "Condição de limpeza" só passou a existir na devolução com esta versão -
@@ -286,9 +300,36 @@ function validateOperation(operation, previousOperation){
       validatePhotoDataUrl(photo.dados);
     });
   }
+  // Uma quilometragem menor que o esperado (digito a mais por engano, por
+  // exemplo) não trava mais o registro - o cliente já perguntou "tem certeza?"
+  // antes de mandar (ver js/management-operations.js) e marcou
+  // quilometragemDivergente quando a pessoa confirmou mesmo assim. Isso só
+  // dispara uma notificação para quem gerencia a frota verificar o odômetro
+  // in loco (ver notifyOdometerDiscrepancy em server/notifications.js) em vez
+  // de impedir a operação por um valor que pode estar certo.
   if(operation.retirada && operation.devolucao){
-    assert(Number(operation.devolucao.quilometragem) >= Number(operation.retirada.quilometragem),
-      'A quilometragem final não pode ser menor que a inicial.');
+    assert(
+      operation.devolucao.quilometragemDivergente === true ||
+        Number(operation.devolucao.quilometragem) >= Number(operation.retirada.quilometragem),
+      'A quilometragem final não pode ser menor que a inicial.'
+    );
+  }
+  // Só compara com o odômetro do veículo quando a retirada está sendo
+  // registrada AGORA pela primeira vez (mesma lógica de isNewDevolucao acima)
+  // - senão uma retirada antiga, já confirmada, ficaria refém do odômetro
+  // atual do veículo, que sobe com QUALQUER operação de QUALQUER reserva
+  // dele depois (mesma armadilha retroativa do bloqueio/CNH/dias em
+  // validateReservations, resolvida ali por "isUnchanged").
+  const isNewRetirada = !!operation.retirada && !(previousOperation && previousOperation.retirada);
+  if(isNewRetirada && vehicle && vehicle.odometroAtual != null && vehicle.odometroAtual !== ''){
+    const esperado = Number(vehicle.odometroAtual);
+    if(Number.isFinite(esperado)){
+      assert(
+        operation.retirada.quilometragemDivergente === true ||
+          Number(operation.retirada.quilometragem) >= esperado,
+        `A quilometragem informada é menor que o odômetro atual do veículo: ${esperado} km.`
+      );
+    }
   }
 }
 
@@ -456,7 +497,7 @@ function validateReservations(value, context){
           `ou superior. A CNH cadastrada é categoria ${driverLicense.categoria}.`);
       }
     }
-    validateOperation(reservation.operacao, previousReservation && previousReservation.operacao);
+    validateOperation(reservation.operacao, previousReservation && previousReservation.operacao, vehicle);
 
     const blockConflict = blocks.some(block =>
       String(block.local).toLowerCase() === branch.toLowerCase() &&

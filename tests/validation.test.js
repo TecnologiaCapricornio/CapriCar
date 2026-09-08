@@ -421,7 +421,7 @@ test('impede nova reserva enquanto o mesmo usuário tem devolução pendente', (
   ], context({ currentReservations:[administrativelyClosed] })));
 });
 
-function withDevolucao(condicaoLimpeza){
+function withDevolucao(condicaoLimpeza, overrides){
   return {
     quilometragem:150,
     combustivel:'Cheio',
@@ -429,7 +429,20 @@ function withDevolucao(condicaoLimpeza){
     registradoPor:'Usuário Teste',
     registradoEm:new Date().toISOString(),
     fotos:[],
-    ...(condicaoLimpeza === undefined ? {} : { condicaoLimpeza })
+    ...(condicaoLimpeza === undefined ? {} : { condicaoLimpeza }),
+    ...(overrides || {})
+  };
+}
+
+function withRetirada(overrides){
+  return {
+    quilometragem:100,
+    combustivel:'Cheio',
+    avarias:'',
+    registradoPor:'Usuário Teste',
+    registradoEm:new Date().toISOString(),
+    fotos:[],
+    ...(overrides || {})
   };
 }
 
@@ -464,4 +477,80 @@ test('devolução nova exige condição de limpeza válida; devolução antiga s
     [{ ...devolucaoAntiga, motivo:'Edição posterior' }],
     context({ currentReservations:[devolucaoAntiga] })
   ));
+});
+
+test('devolução com quilometragem menor que a retirada é recusada, mas aceita quando confirmada', () => {
+  const semDevolucao = reservation({
+    status:'concluída',
+    operacao:{ retirada:withRetirada({ quilometragem:500 }) }
+  });
+  const devolucaoMenor = {
+    ...semDevolucao,
+    operacao:{
+      retirada:semDevolucao.operacao.retirada,
+      devolucao:withDevolucao('limpo', { quilometragem:400 })
+    }
+  };
+  assert.throws(
+    () => validateReservations([devolucaoMenor], context({ currentReservations:[semDevolucao] })),
+    /quilometragem final não pode ser menor/i
+  );
+
+  const devolucaoMenorConfirmada = {
+    ...semDevolucao,
+    operacao:{
+      retirada:semDevolucao.operacao.retirada,
+      devolucao:withDevolucao('limpo', { quilometragem:400, quilometragemDivergente:true })
+    }
+  };
+  assert.doesNotThrow(() => validateReservations(
+    [devolucaoMenorConfirmada],
+    context({ currentReservations:[semDevolucao] })
+  ));
+});
+
+test('retirada nova com quilometragem menor que o odômetro atual do veículo é recusada, mas aceita quando confirmada', () => {
+  const vehicleComOdometro = [{ ...vehicles[0], odometroAtual:500 }];
+  const retiradaMenor = reservation({ operacao:{ retirada:withRetirada({ quilometragem:400 }) } });
+
+  assert.throws(
+    () => validateReservations([retiradaMenor], context({ vehicles:vehicleComOdometro })),
+    /odômetro atual/i
+  );
+
+  const retiradaMenorConfirmada = {
+    ...retiradaMenor,
+    operacao:{ retirada:withRetirada({ quilometragem:400, quilometragemDivergente:true }) }
+  };
+  assert.doesNotThrow(() => validateReservations(
+    [retiradaMenorConfirmada],
+    context({ vehicles:vehicleComOdometro })
+  ));
+
+  const retiradaMaior = reservation({ operacao:{ retirada:withRetirada({ quilometragem:600 }) } });
+  assert.doesNotThrow(() => validateReservations([retiradaMaior], context({ vehicles:vehicleComOdometro })));
+});
+
+test('retirada já registrada não é bloqueada retroativamente se o odômetro do veículo subir depois (outra operação no mesmo veículo)', () => {
+  const retiradaAntiga = reservation({ operacao:{ retirada:withRetirada({ quilometragem:400 }) } });
+  const vehicleComOdometroMaior = [{ ...vehicles[0], odometroAtual:9999 }];
+  assert.doesNotThrow(() => validateReservations(
+    [retiradaAntiga],
+    context({ vehicles:vehicleComOdometroMaior, currentReservations:[retiradaAntiga] })
+  ));
+});
+
+test('validateVehicles aceita odometroAtual opcional e recusa valor inválido', () => {
+  assert.doesNotThrow(() => validateVehicles(
+    [{ ...vehicles[0], odometroAtual:12345 }],
+    branches
+  ));
+  assert.throws(
+    () => validateVehicles([{ ...vehicles[0], odometroAtual:-1 }], branches),
+    /odômetro atual/i
+  );
+  assert.throws(
+    () => validateVehicles([{ ...vehicles[0], odometroAtual:'muito' }], branches),
+    /odômetro atual/i
+  );
 });

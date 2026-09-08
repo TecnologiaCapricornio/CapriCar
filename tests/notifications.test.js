@@ -4,6 +4,7 @@ const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
   notifyOperationReport,
+  notifyOdometerDiscrepancy,
   notifyReservationPassengerRemovals,
   reminderTypesForReservation
 } = require('../server/notifications');
@@ -189,6 +190,39 @@ test('editar a mesma reserva de novo não duplica a notificação', async () => 
   const reservation = { ...base, operacao:{ retirada:{ avarias:'Risco na lateral', fotos:[] } } };
   await notifyOperationReport(client, reservation, 'retirada', owner);
   await notifyOperationReport(client, reservation, 'retirada', owner);
+  assert.equal(client.inserted.length, 1);
+});
+
+const fleetManager = { id:'55555555-5555-4555-8555-555555555555', nome:'Gestor de Frota', role:'admin' };
+
+test('gestor de frota é notificado quando a retirada confirma quilometragem menor que o odômetro do veículo', async () => {
+  const client = dedupingNotificationClient([fleetManager.id]);
+  await notifyOdometerDiscrepancy(client, base, 'retirada', owner, 400, 500);
+  assert.equal(client.inserted.length, 1);
+  assert.equal(client.inserted[0][0], fleetManager.id);
+  assert.equal(client.inserted[0][1], 'odometer_discrepancy');
+  assert.match(client.inserted[0][3], /400 km na retirada/i);
+  assert.match(client.inserted[0][3], /menor que o esperado \(500 km\)/i);
+  assert.match(client.inserted[0][3], /verifique o odômetro/i);
+});
+
+test('gestor de frota é notificado quando a devolução confirma quilometragem menor que a retirada', async () => {
+  const client = dedupingNotificationClient([fleetManager.id]);
+  await notifyOdometerDiscrepancy(client, base, 'devolucao', owner, 400, 500);
+  assert.equal(client.inserted.length, 1);
+  assert.match(client.inserted[0][3], /devolução/i);
+});
+
+test('o próprio autor do registro não recebe a notificação de divergência de odômetro', async () => {
+  const client = dedupingNotificationClient([fleetManager.id]);
+  await notifyOdometerDiscrepancy(client, base, 'retirada', fleetManager, 400, 500);
+  assert.equal(client.inserted.length, 0);
+});
+
+test('editar a mesma reserva de novo não duplica a notificação de divergência de odômetro', async () => {
+  const client = dedupingNotificationClient([fleetManager.id]);
+  await notifyOdometerDiscrepancy(client, base, 'retirada', owner, 400, 500);
+  await notifyOdometerDiscrepancy(client, base, 'retirada', owner, 400, 500);
   assert.equal(client.inserted.length, 1);
 });
 
