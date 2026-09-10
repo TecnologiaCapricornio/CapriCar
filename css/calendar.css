@@ -1258,6 +1258,54 @@
   cursor:pointer;
 }
 
+/* Cabeçalho "yearNav": dois <select> (mês/ano) no lugar do texto fixo,
+   pra pular direto pro mês/ano certo sem clicar dezenas de vezes em
+   "próximo mês" (caso de uso: validade de CNH, até ~10 anos à frente). */
+.range-calendar-header.has-year-nav{
+  grid-template-columns:32px 1fr 32px;
+}
+
+.date-popup-monthyear-select{
+  display:flex;
+  gap:6px;
+  justify-content:center;
+}
+
+.date-popup-month-select,
+.date-popup-year-select{
+  /* width:auto é essencial aqui: a regra global "select{width:100%}" (ver
+     css/base.css) vira a flex-basis de cada <select> quando flex-basis fica
+     no "auto" padrão, e com os dois pedindo 100% do wrapper o flexbox
+     espremia o select de mês perto de 0px pra sobrar espaço pro de ano.
+     Com width:auto a base volta a ser o conteúdo, e o flex-grow abaixo
+     distribui o espaço direito. */
+  width:auto;
+  background:var(--surface-solid);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  font-size:.8rem;
+  padding:4px 6px;
+  cursor:pointer;
+}
+
+.date-popup-month-select{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.date-popup-year-select{
+  flex:0 0 auto;
+}
+
+.date-popup-month-select:hover,
+.date-popup-year-select:hover,
+.date-popup-month-select:focus,
+.date-popup-year-select:focus{
+  border-color:var(--accent);
+  outline:none;
+}
+
 .range-calendar-nav:hover{
   background:rgba(111,168,216,.14);
   color:#fff;

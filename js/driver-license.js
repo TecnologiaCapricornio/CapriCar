@@ -215,11 +215,20 @@ let cnhDatePickerReady = false;
 function ensureCnhDatePicker(){
   if(cnhDatePickerReady) return;
   cnhDatePickerReady = true;
+  const cnhAnoAtual = new Date().getFullYear();
   createDatePicker(cnhValidadeInput, document.getElementById('wrap-cnhValidade'), null, {
-    title:'Validade da CNH'
-    // Sem getMinDate: uma CNH já vencida precisa poder ser cadastrada, senão
-    // não há como registrar a situação real de quem está com o documento
-    // atrasado.
+    title:'Validade da CNH',
+    // yearNav troca o "‹ Mês de Ano ›" por dois <select> de mês/ano no
+    // cabeçalho do calendário - sem isso, cadastrar uma CNH recém-renovada
+    // (validade de até 10 anos à frente) exigia clicar dezenas de vezes em
+    // "próximo mês" só pra chegar no ano certo.
+    yearNav:true,
+    minYear:cnhAnoAtual - 10,
+    maxYear:cnhAnoAtual + 15,
+    // allowPast (e, por consequência, minYear no passado): uma CNH já
+    // vencida precisa poder ser cadastrada, senão não há como registrar a
+    // situação real de quem está com o documento atrasado.
+    allowPast:true
   });
 }
 

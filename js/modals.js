@@ -593,6 +593,36 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
     }
   }
 
+  // Pra datas distantes do mês atual (ex.: validade de CNH recém-emitida,
+  // até 10 anos no futuro), navegar só de mês em mês exigia dezenas de
+  // cliques no "›". Com settings.yearNav, a faixa "Mês de Ano" vira dois
+  // <select> - dá pra pular direto pro mês/ano certo em 2 escolhas, sem
+  // perder os botões de mês anterior/seguinte pra ajuste fino.
+  function monthYearHeaderHTML(){
+    if(!settings.yearNav){
+      return '<strong>' + MESES[viewMonth] + ' de ' + viewYear + '</strong>';
+    }
+    const currentYear = new Date().getFullYear();
+    let startYear = typeof settings.minYear === 'number' ? settings.minYear : currentYear - 5;
+    let endYear = typeof settings.maxYear === 'number' ? settings.maxYear : currentYear + 15;
+    if(viewYear < startYear) startYear = viewYear;
+    if(viewYear > endYear) endYear = viewYear;
+
+    let monthOptions = '';
+    MESES.forEach((nome, idx) => {
+      monthOptions += '<option value="' + idx + '"' + (idx === viewMonth ? ' selected' : '') + '>' +
+        escapeHTML(nome) + '</option>';
+    });
+    let yearOptions = '';
+    for(let y = startYear; y <= endYear; y++){
+      yearOptions += '<option value="' + y + '"' + (y === viewYear ? ' selected' : '') + '>' + y + '</option>';
+    }
+    return '<span class="date-popup-monthyear-select">' +
+        '<select class="date-popup-month-select" aria-label="Mês">' + monthOptions + '</select>' +
+        '<select class="date-popup-year-select" aria-label="Ano">' + yearOptions + '</select>' +
+      '</span>';
+  }
+
   function render(){
     const blocked = blockedDates() || new Set();
     const today = todayISO();
@@ -604,9 +634,9 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
                  '<div><strong>' + escapeHTML(pickerTitle()) + '</strong>' +
                  '<span>' + escapeHTML(pickerSubtitle()) + '</span></div>' +
                '</div>' +
-               '<div class="range-calendar-header">' +
+               '<div class="range-calendar-header' + (settings.yearNav ? ' has-year-nav' : '') + '">' +
                  '<button type="button" class="range-calendar-nav date-popup-nav-btn" data-nav="prev" aria-label="Mês anterior">&#8249;</button>' +
-                 '<strong>' + MESES[viewMonth] + ' de ' + viewYear + '</strong>' +
+                 monthYearHeaderHTML() +
                  '<button type="button" class="range-calendar-nav date-popup-nav-btn" data-nav="next" aria-label="Próximo mês">&#8250;</button>' +
                '</div>' +
                '<div class="range-calendar-grid date-popup-grid">';
@@ -701,6 +731,26 @@ function createDatePicker(inputEl, wrapperEl, getBlockedSetFn, options){
     window.removeEventListener('scroll', positionPopup, true);
     window.removeEventListener('resize', positionPopup);
   }
+
+  // 'change' nos <select> de mês/ano do cabeçalho (só existem quando
+  // settings.yearNav está ligado) - clique neles já é tratado (ou melhor,
+  // ignorado) pelo listener de 'click' abaixo, que não encontra nenhum dos
+  // seletores conhecidos (.date-popup-nav-btn, .date-popup-day etc.) e só
+  // retorna sem fazer nada, deixando o <select> nativo abrir normalmente.
+  popup.addEventListener('change', function(e){
+    const monthSelect = e.target.closest('.date-popup-month-select');
+    if(monthSelect){
+      viewMonth = Number(monthSelect.value);
+      render();
+      return;
+    }
+    const yearSelect = e.target.closest('.date-popup-year-select');
+    if(yearSelect){
+      viewYear = Number(yearSelect.value);
+      render();
+      return;
+    }
+  });
 
   popup.addEventListener('click', function(e){
     const clearBtn = e.target.closest('.date-popup-clear-btn');

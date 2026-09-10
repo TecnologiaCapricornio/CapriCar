@@ -98,12 +98,24 @@ const PREVIEW_TOKENS = {
   proximaData:'15/09/2026'
 };
 
+// Alguns tokens (ex.: {{mensagem}}) são compartilhados por mais de um tipo
+// de e-mail, mas com conteúdo real diferente em cada um (server/reminders.js:
+// licenseStatusMessage para cnhExpiring, maintenanceStatusMessage para
+// maintenanceDue). Um valor único em PREVIEW_TOKENS mostraria a mensagem de
+// CNH na prévia de manutenção da frota (e vice-versa) mesmo com os dois
+// templates corretos - por isso os overrides por tipo abaixo.
+const PREVIEW_TOKEN_OVERRIDES = {
+  maintenanceDue:{
+    mensagem:'Troca de óleo do Volkswagen Polo está próxima — faltam 15 dia(s).'
+  }
+};
+
 // Mesma substituição de server/reminders.js:renderTemplate - token
 // desconhecido fica visível como {{token}} em vez de sumir, que é o que
 // permite flagrar um nome digitado errado.
-function renderPreviewTemplate(template){
+function renderPreviewTemplate(template, tokens){
   return String(template || '').replace(/\{\{(\w+)\}\}/g, (match, key) =>
-    Object.prototype.hasOwnProperty.call(PREVIEW_TOKENS, key) ? String(PREVIEW_TOKENS[key]) : match
+    Object.prototype.hasOwnProperty.call(tokens, key) ? String(tokens[key]) : match
   );
 }
 
@@ -121,10 +133,12 @@ function openEmailPreview(tipo){
 
   emailPreviewTitle.textContent = REMINDER_LABELS[tipo] || 'Pré-visualização';
 
-  const assunto = renderPreviewTemplate(campos.subject.value);
+  const tokens = Object.assign({}, PREVIEW_TOKENS, PREVIEW_TOKEN_OVERRIDES[tipo] || {});
+
+  const assunto = renderPreviewTemplate(campos.subject.value, tokens);
   emailPreviewSubject.textContent = assunto || '(assunto em branco)';
 
-  const corpo = renderPreviewTemplate(campos.body.value.trim());
+  const corpo = renderPreviewTemplate(campos.body.value.trim(), tokens);
   const documento = corpo
     ? '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
