@@ -225,7 +225,14 @@ async function openOperationModal(reservationId, phase) {
     '<br>' + getVehicleDisplayHTML(reserva);
   // Condição de limpeza só existe na devolução - reset() já limpa a seleção
   // dos radios, então só falta mostrar/esconder o campo pra fase certa.
-  document.getElementById('operationCleanlinessField').classList.toggle('hidden', phase !== 'devolucao');
+  // O select fica "required" no HTML, mas quando some (retirada) o navegador
+  // ainda tentava validar esse campo escondido no submit nativo e travava o
+  // envio (não conseguia focar um campo invisível) - por isso agora também
+  // desliga o required junto com a visibilidade, e o form ganhou "novalidate"
+  // porque a validação de verdade já é feita manualmente no submit abaixo.
+  const isDevolucao = phase === 'devolucao';
+  document.getElementById('operationCleanlinessField').classList.toggle('hidden', !isDevolucao);
+  document.getElementById('operationCleanliness').required = isDevolucao;
   document.getElementById('error-operationCleanliness').textContent = '';
   // Só um lembrete visual do valor esperado agora - não trava mais o campo
   // (min dinâmico), porque um dígito a mais digitado por engano deixava a
