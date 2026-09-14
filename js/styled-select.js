@@ -313,6 +313,29 @@ function initStyledSelects(root){
   });
 }
 
+// form.reset() (chamado ao reabrir modais como "Nova Reserva") restaura o
+// <select> nativo para o valor original sem passar pelo setter de .value
+// interceptado acima e sem disparar 'change' - por isso o texto mostrado no
+// botão customizado (triggerValue) não acompanha e fica com o valor
+// anterior "grudado" (ex.: campo Partida volta a exibir "São Paulo" depois
+// de uma reserva anterior, mesmo com o <select> real já voltando a "").
+// Campos cujas opções são reconstruídas via innerHTML em vez de reset()
+// (Destino, Veículo) não sofrem disso, pois o MutationObserver de cada
+// instância já resincroniza nesse caso.
+//
+// O evento 'reset' dispara ANTES do algoritmo de reset aplicar os valores
+// (é como 'submit': só cancelável antes do efeito) - por isso a resincronia
+// roda num setTimeout(0), depois que o navegador já restaurou os valores.
+document.addEventListener('reset', function(event){
+  const form = event.target;
+  if(!(form instanceof HTMLFormElement)) return;
+  setTimeout(function(){
+    form.querySelectorAll('select').forEach(function(select){
+      if(select._styledSelect) select._styledSelect.sync();
+    });
+  }, 0);
+});
+
 // Roda assim que este script é interpretado - todo <select> do HTML já
 // existe nesse ponto (scripts ficam no fim do <body>), mesmo que as
 // <option> de muitos deles só sejam preenchidas depois, por outros
