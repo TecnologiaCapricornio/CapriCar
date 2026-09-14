@@ -273,16 +273,17 @@ function validateOperation(operation, previousOperation, vehicle){
     }
     text(record.combustivel, 'o nível de combustível', 30);
     text(record.avarias, 'as avarias', 4000, false);
-    // "Condição de limpeza" só passou a existir na devolução com esta versão -
-    // só é exigida quando a devolução está sendo registrada agora pela
-    // primeira vez (a reserva ainda não tinha devolução na versão anterior).
-    // Uma devolução antiga, já registrada antes do campo existir, continua
-    // passando mesmo que a reserva seja tocada por outro motivo depois (ex.:
-    // um admin corrigindo o motivo da viagem) - mesma armadilha do "motivo"
-    // logo acima em value.forEach, que por isso também não é obrigatório
-    // retroativamente.
+    // "Condição de limpeza" é exigida nas duas fases (também na retirada,
+    // desde esta versão) - só quando a fase está sendo registrada agora pela
+    // primeira vez (a reserva ainda não tinha essa fase na versão anterior).
+    // Um registro antigo, já feito antes do campo existir (ou antes de valer
+    // pra retirada), continua passando mesmo que a reserva seja tocada por
+    // outro motivo depois (ex.: um admin corrigindo o motivo da viagem) -
+    // mesma armadilha do "motivo" logo acima em value.forEach, que por isso
+    // também não é obrigatório retroativamente.
     const isNewDevolucao = phase === 'devolucao' && !(previousOperation && previousOperation.devolucao);
-    if(isNewDevolucao){
+    const isNewRetiradaPhase = phase === 'retirada' && !(previousOperation && previousOperation.retirada);
+    if(isNewDevolucao || isNewRetiradaPhase){
       assert(CLEANLINESS_CONDITIONS.includes(String(record.condicaoLimpeza || '')),
         'Selecione a condição de limpeza do veículo.');
     }else if(record.condicaoLimpeza){

@@ -187,6 +187,25 @@ pickupAvailabilityModal.addEventListener('click', event => {
 });
 
 
+// Quilometragem da devolução mais recente já registrada para um veículo
+// (mesmo local + código), em qualquer reserva - não só a reserva atual.
+// Usado para pré-preencher a retirada com o odômetro real deixado pela
+// última pessoa que devolveu o carro. Ordena por "registradoEm" (o
+// timestamp do próprio registro) em vez de data/horário da reserva, porque
+// é o que reflete quando a devolução de fato aconteceu.
+function lastVehicleDevolucaoKm(partida, carro, excludeReservationId){
+  const candidatos = getReservations().filter(r =>
+    String(r.id) !== String(excludeReservationId) &&
+    r.partida === partida && String(r.carro) === String(carro) &&
+    r.operacao && r.operacao.devolucao && r.operacao.devolucao.registradoEm
+  );
+  if (!candidatos.length) return null;
+  candidatos.sort((a, b) =>
+    new Date(b.operacao.devolucao.registradoEm) - new Date(a.operacao.devolucao.registradoEm));
+  const km = Number(candidatos[0].operacao.devolucao.quilometragem);
+  return Number.isFinite(km) ? km : null;
+}
+
 /* =========================================================
    Retirada e devolução
    ========================================================= */
@@ -223,29 +242,39 @@ async function openOperationModal(reservationId, phase) {
   operationTitle.textContent = phase === 'retirada' ? 'Registrar retirada' : 'Registrar devolução';
   operationSummary.innerHTML = escapeHTML(reserva.partida + ' → ' + reserva.destino) +
     '<br>' + getVehicleDisplayHTML(reserva);
-  // Condição de limpeza só existe na devolução - reset() já limpa a seleção
-  // dos radios, então só falta mostrar/esconder o campo pra fase certa.
-  // O select fica "required" no HTML, mas quando some (retirada) o navegador
-  // ainda tentava validar esse campo escondido no submit nativo e travava o
-  // envio (não conseguia focar um campo invisível) - por isso agora também
-  // desliga o required junto com a visibilidade, e o form ganhou "novalidate"
-  // porque a validação de verdade já é feita manualmente no submit abaixo.
-  const isDevolucao = phase === 'devolucao';
-  document.getElementById('operationCleanlinessField').classList.toggle('hidden', !isDevolucao);
-  document.getElementById('operationCleanliness').required = isDevolucao;
+  // Condição de limpeza é perguntada nas duas fases (retirada e devolução) -
+  // o campo em si é sempre o mesmo select, então só falta garantir que ele
+  // esteja visível e obrigatório de novo (reset() já limpa a seleção
+  // anterior). O form usa "novalidate" porque a validação de verdade já é
+  // feita manualmente no submit abaixo.
+  document.getElementById('operationCleanlinessField').classList.remove('hidden');
+  document.getElementById('operationCleanliness').required = true;
   document.getElementById('error-operationCleanliness').textContent = '';
   // Só um lembrete visual do valor esperado agora - não trava mais o campo
   // (min dinâmico), porque um dígito a mais digitado por engano deixava a
   // pessoa impedida de registrar a operação. Ver a confirmação de divergência
   // no submit, abaixo.
+  const kmInput = document.getElementById('operationKm');
   const kmHint = document.getElementById('operationKmHint');
   if (phase === 'devolucao' && operacao.retirada) {
     kmHint.textContent = 'Quilometragem na retirada: ' + Number(operacao.retirada.quilometragem || 0).toLocaleString('pt-BR') + ' km.';
   } else {
-    const vehicle = getVehicle(reserva.partida, reserva.carro);
-    kmHint.textContent = vehicle && vehicle.odometroAtual != null && vehicle.odometroAtual !== ''
-      ? 'Odômetro atual do veículo: ' + Number(vehicle.odometroAtual).toLocaleString('pt-BR') + ' km.'
-      : '';
+    // Retirada: pré-preenche com a quilometragem da última devolução
+    // registrada para este mesmo veículo (de qualquer reserva anterior) -
+    // é o valor mais confiável disponível, porque reflete o odômetro real na
+    // última vez que alguém devolveu o carro. "operationKm.value" continua
+    // editável normalmente; isto é só um ponto de partida, não uma trava.
+    const ultimaDevolucaoKm = lastVehicleDevolucaoKm(reserva.partida, reserva.carro, reservationId);
+    if (ultimaDevolucaoKm != null) {
+      kmInput.value = ultimaDevolucaoKm;
+      kmHint.textContent = 'Preenchido com a quilometragem da última devolução deste veículo (' +
+        ultimaDevolucaoKm.toLocaleString('pt-BR') + ' km) - confira antes de confirmar.';
+    } else {
+      const vehicle = getVehicle(reserva.partida, reserva.carro);
+      kmHint.textContent = vehicle && vehicle.odometroAtual != null && vehicle.odometroAtual !== ''
+        ? 'Odômetro atual do veículo: ' + Number(vehicle.odometroAtual).toLocaleString('pt-BR') + ' km.'
+        : '';
+    }
   }
   operationModal.classList.remove('hidden');
 }
@@ -310,10 +339,8 @@ operationForm.addEventListener('submit', async function (e) {
     operationError.textContent = 'Informe quilometragem e combustível.';
     return;
   }
-  const cleanlinessValue = operationPhase === 'devolucao'
-    ? document.getElementById('operationCleanliness').value
-    : '';
-  if (operationPhase === 'devolucao' && !cleanlinessValue) {
+  const cleanlinessValue = document.getElementById('operationCleanliness').value;
+  if (!cleanlinessValue) {
     document.getElementById('error-operationCleanliness').textContent = 'Selecione a condição de limpeza do veículo.';
     return;
   }
@@ -358,8 +385,8 @@ operationForm.addEventListener('submit', async function (e) {
       quilometragem: km,
       combustivel: fuel,
       avarias: document.getElementById('operationDamages').value.trim(),
-      // Só existe na devolução (ver toggle em openOperationModal). "Excesso
-      // de sujeira" conta como avaria/observação pra tudo que já reage a
+      // Perguntado nas duas fases (ver openOperationModal). "Excesso de
+      // sujeira" conta como avaria/observação pra tudo que já reage a
       // avarias/fotos (filtro "Somente com registro", notificação ao
       // responsável) - ver reservationHasOperationReport em js/utils.js e
       // notifyOperationReport em server/notifications.js.
