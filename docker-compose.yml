@@ -1,50 +1,20 @@
 name: capricar
 
 services:
-  db:
-    # Precisa bater com a versão do PostgreSQL instalado localmente (a que
-    # gerou os backups com pg_dump) - um dump feito por uma versão mais nova
-    # pode usar parâmetros que uma imagem mais antiga não reconhece (ex.:
-    # "transaction_timeout", que só existe a partir do Postgres 17).
-    image: postgres:18-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${PGDATABASE}
-      POSTGRES_USER: ${PGUSER}
-      POSTGRES_PASSWORD: ${PGPASSWORD}
-    # A partir da imagem oficial do Postgres 18, o volume é montado na pasta
-    # /var/lib/postgresql inteira (não mais só .../data) - layout novo
-    # compatível com pg_ctlcluster. Ver github.com/docker-library/postgres/pull/1259.
-    volumes:
-      - capricar_pgdata:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    # Publicado em 5433 (não 5432) para não brigar com um Postgres já
-    # instalado direto na máquina, escutando na porta padrão - é só o que
-    # permite usar as ferramentas de linha de comando locais (pg_dump/
-    # pg_restore.exe, ou "npm run db:backup"/"db:restore" fora do Docker)
-    # apontando pra cá com PGPORT=5433, o que evita o erro de versão que dá
-    # quando o pg_restore *dentro* do container (de uma imagem Postgres mais
-    # antiga que a instalada localmente) tenta ler um dump feito por um
-    # pg_dump mais novo. Sem essa necessidade, pode comentar de novo.
-    ports:
-      - "5433:5432"
-
   app:
     build: .
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      # Sobrescrevem o que estiver no .env: dentro do Compose o Postgres é
-      # o serviço "db" (resolvido pela rede interna do Docker), não
-      # "localhost", e a aplicação precisa escutar em todas as interfaces
-      # do container - não só no loopback - para o mapeamento de porta
-      # abaixo conseguir alcançá-la (ver server/config.js).
-      PGHOST: db
+      # Banco volta a ser o Postgres instalado direto na máquina (fora do
+      # Docker) - "host.docker.internal" é o nome especial que o Docker
+      # Desktop resolve pro IP do host visto de dentro do container (não dá
+      # pra usar "localhost" aqui, porque dentro do container isso apontaria
+      # pro próprio container, não pra sua máquina). PGPORT volta a ser a
+      # porta padrão (5432), já que não tem mais nenhum Postgres do Docker
+      # competindo por ela.
+      PGHOST: host.docker.internal
       PGPORT: 5432
       HOST: 0.0.0.0
       PORT: 3000
@@ -55,11 +25,12 @@ services:
       # sem isso, elas somem toda vez que o container é recriado.
       - capricar_uploads:/app/server/uploads
       - capricar_backups:/app/backups
-    depends_on:
-      db:
-        condition: service_healthy
+    # "extra_hosts" garante que "host.docker.internal" resolva mesmo fora do
+    # Docker Desktop (em Linux puro ele não vem configurado por padrão; no
+    # Windows/Mac já funciona sozinho, mas não tem problema deixar aqui).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
-  capricar_pgdata:
   capricar_uploads:
   capricar_backups:
