@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capricar-app
+  namespace: capricar
+spec:
+  # Mais de 1 réplica exige que as fotos fiquem em ReadWriteMany (já é o
+  # caso, ver 30-pvc-uploads.yaml) e que a sessão sobreviva a qualquer pod
+  # responder a requisição - confirme com o time se as sessões ficam só em
+  # memória do processo antes de subir mais de uma réplica; se sim, comece
+  # com 1 até validar isso, senão o usuário pode ser deslogado ao alternar
+  # entre pods.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: capricar-app
+  template:
+    metadata:
+      labels:
+        app: capricar-app
+    spec:
+      containers:
+        - name: capricar-app
+          # Substitua pelo caminho da imagem no seu Azure Container Registry,
+          # ex.: seuacr.azurecr.io/capricar:latest (ideal: uma tag por versão
+          # em vez de "latest", para saber exatamente o que está no ar).
+          image: SUBSTITUA.azurecr.io/capricar:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: capricar-config
+            - secretRef:
+                name: capricar-secrets
+          env:
+            # Exige TLS na conexão com o Azure Database for PostgreSQL (ver
+            # server/config.js). "require" valida o certificado com a lista
+            # de CAs públicas do Node, que já reconhece a CA da Azure.
+            - name: PGSSLMODE
+              value: "require"
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/server/uploads
+            - name: backups
+              mountPath: /app/backups
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: capricar-uploads
+        - name: backups
+          persistentVolumeClaim:
+            claimName: capricar-backups
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capricar-app
+  namespace: capricar
+spec:
+  selector:
+    app: capricar-app
+  ports:
+    - port: 80
+      targetPort: 3000

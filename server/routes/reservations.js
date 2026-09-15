@@ -20,7 +20,7 @@ const {
   notifyOdometerDiscrepancy
 } = require('../notifications');
 const { createOrUpdateCalendarEvent, deleteCalendarEvent, resolveCalendarOwner } = require('../calendar-sync');
-const { sendPassengerJoinedEmail, sendPassengerRemovalEmail } = require('../reminders');
+const { sendPassengerJoinedEmail, sendPassengerRemovalEmail, notifyDriverLicenseOnReservation } = require('../reminders');
 const { notifyRideWatchMatches, sendRideWatchMatchEmails } = require('../ride-watches');
 const { getLicensesForUsers } = require('../driver-licenses');
 
@@ -169,6 +169,7 @@ router.post('/sync', async (req, res) => {
   const passengerJoinedEmailTasks = [];
   const passengerRemovedEmailTasks = [];
   const rideWatchEmailTasks = [];
+  const cnhReminderTasks = [];
 
   await withTransaction(async client => {
     const current = await listAllReservations(client);
@@ -287,6 +288,13 @@ router.post('/sync', async (req, res) => {
           reservation:{ ...change.reservation, numeroReserva:saved.reservationNumber },
           previousGraphEventId
         });
+        // Reforça o aviso de CNH vencendo/vencida na hora da reserva (além da
+        // varredura diária) - dedupeado por reserva em notifyDriverLicenseOnReservation,
+        // então reeditar a mesma reserva não reenvia.
+        cnhReminderTasks.push({
+          userId:change.reservation.criadorUsuarioId,
+          reservationId:saved.legacyId
+        });
       }
     }
   });
@@ -325,6 +333,14 @@ router.post('/sync', async (req, res) => {
 
   for(const task of rideWatchEmailTasks){
     await sendRideWatchMatchEmails(task.reservation, task.matches);
+  }
+
+  for(const task of cnhReminderTasks){
+    try{
+      await notifyDriverLicenseOnReservation(task.userId, task.reservationId);
+    }catch(error){
+      console.error('Falha ao enviar aviso de vencimento de CNH na reserva:', error.message);
+    }
   }
 });
 

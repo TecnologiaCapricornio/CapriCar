@@ -355,6 +355,8 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const displayName = String(req.body && req.body.nome || '').trim();
+  const usernameWasSent = !!(req.body && typeof req.body.username === 'string');
+  const requestedUsername = usernameWasSent ? String(req.body.username).trim().toLowerCase() : '';
   const emailWasSent = !!(req.body && typeof req.body.email === 'string');
   const requestedEmail = emailWasSent ? String(req.body.email).trim() : '';
   const costCenterWasSent = !!(req.body && typeof req.body.centroCusto === 'string');
@@ -370,6 +372,9 @@ router.patch('/:id', async (req, res) => {
   );
   const requestedPermissions = normalizePermissions(req.body && req.body.permissions);
   if(!displayName) return res.status(400).json({ error:'Informe o nome.' });
+  if(usernameWasSent && !/^[a-z0-9._-]{3,40}$/.test(requestedUsername)){
+    return res.status(400).json({ error:'Usuário de acesso inválido.' });
+  }
   if(requestedEmail && !isValidEmail(requestedEmail)){
     return res.status(400).json({ error:'Informe um e-mail válido.' });
   }
@@ -391,6 +396,23 @@ router.patch('/:id', async (req, res) => {
       });
     }
     const isAdminAccount = current.role === 'admin';
+    // O username de contas Entra é derivado do UPN no provisionamento (ver
+    // sso.js) - mudar aqui destoaria do que o Entra manda no próximo login.
+    if(current.auth_provider === 'entra' && usernameWasSent && requestedUsername !== current.username){
+      throw Object.assign(new Error('O usuário de uma conta Entra ID é definido automaticamente e não pode ser alterado aqui.'), {
+        status:400
+      });
+    }
+    const username = usernameWasSent && current.auth_provider !== 'entra' ? requestedUsername : current.username;
+    if(username !== current.username){
+      const clash = await client.query(
+        'SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2 AND deleted_at IS NULL',
+        [username, current.id]
+      );
+      if(clash.rows[0]){
+        throw Object.assign(new Error('Já existe outro usuário com esse nome de acesso.'), { status:409 });
+      }
+    }
     // O e-mail de contas Entra é ditado pelo UPN (sincronizado no login/importação);
     // ignorar qualquer valor enviado pelo cliente para essas contas, mesmo que o
     // campo já venha desabilitado na interface.
@@ -415,6 +437,7 @@ router.patch('/:id', async (req, res) => {
     const updated = await client.query(
       `UPDATE users
           SET display_name = $2,
+              username = $17,
               email = $3,
               password_hash = COALESCE($4, password_hash),
               active = CASE WHEN role = 'admin' THEN TRUE ELSE COALESCE($5, active) END,
@@ -443,11 +466,13 @@ router.patch('/:id', async (req, res) => {
         isAdminAccount || permissions.rules,
         isAdminAccount || permissions.users,
         isAdminAccount || permissions.integrations,
-        costCenter
+        costCenter,
+        username
       ]
     );
     await audit(client, req.user.id, 'updated', current.id, {
       passwordChanged:!!password,
+      usernameChanged:username !== current.username,
       permissionsChanged:!isAdminAccount
     });
     return updated.rows[0];

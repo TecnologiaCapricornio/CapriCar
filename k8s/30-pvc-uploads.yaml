@@ -1,0 +1,20 @@
+# Guarda as fotos de CNH e de retirada/devolução (server/uploads) - o
+# equivalente ao volume "capricar_uploads" do docker-compose.yml. Usa Azure
+# Files (ReadWriteMany) em vez de disco local porque os pods podem ser
+# recriados em outro nó do cluster a qualquer momento.
+#
+# Pré-requisito: a StorageClass "azurefile-csi" já vem instalada por padrão
+# em qualquer cluster AKS - não precisa criar nada antes de aplicar isto.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: capricar-uploads
+  namespace: capricar
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  resources:
+    requests:
+      # Ajuste conforme o volume de fotos esperado (CNH + retirada/devolução).
+      storage: 5Gi

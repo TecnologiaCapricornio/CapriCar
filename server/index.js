@@ -142,8 +142,8 @@ async function runReminderSweep(){
   }
 }
 
-const server = app.listen(config.port, '127.0.0.1', () => {
-  console.log('CapriCar disponível em http://localhost:' + config.port);
+const server = app.listen(config.port, config.host, () => {
+  console.log('CapriCar disponível em http://' + config.host + ':' + config.port);
   runReminderSweep();
 });
 

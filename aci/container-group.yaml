@@ -1,0 +1,84 @@
+# Definição do Container Group para "az container create --file container-group.yaml".
+# Substitua os valores marcados com SUBSTITUA antes de aplicar.
+apiVersion: '2021-10-01'
+location: brazilsouth
+name: capricar
+properties:
+  containers:
+    - name: capricar-app
+      properties:
+        # Imagem publicada no seu Azure Container Registry.
+        image: SUBSTITUA.azurecr.io/capricar:latest
+        ports:
+          - port: 3000
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 1.0
+        environmentVariables:
+          - name: PORT
+            value: '3000'
+          - name: NODE_ENV
+            value: production
+          - name: HOST
+            value: '0.0.0.0'
+          - name: PGHOST
+            value: SUBSTITUA.postgres.database.azure.com
+          - name: PGPORT
+            value: '5432'
+          - name: PGDATABASE
+            value: capricar
+          - name: PGUSER
+            value: capricar_app
+          - name: PGSSLMODE
+            value: require
+          - name: SESSION_TTL_HOURS
+            value: '12'
+          - name: SESSION_COOKIE_SECURE
+            value: 'true'
+          - name: BACKUP_DIR
+            value: backups
+          - name: BACKUP_RETENTION_DAYS
+            value: '30'
+          - name: LOGIN_METHOD
+            value: both
+        # Variáveis sensíveis - NÃO ficam em texto puro no `az container create`,
+        # ficam como "secureValue" (não aparecem em `az container show`/logs).
+        # Preencha na hora de criar via --secure-environment-variables (ver
+        # README.md) em vez de deixar o valor real neste arquivo.
+        secureEnvironmentVariables:
+          - name: PGPASSWORD
+            secureValue: SUBSTITUA
+          - name: SETTINGS_ENCRYPTION_KEY
+            secureValue: SUBSTITUA
+          # - name: BACKUP_ENCRYPTION_KEY
+          #   secureValue: SUBSTITUA
+        volumeMounts:
+          - name: uploads
+            mountPath: /app/server/uploads
+          - name: backups
+            mountPath: /app/backups
+  osType: Linux
+  restartPolicy: OnFailure
+  ipAddress:
+    type: Public
+    ports:
+      - protocol: tcp
+        port: 3000
+    # Vira "SUBSTITUA.brazilsouth.azurecontainer.io" - único dentro da região.
+    dnsNameLabel: SUBSTITUA
+  volumes:
+    - name: uploads
+      azureFile:
+        shareName: capricar-uploads
+        storageAccountName: SUBSTITUA
+        storageAccountKey: SUBSTITUA
+    - name: backups
+      azureFile:
+        shareName: capricar-backups
+        storageAccountName: SUBSTITUA
+        storageAccountKey: SUBSTITUA
+  imageRegistryCredentials:
+    - server: SUBSTITUA.azurecr.io
+      username: SUBSTITUA
+      password: SUBSTITUA

@@ -1,0 +1,48 @@
+# Pré-requisitos (rodar uma vez no cluster, via Helm, antes de aplicar isto):
+#   1. Ingress controller:
+#      helm install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace
+#   2. cert-manager (emite o certificado HTTPS automático via Let's Encrypt):
+#      helm install cert-manager jetstack/cert-manager -n cert-manager --create-namespace --set installCRDs=true
+#   3. Um ClusterIssuer do Let's Encrypt (troque o e-mail):
+#      apiVersion: cert-manager.io/v1
+#      kind: ClusterIssuer
+#      metadata:
+#        name: letsencrypt-prod
+#      spec:
+#        acme:
+#          server: https://acme-v02.api.letsencrypt.org/directory
+#          email: SUBSTITUA@seudominio.com
+#          privateKeySecretRef:
+#            name: letsencrypt-prod
+#          solvers:
+#            - http01:
+#                ingress:
+#                  class: nginx
+#   4. Depois de aplicar este Ingress, pegue o IP público dele
+#      (kubectl get ingress -n capricar) e cria um registro DNS tipo A
+#      apontando "SUBSTITUA.seudominio.com" pra esse IP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: capricar-app
+  namespace: capricar
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m" # upload de fotos de CNH
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - SUBSTITUA.seudominio.com
+      secretName: capricar-tls
+  rules:
+    - host: SUBSTITUA.seudominio.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: capricar-app
+                port:
+                  number: 80

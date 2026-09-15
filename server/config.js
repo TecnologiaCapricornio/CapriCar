@@ -11,6 +11,18 @@ function required(name){
   return value;
 }
 
+// Provedores gerenciados (Azure Database for PostgreSQL, por exemplo) exigem
+// conexão TLS por padrão - sem isso a conexão nem chega a autenticar. Local
+// e Docker Compose não precisam (PGSSLMODE fica em branco = sem TLS). O
+// certificado da Azure é assinado por uma CA pública reconhecida pelo Node,
+// então a validação padrão já funciona; PGSSLMODE=no-verify existe só como
+// escape hatch de depuração (nunca use isso além de investigar um problema).
+function databaseSslConfig(){
+  const mode = String(process.env.PGSSLMODE || '').trim().toLowerCase();
+  if(!mode || mode === 'disable') return undefined;
+  return { rejectUnauthorized: mode !== 'no-verify' };
+}
+
 function databaseConfig(){
   return {
     host:required('PGHOST'),
@@ -18,6 +30,7 @@ function databaseConfig(){
     database:required('PGDATABASE'),
     user:required('PGUSER'),
     password:required('PGPASSWORD'),
+    ssl:databaseSslConfig(),
     max:10,
     idleTimeoutMillis:30000,
     connectionTimeoutMillis:5000
@@ -27,6 +40,15 @@ function databaseConfig(){
 function appConfig(){
   return {
     port:Number(process.env.PORT || 3000),
+    // Só aceita conexão vindo da própria máquina por padrão (loopback) -
+    // pressupõe um proxy reverso (nginx, etc.) rodando ali do lado, que é
+    // quem de fato recebe tráfego externo (ver cabeçalhos de segurança e
+    // "trust proxy" acima). Dentro de um container Docker, "127.0.0.1" é o
+    // loopback DO PRÓPRIO CONTAINER - nem o host nem um proxy em outro
+    // container conseguem alcançar isso, então o docker-compose define
+    // HOST=0.0.0.0 para o serviço da aplicação (ver docker-compose.yml).
+    // Fora do Docker, deixe HOST em branco para manter o padrão mais seguro.
+    host:String(process.env.HOST || '127.0.0.1').trim() || '127.0.0.1',
     production:process.env.NODE_ENV === 'production',
     sessionTtlHours:Math.max(1, Number(process.env.SESSION_TTL_HOURS || 12)),
     secureCookie:process.env.SESSION_COOKIE_SECURE === 'true'

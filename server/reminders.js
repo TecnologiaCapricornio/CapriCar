@@ -773,10 +773,45 @@ async function sweepEmailReminders(){
   return summary;
 }
 
+// E-mail de vencimento de CNH: o mesmo envio serve dois gatilhos - a
+// varredura periódica (sweepDriverLicenseReminders, no máximo um e-mail por
+// dia enquanto a CNH estiver "vencendo"/"vencida") e a criação de uma
+// reserva (notifyDriverLicenseOnReservation, reforçando o aviso na hora em
+// que a pessoa está agendando). Cada gatilho passa sua própria dedupe_key,
+// então um não pisa na cadência do outro.
+async function sendCnhExpiringEmail(row, status, emailConfig, dedupeKey){
+  if(!emailConfig || !emailConfig.enabled) return 'skipped';
+  if(!row.email) return 'skipped';
+  if(await alreadySent(row.user_id, dedupeKey)) return 'skipped';
+
+  const tokens = {
+    nome:row.display_name,
+    mensagem:licenseStatusMessage(status),
+    situacaoCurta:status.estado === 'vencida' ? 'está vencida' : 'está próxima do vencimento',
+    validade:formatDateBR(row.validade),
+    categoria:row.categoria || 'Não informada',
+    diasRestantes:String(status.diasRestantes)
+  };
+
+  try{
+    await sendMail({
+      to:row.email,
+      subject:renderTemplate(emailConfig.subject, tokens),
+      html:renderTemplate(emailConfig.body, tokens)
+    });
+    await recordOutcome(row.user_id, 'cnhExpiring', null, dedupeKey, 'sent', null);
+    return 'sent';
+  }catch(error){
+    await recordOutcome(row.user_id, 'cnhExpiring', null, dedupeKey, 'failed', error.message);
+    return 'failed';
+  }
+}
+
 // Varredura de vencimento de CNH. Diferente do sweep de reservas, este é
 // orientado a USUÁRIO - percorre as CNHs cadastradas, não as reservas.
-// Cria a notificação do sino e envia o e-mail, ambos governados pelo mesmo
-// marco, para o portal e a caixa de entrada nunca discordarem.
+// Cria a notificação do sino (uma vez por marco cruzado, ver
+// CNH_MILESTONES) e envia o e-mail (no máximo uma vez por dia, ver
+// sendCnhExpiringEmail) - os dois usam dedupe_key diferentes de propósito.
 async function sweepDriverLicenseReminders(){
   const summary = { scanned:0, notified:0, sent:0, skipped:0, failed:0 };
 
@@ -804,13 +839,11 @@ async function sweepDriverLicenseReminders(){
     const marco = cnhMilestoneFor(status.diasRestantes);
     if(!marco){ summary.skipped++; continue; }
 
-    const mensagem = licenseStatusMessage(status);
-    const situacaoCurta = status.estado === 'vencida' ? 'está vencida' : 'está próxima do vencimento';
     // A validade entra na chave em ISO (e não pela coerção do objeto Date, que
     // produziria "Wed Sep 30 2026 ... GMT-0300" e mudaria conforme o locale do
     // servidor). Incluí-la faz o aviso recomeçar quando a CNH é renovada.
     const validadeISO = toISODate(row.validade);
-    const dedupeKey = `cnh-expiring:${row.id}:${validadeISO}:${marco}`;
+    const notificationDedupeKey = `cnh-expiring:${row.id}:${validadeISO}:${marco}`;
 
     // Notificação no portal. O unique (user_id, dedupe_key) é quem garante o
     // "uma vez por marco"; só contamos quando a linha entrou de fato.
@@ -821,9 +854,9 @@ async function sweepDriverLicenseReminders(){
           userId:String(row.user_id),
           type:'cnh_expiring',
           title:status.estado === 'vencida' ? 'Sua CNH está vencida' : 'Sua CNH está vencendo',
-          message:mensagem,
+          message:licenseStatusMessage(status),
           reservationId:null,
-          dedupeKey,
+          dedupeKey:notificationDedupeKey,
           metadata:{ validade:validadeISO, diasRestantes:status.diasRestantes }
         });
       });
@@ -832,35 +865,48 @@ async function sweepDriverLicenseReminders(){
       console.error('Falha ao notificar vencimento de CNH:', error.message);
     }
 
-    // E-mail, se o tipo estiver habilitado em Integrações > Lembretes.
-    if(!emailConfig || !emailConfig.enabled){ summary.skipped++; continue; }
-    if(!row.email){ summary.skipped++; continue; }
-    if(await alreadySent(row.user_id, dedupeKey)){ summary.skipped++; continue; }
-
-    const tokens = {
-      nome:row.display_name,
-      mensagem,
-      situacaoCurta,
-      validade:formatDateBR(row.validade),
-      categoria:row.categoria || 'Não informada',
-      diasRestantes:String(status.diasRestantes)
-    };
-
-    try{
-      await sendMail({
-        to:row.email,
-        subject:renderTemplate(emailConfig.subject, tokens),
-        html:renderTemplate(emailConfig.body, tokens)
-      });
-      await recordOutcome(row.user_id, 'cnhExpiring', null, dedupeKey, 'sent', null);
-      summary.sent++;
-    }catch(error){
-      await recordOutcome(row.user_id, 'cnhExpiring', null, dedupeKey, 'failed', error.message);
-      summary.failed++;
-    }
+    // E-mail: no máximo um por dia, enquanto o estado continuar
+    // "vencendo"/"vencida" - a dedupe_key inclui o dia de hoje, não o marco.
+    const emailDedupeKey = `cnh-expiring-email:${row.id}:${validadeISO}:${hoje}`;
+    const outcome = await sendCnhExpiringEmail(row, status, emailConfig, emailDedupeKey);
+    if(outcome === 'sent') summary.sent++;
+    else if(outcome === 'failed') summary.failed++;
+    else summary.skipped++;
   }
 
   return summary;
+}
+
+// Reforço enviado na hora em que a pessoa faz uma reserva, além da
+// varredura diária - mesmo e-mail de vencimento de CNH, mas com uma
+// dedupe_key própria por reserva: cada reserva nova gera um aviso, mesmo
+// que a varredura periódica já tenha mandado um hoje. Chamado depois da
+// transação da reserva já confirmada (ver server/routes/reservations.js) -
+// nunca deve atrasar nem bloquear a criação da reserva em si.
+async function notifyDriverLicenseOnReservation(userId, reservationId){
+  if(!userId || !reservationId) return;
+  const result = await query(
+    `SELECT l.id, l.user_id, l.numero, l.categoria, l.validade,
+            u.email, u.display_name
+       FROM driver_licenses l
+       JOIN users u ON u.id = l.user_id
+      WHERE l.user_id = $1 AND l.validade IS NOT NULL
+        AND u.active = TRUE AND u.deleted_at IS NULL`,
+    [userId]
+  );
+  const row = result.rows[0];
+  if(!row) return;
+
+  const status = licenseStatus(
+    { numero:row.numero, categoria:row.categoria, validade:row.validade },
+    todayISO()
+  );
+  if(status.estado !== 'vencendo' && status.estado !== 'vencida') return;
+
+  const settings = await getEmailReminderSettings();
+  const validadeISO = toISODate(row.validade);
+  const emailDedupeKey = `cnh-expiring-email:${row.id}:${validadeISO}:reserva:${reservationId}`;
+  await sendCnhExpiringEmail(row, status, settings.cnhExpiring, emailDedupeKey);
 }
 
 // Varredura de manutenção da frota. Orientada a LEMBRETE (coleção
@@ -1038,6 +1084,7 @@ async function sendPassengerRemovalEmail(task){
 module.exports = {
   sweepEmailReminders,
   sweepDriverLicenseReminders,
+  notifyDriverLicenseOnReservation,
   sweepMaintenanceReminders,
   getEmailReminderSettings,
   DEFAULT_TEMPLATES,

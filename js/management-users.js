@@ -635,6 +635,7 @@ function openUserEditModal(accountId){
   userEditNameInput.value = account.nome;
   userEditNameInput.disabled = isEntra;
   userEditUsernameInput.value = account.username;
+  userEditUsernameInput.disabled = isEntra;
   userEditEmailInput.value = account.email || '';
   userEditEmailInput.disabled = isEntra;
   userEditPasswordInput.value = '';
@@ -680,11 +681,21 @@ if(userEditForm){
 
     const isEntra = editing.authProvider === 'entra';
     const nome = isEntra ? editing.nome : userEditNameInput.value.trim();
+    const username = isEntra ? editing.username : userEditUsernameInput.value.trim().toLowerCase();
     const email = isEntra ? (editing.email || '') : userEditEmailInput.value.trim();
     const password = isEntra ? '' : userEditPasswordInput.value.trim();
 
     if(!nome){
       userEditError.textContent = 'Informe o nome do usuário.';
+      return;
+    }
+    if(!isEntra && !/^[a-z0-9._-]{3,40}$/.test(username)){
+      userEditError.textContent = 'Usuário de acesso inválido (use letras minúsculas, números, ".", "_" ou "-", entre 3 e 40 caracteres).';
+      return;
+    }
+    if(!isEntra && username !== editing.username &&
+       accounts.some(account => String(account.id) !== String(editing.id) && account.username === username)){
+      userEditError.textContent = 'Já existe outro usuário com esse nome de acesso.';
       return;
     }
     if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
@@ -703,6 +714,7 @@ if(userEditForm){
         centroCusto:userEditCostCenterInput.value.trim(),
         permissions:editing.role === 'admin' ? editing.permissions : selectedUserEditPermissions()
       };
+      if(!isEntra) body.username = username;
       if(!isEntra && password) body.password = password;
 
       const result = await apiRequest('/api/users/' + encodeURIComponent(editing.id), {

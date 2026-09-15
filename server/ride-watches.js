@@ -1,7 +1,12 @@
 const { query } = require('./db');
 const { resolveVehicle } = require('./calendar-sync');
 const { ensureNotificationsTable, insertNotification, reservationSummary } = require('./notifications');
-const { getEmailReminderSettings, renderTemplate, reservationTokens, sendMail } = require('./reminders');
+const { getEmailReminderSettings, renderTemplate, reservationTokens } = require('./reminders');
+// sendMail vem direto de ./mailer (e não de ./reminders, que não reexporta
+// essa função) - reminders.js só a usa internamente, importar de lá dava
+// undefined e quebrava com "sendMail is not a function" ao enviar o aviso
+// de carona monitorada.
+const { sendMail } = require('./mailer');
 
 // Compara um monitoramento de carona (origem/destino/período, todos
 // opcionais - vazio/nulo significa "qualquer") contra uma reserva recém

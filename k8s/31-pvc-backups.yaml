@@ -1,0 +1,17 @@
+# Equivalente ao volume "capricar_backups" do docker-compose.yml - usado se
+# você rodar "npm run db:backup" de dentro do pod (ele também copia as fotos
+# de retirada/devolução, não só o dump do banco). O Flexible Server já tem
+# backup automático próprio (restauração point-in-time), então este PVC é
+# mais para os backups "manuais" do app continuarem funcionando como antes.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: capricar-backups
+  namespace: capricar
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  resources:
+    requests:
+      storage: 5Gi

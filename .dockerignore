@@ -1,0 +1,20 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.github
+.claude
+Claude outputs
+output
+backups
+server/uploads
+tests
+docs
+*.md
+!README.md
+.eslintrc*
+eslint.config.js
+db/backups

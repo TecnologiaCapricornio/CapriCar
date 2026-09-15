@@ -1,1 +1,6 @@
 *.pdf binary
+# Shell scripts rodam dentro do container Linux (ver docker/entrypoint.sh) -
+# precisam ficar com final de linha LF mesmo cloneados no Windows, senão o
+# "#!/bin/sh" da primeira linha vem com um \r no final e o container recusa
+# a rodar o script ("no such file or directory").
+*.sh text eol=lf
