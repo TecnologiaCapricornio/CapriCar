@@ -19,7 +19,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="css/variables.css?v=20260903-1">
   <link rel="stylesheet" href="css/base.css?v=20260908-1">
-  <link rel="stylesheet" href="css/components.css?v=20260908-1">
+  <link rel="stylesheet" href="css/components.css?v=20260918-5">
   <link rel="stylesheet" href="css/calendar.css?v=20260908-1">
   <link rel="stylesheet" href="css/admin.css?v=20260908-2">
   <link rel="stylesheet" href="css/responsive.css?v=20260908-2">
@@ -496,6 +496,7 @@
             <button type="button" class="admin-section-btn" data-admin-section="regras">Regras</button>
             <button type="button" class="admin-section-btn" data-admin-section="integracoes">Integrações</button>
             <button type="button" class="admin-section-btn" data-admin-section="usuarios">Usuários</button>
+            <button type="button" class="admin-section-btn" data-admin-section="checklist">Checklist</button>
           </div>
 
           <div class="admin-section-panel" id="admin-section-reservas">
@@ -1171,6 +1172,7 @@
                     <label class="permission-option"><input type="checkbox" id="permissionIntegrations">
                       Integrações</label>
                     <label class="permission-option"><input type="checkbox" id="permissionUsers"> Usuários</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionChecklist"> Checklist</label>
                   </div>
                   <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar
                     veículos.</div>
@@ -1214,6 +1216,7 @@
                   <option value="rules">Regras</option>
                   <option value="integrations">Integrações</option>
                   <option value="users">Usuários</option>
+                  <option value="checklist">Checklist</option>
                 </select>
               </div>
               <div class="field">
@@ -1238,6 +1241,53 @@
             </div>
             <div id="userAccountsList" class="management-list"></div>
             <div class="user-pagination" id="userPagination"></div>
+          </div>
+
+          <div class="admin-section-panel hidden" id="admin-section-checklist">
+            <div class="admin-subcard">
+              <h3>Checklists de retirada e devolução</h3>
+              <p class="form-hint">Checklists de retirada/devolução de todas as reservas. A permissão "Checklist"
+                dá acesso a registrar, revisar, aprovar e corrigir.</p>
+              <div class="reservation-view-tabs" aria-label="Filtrar checklists">
+                <button type="button" class="reservation-view-btn active" data-checklist-review-view="pendente">
+                  Pendente <span id="checklistPendingCount">0</span>
+                </button>
+                <button type="button" class="reservation-view-btn" data-checklist-review-view="arquivados">
+                  Arquivados <span id="checklistArchivedTabCount">0</span>
+                </button>
+              </div>
+              <div class="row admin-filter-row">
+                <div class="field">
+                  <label for="checklistFiltroLocal">Filial</label>
+                  <select id="checklistFiltroLocal">
+                    <option value="">Todas</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="checklistFiltroCarro">Veículo</label>
+                  <select id="checklistFiltroCarro">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="checklistReviewSearch">Outra busca</label>
+                  <input type="text" id="checklistReviewSearch" placeholder="Reserva, veículo ou solicitante"
+                    autocomplete="off">
+                </div>
+              </div>
+              <div id="checklistBulkActions" class="checklist-bulk-actions hidden">
+                <label class="checklist-bulk-select-all">
+                  <input type="checkbox" id="checklistSelectAllCheckbox">
+                  Selecionar todos
+                </label>
+                <div id="checklistBulkActionsRight" class="checklist-bulk-actions-right hidden">
+                  <span id="checklistBulkCount">0 selecionados</span>
+                  <button type="button" id="checklistBulkArchiveBtn" class="delete-btn">Arquivar selecionados</button>
+                  <button type="button" id="checklistBulkClearBtn" class="checklist-archived-link">Limpar seleção</button>
+                </div>
+              </div>
+              <div id="checklistReviewList" class="checklist-review-groups"></div>
+            </div>
           </div>
         </div>
   </div>
@@ -1725,6 +1775,7 @@
             <label class="permission-option"><input type="checkbox" id="editPermissionIntegrations">
               Integrações</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionChecklist"> Checklist</label>
           </div>
         </div>
 
@@ -1865,6 +1916,7 @@
             <label class="permission-option"><input type="checkbox" id="bulkPermissionIntegrations">
               Integrações</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionChecklist"> Checklist</label>
           </div>
         </div>
         <div class="error-msg" role="alert" id="userBulkPermissionsError"></div>
@@ -1935,9 +1987,34 @@
           </select>
           <div class="error-msg" role="alert" id="error-operationCleanliness"></div>
         </div>
-        <div class="field">
-          <label for="operationDamages">Avarias e observações</label>
-          <textarea id="operationDamages" rows="3" placeholder="Informe avarias existentes ou encontradas"></textarea>
+        <div class="field checkbox-field">
+          <label class="checklist-toggle-label" for="operationHasAvaria">
+            <input type="checkbox" id="operationHasAvaria">
+            Avaria no veículo.
+          </label>
+        </div>
+        <div class="hidden" id="operationChecklistSection">
+          <div class="checklist-block">
+            <div class="checklist-block-title">Onde está a avaria?</div>
+            <div class="form-hint">Toque nos pontos do veículo onde há avaria ou risco. Toque de novo para desmarcar.</div>
+            <div class="checklist-diagram-wrap" id="operationChecklistDiagram" role="group"
+              aria-label="Diagrama do veículo com as 4 vistas, com pontos numerados para marcar avarias"></div>
+            <div class="checklist-diagram-selected" id="operationChecklistDiagramSelected">Nenhum ponto marcado.</div>
+            <div class="checklist-diagram-legend" id="operationChecklistDiagramLegend"></div>
+          </div>
+          <div class="checklist-block">
+            <div class="checklist-block-title">Componentes / avarias</div>
+            <div class="checklist-legend">
+              <span class="checklist-legend-item"><span class="checklist-badge checklist-badge-c">C</span> Conforme</span>
+              <span class="checklist-legend-item"><span class="checklist-badge checklist-badge-a">A</span> Avaria — uso possível</span>
+              <span class="checklist-legend-item"><span class="checklist-badge checklist-badge-x">X</span> Avaria — impossibilita o uso</span>
+            </div>
+            <div class="checklist-components" id="operationChecklistComponents"></div>
+          </div>
+          <div class="field">
+            <label for="operationChecklistObs">Observações do checklist</label>
+            <textarea id="operationChecklistObs" rows="2" placeholder="Detalhes adicionais sobre as avarias marcadas"></textarea>
+          </div>
         </div>
         <div class="field">
           <label for="operationPhotos">Fotos (até 3, máximo 1 MB cada)</label>
@@ -2013,6 +2090,67 @@
     </div>
   </div>
 
+  <!-- Aba "Checklist" do painel de gestão — revisar/aprovar/editar o checklist
+       de uma retirada ou devolução já registrada (ver js/management-operations.js
+       -> renderChecklistManagement/openChecklistReviewModal). -->
+  <div class="modal-overlay hidden" id="checklistReviewModal">
+    <div class="modal-card checklist-review-card-modal" role="dialog" aria-modal="true"
+      aria-labelledby="checklistReviewTitle">
+      <button type="button" class="modal-close" id="checklistReviewCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="checklistReviewTitle">Checklist</h3>
+      <p class="form-hint" id="checklistReviewSubtitle"></p>
+      <div class="checklist-review-status" id="checklistReviewStatusBadge"></div>
+
+      <form id="checklistReviewForm" class="compact-form" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="checklistReviewOdometer">Quilometragem</label>
+            <input type="number" id="checklistReviewOdometer" min="0" step="1" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="checklistReviewFuel">Combustível</label>
+            <input type="text" id="checklistReviewFuel" maxlength="30" autocomplete="off">
+          </div>
+        </div>
+        <div class="field">
+          <label for="checklistReviewCleanliness">Condição de limpeza</label>
+          <select id="checklistReviewCleanliness">
+            <option value="">Não informado</option>
+            <option value="limpo">Limpo</option>
+            <option value="sujeira_interna">Sujeira interna</option>
+            <option value="sujeira_externa">Sujeira externa</option>
+          </select>
+        </div>
+
+        <h4>Diagrama do veículo</h4>
+        <div class="checklist-diagram-wrap" id="checklistReviewDiagram" role="group"
+          aria-label="Diagrama do veículo com as 4 vistas, com pontos numerados para marcar avarias"></div>
+        <div class="checklist-diagram-legend" id="checklistReviewDiagramLegend"></div>
+
+        <h4>Componentes</h4>
+        <div class="checklist-components" id="checklistReviewComponents"></div>
+
+        <h4>Fotos</h4>
+        <div class="operation-photos" id="checklistReviewPhotos"></div>
+
+        <div class="field">
+          <label for="checklistReviewAvarias">Avarias e observações (resumo)</label>
+          <textarea id="checklistReviewAvarias" rows="3" maxlength="4000"></textarea>
+        </div>
+        <div class="field">
+          <label for="checklistReviewObs">Observações do checklist</label>
+          <textarea id="checklistReviewObs" rows="3" maxlength="1000"></textarea>
+        </div>
+
+        <div class="error-msg" role="alert" id="checklistReviewError"></div>
+        <div class="user-form-actions">
+          <button type="button" class="secondary-btn" id="checklistReviewApproveBtn">Aprovar</button>
+          <button type="submit" class="submit-btn" id="checklistReviewSaveBtn">Salvar edição</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="js/reservation-defaults.js?v=20260824-1"></script>
   <script src="js/cnh-categorias.js?v=20260901-1"></script>
   <script src="js/config.js?v=20260903-1"></script>
@@ -2025,16 +2163,16 @@
   <script src="js/vehicle-recommendation.js?v=20260902-3"></script>
   <script src="js/notifications.js?v=20260826-2"></script>
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
-  <script src="js/seat-map.js?v=20260903-1"></script>
+  <script src="js/seat-map.js?v=20260918-15"></script>
   <script src="js/rides.js?v=20260903-1"></script>
   <script src="js/reservations.js?v=20260904-1"></script>
   <script src="js/calendar.js?v=20260903-2"></script>
   <script src="js/modals.js?v=20260903-2"></script>
   <script src="js/admin.js?v=20260908-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260908-1"></script>
-  <script src="js/management-config.js?v=20260908-1"></script>
-  <script src="js/management-users.js?v=20260903-1"></script>
+  <script src="js/management-operations.js?v=20260917-2"></script>
+  <script src="js/management-config.js?v=20260916-1"></script>
+  <script src="js/management-users.js?v=20260916-1"></script>
   <script src="js/management-integrations.js?v=20260908-1"></script>
   <!-- Depois de management-integrations.js: os botões são gerados a partir
        do REMINDER_FIELDS declarado lá. -->
@@ -2049,7 +2187,7 @@
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
   <script src="js/driver-license.js?v=20260903-1"></script>
-  <script src="js/auth.js?v=20260908-1"></script>
+  <script src="js/auth.js?v=20260916-1"></script>
   <script src="js/app.js?v=20260903-1"></script>
 
 </body>

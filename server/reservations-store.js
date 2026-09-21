@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { query, withTransaction } = require('./db');
-const { decodeImageDataUrl, VEHICLE_TYPES, VEHICLE_CAPACITY_LIMITS } = require('./validation');
+const { decodeImageDataUrl, VEHICLE_TYPES, VEHICLE_CAPACITY_LIMITS, validateChecklistEdit } = require('./validation');
 
 // Veículos cadastrados antes da migration 022 não têm tipo; a coluna tem
 // CHECK, então um valor vazio quebraria o espelho - por isso o padrão.
@@ -24,7 +24,13 @@ function isUuid(value){
 
 function canViewAllReservations(user){
   return user && (user.role === 'admin' || !!(user.permissions && (
-    user.permissions.reservations || user.permissions.reports || user.permissions.audit
+    user.permissions.reservations || user.permissions.reports || user.permissions.audit ||
+    // Quem tem a permissão "Checklist" (ver aba Checklist do painel de
+    // gestão) precisa enxergar toda reserva pra revisar/aprovar/editar o
+    // checklist de retirada e devolução, e também pra poder registrar a
+    // retirada/devolução de qualquer reserva em nome de outra pessoa -
+    // a mesma permissão cobre as duas coisas, não só a dela.
+    user.permissions.checklist
   )));
 }
 
@@ -257,7 +263,14 @@ async function replacePassengers(client, reservationId, passengers){
 // seguintes com a mesma fase caem no ramo "existing" e não alteram nada além
 // das fotos). Quem chama usa isso para só atualizar o odômetro do veículo
 // (ver updateVehicleOdometer) quando o valor é realmente novo.
-async function upsertOperation(client, reservationId, phase, record, actor){
+// autoApprove=true grava o checklist já aprovado (checklist_approved_by/at
+// preenchidos na hora) - usado quando quem registrou não é o dono da
+// reserva (alguém do painel de gestão, com a permissão "Checklist",
+// preenchendo em nome de outra pessoa): esse caso pula a revisão manual e
+// cai direto no Histórico. Quando é o próprio dono preenchendo pela aba
+// "Minhas Reservas", autoApprove é false e o registro entra pendente de
+// revisão, como sempre foi.
+async function upsertOperation(client, reservationId, phase, record, actor, autoApprove){
   if(!record) return { inserted:false, quilometragem:null };
   const dbPhase = phase === 'retirada' ? 'pickup' : 'return';
   const existing = await client.query(
@@ -272,11 +285,14 @@ async function upsertOperation(client, reservationId, phase, record, actor){
     const inserted_ = await client.query(
       `INSERT INTO vehicle_operations
          (reservation_id, phase, odometer_km, fuel_level, damages_notes, cleanliness_condition,
-          odometer_discrepancy_confirmed, recorded_by, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`,
+          odometer_discrepancy_confirmed, recorded_by, recorded_at, checklist,
+          checklist_approved_by, checklist_approved_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9::jsonb, $10, $11) RETURNING id`,
       [reservationId, dbPhase, Number(record.quilometragem), String(record.combustivel || ''),
         String(record.avarias || ''), record.condicaoLimpeza || null,
-        record.quilometragemDivergente === true, actor.id]
+        record.quilometragemDivergente === true, actor.id,
+        record.checklist ? JSON.stringify(record.checklist) : null,
+        autoApprove ? actor.id : null, autoApprove ? new Date() : null]
     );
     operationId = inserted_.rows[0].id;
     inserted = true;
@@ -412,8 +428,14 @@ async function persistReservation(client, reservation, actor, options){
   }
   await replacePassengers(client, reservationId, reservation.passageiros);
   const operationActor = actor || requester;
-  const retiradaResult = await upsertOperation(client, reservationId, 'retirada', reservation.operacao && reservation.operacao.retirada, operationActor);
-  const devolucaoResult = await upsertOperation(client, reservationId, 'devolucao', reservation.operacao && reservation.operacao.devolucao, operationActor);
+  // Quem preencheu o checklist decide se ele nasce pendente ou já aprovado:
+  // o próprio dono da reserva (via "Minhas Reservas") sempre passa pela
+  // revisão normal; qualquer outra pessoa (via aba Checklist do painel de
+  // gestão, com a permissão "Checklist") registrou em nome dele, então já
+  // nasce aprovado e vai direto pro Histórico.
+  const isSelfRegistration = String(operationActor.id) === String(requester.id);
+  const retiradaResult = await upsertOperation(client, reservationId, 'retirada', reservation.operacao && reservation.operacao.retirada, operationActor, !isSelfRegistration);
+  const devolucaoResult = await upsertOperation(client, reservationId, 'devolucao', reservation.operacao && reservation.operacao.devolucao, operationActor, !isSelfRegistration);
   if(retiradaResult.inserted) await updateVehicleOdometer(client, reservation, retiradaResult.quilometragem);
   if(devolucaoResult.inserted) await updateVehicleOdometer(client, reservation, devolucaoResult.quilometragem);
   return { id:reservationId, legacyId, reservationNumber };
@@ -424,11 +446,15 @@ async function loadReservationData(executor){
   const reservations = await run(
     `SELECT r.*, b.name AS branch_name,
             v.code AS vehicle_code, v.plate, v.brand, v.model, v.capacity,
-            closer.display_name AS closer_current_name
+            closer.display_name AS closer_current_name,
+            archiver_retirada.display_name AS checklist_archived_retirada_by_name,
+            archiver_devolucao.display_name AS checklist_archived_devolucao_by_name
        FROM reservations r
        JOIN branches b ON b.id = r.branch_id
        JOIN vehicles v ON v.id = r.vehicle_id
        LEFT JOIN users closer ON closer.id = r.administrative_closed_by
+       LEFT JOIN users archiver_retirada ON archiver_retirada.id = r.checklist_archived_retirada_by
+       LEFT JOIN users archiver_devolucao ON archiver_devolucao.id = r.checklist_archived_devolucao_by
       WHERE r.status <> 'cancelled'
       ORDER BY r.starts_at, r.reservation_number`
   );
@@ -440,8 +466,13 @@ async function loadReservationData(executor){
       ORDER BY reservation_id, sort_order, joined_at`, [ids]
   );
   const operations = await run(
-    `SELECT o.*, u.display_name AS recorded_by_name
-       FROM vehicle_operations o JOIN users u ON u.id = o.recorded_by
+    `SELECT o.*, u.display_name AS recorded_by_name,
+            approver.display_name AS checklist_approved_by_name,
+            editor.display_name AS checklist_edited_by_name
+       FROM vehicle_operations o
+       JOIN users u ON u.id = o.recorded_by
+       LEFT JOIN users approver ON approver.id = o.checklist_approved_by
+       LEFT JOIN users editor ON editor.id = o.checklist_edited_by
       WHERE o.reservation_id = ANY($1::uuid[])
       ORDER BY o.recorded_at`, [ids]
   );
@@ -483,6 +514,20 @@ function fullDto(row, data){
       ...(operation.odometer_discrepancy_confirmed ? { quilometragemDivergente:true } : {}),
       registradoPor:operation.recorded_by_name,
       registradoEm:operation.recorded_at,
+      ...(operation.checklist ? { checklist:operation.checklist } : {}),
+      // Estado da revisão pela aba Checklist do painel de gestão: "aprovar"
+      // só marca como revisado (quem/quando), sem outro efeito; "editar"
+      // sobrescreve os campos e registra só quem editou por último (sem
+      // manter o valor original preenchido pelo usuário).
+      aprovado:!!operation.checklist_approved_by,
+      ...(operation.checklist_approved_by ? {
+        aprovadoPor:operation.checklist_approved_by_name,
+        aprovadoEm:operation.checklist_approved_at
+      } : {}),
+      ...(operation.checklist_edited_by ? {
+        editadoPor:operation.checklist_edited_by_name,
+        editadoEm:operation.checklist_edited_at
+      } : {}),
       fotos:(data.photos.get(String(operation.id)) || []).map(photo => ({
         id:String(photo.id), nome:photo.original_name || 'foto', tipo:photo.content_type || 'image/*',
         tamanho:Number(photo.file_size_bytes || 0),
@@ -519,6 +564,24 @@ function fullDto(row, data){
       justificativa:row.administrative_closure_reason || ''
     };
   }
+  // Fases arquivadas pelo botão "Arquivar" da aba Checklist - independe de
+  // já existir retirada/devolução registrada (ver checklist_archived_* em
+  // db/migrations/031_checklist_archive.sql), por isso fica fora do bloco
+  // "operacao" acima.
+  const checklistArquivado = {};
+  if(row.checklist_archived_retirada_at){
+    checklistArquivado.retirada = {
+      registradoEm:row.checklist_archived_retirada_at,
+      registradoPor:row.checklist_archived_retirada_by_name || 'Gestão'
+    };
+  }
+  if(row.checklist_archived_devolucao_at){
+    checklistArquivado.devolucao = {
+      registradoEm:row.checklist_archived_devolucao_at,
+      registradoPor:row.checklist_archived_devolucao_by_name || 'Gestão'
+    };
+  }
+  if(Object.keys(checklistArquivado).length) dto.checklistArquivado = checklistArquivado;
   return dto;
 }
 
@@ -605,6 +668,99 @@ async function getPhotoForUser(user, legacyId, photoId){
   return photo;
 }
 
+// Aba "Checklist" do painel de gestão: aprovar ou editar um checklist de
+// retirada/devolução já registrado. Passa por fora de persistReservation/
+// sanitizeIncoming de propósito - aquele caminho trava qualquer alteração
+// numa retirada já registrada (ver server/routes/reservations.js), mesmo
+// para quem gerencia reservas, e essa trava continua valendo para todo
+// mundo; só quem tem a permissão "Checklist" (checada na rota) chega aqui.
+async function updateOperationChecklist(client, legacyId, phase, action, payload, actor){
+  const dbPhase = phase === 'retirada' ? 'pickup' : 'return';
+  const reservationRow = await client.query(
+    'SELECT id FROM reservations WHERE legacy_id = $1', [String(legacyId)]
+  );
+  if(!reservationRow.rows[0]) return null;
+  const reservationId = reservationRow.rows[0].id;
+  const existing = await client.query(
+    'SELECT id FROM vehicle_operations WHERE reservation_id = $1 AND phase = $2 FOR UPDATE',
+    [reservationId, dbPhase]
+  );
+  if(!existing.rows[0]) return null;
+  const operationId = existing.rows[0].id;
+
+  if(action === 'approve'){
+    await client.query(
+      `UPDATE vehicle_operations
+          SET checklist_approved_by = $2, checklist_approved_at = NOW()
+        WHERE id = $1`,
+      [operationId, actor.id]
+    );
+  }else if(action === 'edit'){
+    const record = payload && payload.record;
+    validateChecklistEdit(record);
+    await client.query(
+      `UPDATE vehicle_operations
+          SET odometer_km = $2, fuel_level = $3, damages_notes = $4, cleanliness_condition = $5,
+              checklist = $6::jsonb, checklist_edited_by = $7, checklist_edited_at = NOW()
+        WHERE id = $1`,
+      [
+        operationId, Number(record.quilometragem), String(record.combustivel || ''),
+        String(record.avarias || ''), record.condicaoLimpeza || null,
+        record.checklist ? JSON.stringify(record.checklist) : null, actor.id
+      ]
+    );
+  }else{
+    throw Object.assign(new Error('Ação de checklist inválida.'), { status:400 });
+  }
+
+  await client.query(
+    `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
+     VALUES ($1, $2, 'checklist', $3, $4::jsonb)`,
+    [actor.id, action === 'approve' ? 'aprovou' : 'editou', String(legacyId), JSON.stringify({
+      description:`Checklist de ${phase} da reserva ${legacyId} ${action === 'approve' ? 'aprovado' : 'editado'}`
+    })]
+  );
+
+  const data = await loadReservationData(client);
+  const row = data.rows.find(item => item.legacy_id === String(legacyId));
+  return row ? fullDto(row, data) : null;
+}
+
+// Botão "Arquivar" da aba Checklist: tira um item pendente (retirada/
+// devolução ainda sem registro, ou já registrada mas ainda sem revisão) da
+// lista normal sem preencher nem aprovar nada - fica só marcado, visível
+// numa aba discreta de arquivados. Ao contrário de updateOperationChecklist,
+// não exige que a operação já tenha sido registrada em vehicle_operations -
+// o arquivamento é por reserva+fase, direto em reservations, porque pode
+// acontecer antes mesmo do registro existir.
+async function setChecklistArchived(client, legacyId, phase, archived, actor){
+  if(!['retirada', 'devolucao'].includes(phase)){
+    throw Object.assign(new Error('Fase inválida.'), { status:400 });
+  }
+  const byColumn = phase === 'retirada' ? 'checklist_archived_retirada_by' : 'checklist_archived_devolucao_by';
+  const atColumn = phase === 'retirada' ? 'checklist_archived_retirada_at' : 'checklist_archived_devolucao_at';
+  const result = await client.query(
+    `UPDATE reservations
+        SET ${byColumn} = $2, ${atColumn} = $3
+      WHERE legacy_id = $1
+      RETURNING id`,
+    [String(legacyId), archived ? actor.id : null, archived ? new Date() : null]
+  );
+  if(!result.rows[0]) return null;
+
+  await client.query(
+    `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
+     VALUES ($1, $2, 'checklist', $3, $4::jsonb)`,
+    [actor.id, archived ? 'arquivou' : 'desarquivou', String(legacyId), JSON.stringify({
+      description:`Checklist de ${phase} da reserva ${legacyId} ${archived ? 'arquivado' : 'desarquivado'}`
+    })]
+  );
+
+  const data = await loadReservationData(client);
+  const row = data.rows.find(item => item.legacy_id === String(legacyId));
+  return row ? fullDto(row, data) : null;
+}
+
 async function migrateLegacyReservations(){
   return withTransaction(async client => {
     const fleet = await loadFleetState(client);
@@ -641,5 +797,7 @@ module.exports = {
   migrateLegacyReservations,
   normalizeName,
   publicDto,
-  isReservationParticipant
+  isReservationParticipant,
+  updateOperationChecklist,
+  setChecklistArchived
 };

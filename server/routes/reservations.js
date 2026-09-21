@@ -9,9 +9,12 @@ const {
   cancelReservation,
   getReservationGraphEventIds,
   getPhotoForUser,
-  normalizeName
+  normalizeName,
+  updateOperationChecklist,
+  setChecklistArchived
 } = require('../reservations-store');
 const { readPhotoFile } = require('../photo-storage');
+const { requirePermission } = require('../auth');
 const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
@@ -78,7 +81,40 @@ function sanitizeRemovalReason(value){
     .slice(0, 300);
 }
 
-function sanitizeIncoming(current, incoming, user, manager){
+// Igual à checagem que já existia pra "após a retirada, só a devolução/
+// encerramento pode mudar" (ver stripMutableOperation logo abaixo), mas pra
+// quem NÃO é dono nem manager: só tem permissão de tocar em operacao/status,
+// nada mais - nenhum outro campo da reserva pode vir diferente.
+function mergeOperationOnlyChange(current, incoming){
+  const stripOperation = value => {
+    const clone = JSON.parse(JSON.stringify(value));
+    delete clone.operacao;
+    delete clone.status;
+    return clone;
+  };
+  if(JSON.stringify(stripOperation(current)) !== JSON.stringify(stripOperation(incoming))){
+    throw Object.assign(new Error('Você só pode registrar a retirada ou a devolução desta reserva.'), { status:403 });
+  }
+  const currentOp = current.operacao || {};
+  const incomingOp = incoming.operacao || {};
+  if(!currentOp.retirada){
+    if(!incomingOp.retirada || incomingOp.devolucao){
+      throw Object.assign(new Error('Registre a retirada antes da devolução.'), { status:409 });
+    }
+  }else if(!currentOp.devolucao){
+    if(JSON.stringify(incomingOp.retirada || null) !== JSON.stringify(currentOp.retirada || null)){
+      throw Object.assign(new Error('A retirada já registrada não pode ser alterada por aqui.'), { status:409 });
+    }
+    if(!incomingOp.devolucao){
+      throw Object.assign(new Error('Nenhuma retirada ou devolução pendente para registrar.'), { status:409 });
+    }
+  }else{
+    throw Object.assign(new Error('Esta reserva já foi concluída.'), { status:409 });
+  }
+  return { ...current, operacao:incomingOp, status:incoming.status };
+}
+
+function sanitizeIncoming(current, incoming, user, manager, canOperateOthers){
   if(!current){
     if(!manager){
       if(incoming.criadorUsuarioId && String(incoming.criadorUsuarioId) !== String(user.id)){
@@ -89,6 +125,13 @@ function sanitizeIncoming(current, incoming, user, manager){
     return incoming;
   }
   if(!manager && !ownsReservation(current, user)){
+    // Permissão "Checklist": só entra aqui quando o pedido realmente tenta
+    // mudar operacao (ver comentário na permissão) - uma pessoa dessas ainda
+    // pode entrar/sair de carona como qualquer outra, então isso não pode
+    // "sequestrar" o fluxo de passageiro abaixo.
+    if(canOperateOthers && JSON.stringify(incoming.operacao || null) !== JSON.stringify(current.operacao || null)){
+      return mergeOperationOnlyChange(current, incoming);
+    }
     rejectPassengerPrivateChanges(current, incoming);
     if(current.operacao && current.operacao.retirada){
       throw Object.assign(new Error('Não é mais possível alterar passageiros após a retirada.'), { status:409 });
@@ -165,6 +208,13 @@ router.post('/sync', async (req, res) => {
   }
   const manager = canViewAllReservations(req.user) &&
     (req.user.role === 'admin' || !!(req.user.permissions && req.user.permissions.reservations));
+  // Permissão "Checklist": além de revisar/aprovar/editar (rota PATCH
+  // .../checklist), também dá acesso a registrar a retirada ou devolução em
+  // nome de outra pessoa - não dá acesso de manager (não pode editar/cancelar
+  // reserva de outra pessoa), só permite mudar operacao.retirada/devolucao,
+  // ver mergeOperationOnlyChange acima.
+  const canOperateOthers = req.user.role === 'admin' ||
+    !!(req.user.permissions && req.user.permissions.checklist);
   const calendarSyncTasks = [];
   const passengerJoinedEmailTasks = [];
   const passengerRemovedEmailTasks = [];
@@ -196,7 +246,7 @@ router.post('/sync', async (req, res) => {
       if(type !== 'upsert' || !change.reservation || typeof change.reservation !== 'object'){
         throw Object.assign(new Error('Alteração de reserva inválida.'), { status:400 });
       }
-      const reservation = sanitizeIncoming(previous, change.reservation, req.user, manager);
+      const reservation = sanitizeIncoming(previous, change.reservation, req.user, manager, canOperateOthers);
       nextById.set(String(reservation.id), reservation);
       prepared.push({
         type, previous, reservation,
@@ -342,6 +392,45 @@ router.post('/sync', async (req, res) => {
       console.error('Falha ao enviar aviso de vencimento de CNH na reserva:', error.message);
     }
   }
+});
+
+// Aba "Checklist" do painel de gestão (js/management-operations.js ->
+// renderChecklistManagement). Passa por fora de POST /sync de propósito:
+// sanitizeIncoming trava qualquer alteração numa retirada/devolução já
+// registrada, mesmo para admin - essa rota é o único jeito de aprovar ou
+// editar um checklist depois de enviado, e só quem tem a permissão
+// "Checklist" chega até aqui.
+router.patch('/:reservationId/operacao/:phase/checklist', requirePermission('checklist'), async (req, res) => {
+  const phase = String(req.params.phase || '');
+  if(!['retirada', 'devolucao'].includes(phase)){
+    return res.status(400).json({ error:'Fase inválida.' });
+  }
+  const action = String(req.body && req.body.action || '');
+  if(!['approve', 'edit'].includes(action)){
+    return res.status(400).json({ error:'Ação inválida.' });
+  }
+  const reservation = await withTransaction(client =>
+    updateOperationChecklist(client, req.params.reservationId, phase, action, req.body, req.user)
+  );
+  if(!reservation) return res.status(404).json({ error:'Registro operacional não encontrado.' });
+  res.json({ reservation });
+});
+
+// Botões "Arquivar"/"Desarquivar" da aba Checklist. Ao contrário da rota
+// .../checklist acima, não exige que a retirada/devolução já tenha sido
+// registrada - dá pra arquivar um item que ainda está em "Registrar
+// retirada/devolução", não só um já enviado aguardando revisão.
+router.patch('/:reservationId/operacao/:phase/archive', requirePermission('checklist'), async (req, res) => {
+  const phase = String(req.params.phase || '');
+  if(!['retirada', 'devolucao'].includes(phase)){
+    return res.status(400).json({ error:'Fase inválida.' });
+  }
+  const archived = req.body && req.body.arquivado === true;
+  const reservation = await withTransaction(client =>
+    setChecklistArchived(client, req.params.reservationId, phase, archived, req.user)
+  );
+  if(!reservation) return res.status(404).json({ error:'Reserva não encontrada.' });
+  res.json({ reservation });
 });
 
 router.get('/:reservationId/photos/:photoId', async (req, res) => {

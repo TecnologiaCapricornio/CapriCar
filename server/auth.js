@@ -65,7 +65,8 @@ function permissionsFromRow(row){
     audit:row.can_view_audit === true,
     rules:row.can_manage_rules === true,
     users:row.can_manage_users === true,
-    integrations:row.can_manage_integrations === true
+    integrations:row.can_manage_integrations === true,
+    checklist:row.can_manage_checklist === true
   };
 }
 

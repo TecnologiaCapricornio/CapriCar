@@ -21,8 +21,14 @@ const rootDir = path.join(__dirname, '..');
 const config = appConfig();
 
 app.disable('x-powered-by');
-// Aceita cabeçalhos de protocolo apenas do proxy que roda na própria máquina.
-app.set('trust proxy', 'loopback');
+// Por padrão só aceita cabeçalhos X-Forwarded-* de um proxy rodando na
+// própria máquina (loopback). Isso não cobre um proxy reverso rodando fora
+// do container (outro container, ou o host, atrás de um domínio HTTPS) -
+// nesse caso configure TRUST_PROXY no .env (ex.: "true" para confiar em
+// qualquer proxy imediato - seguro desde que a porta do app não fique
+// exposta diretamente à internet -, ou um IP/CIDR específico, como o do
+// proxy reverso).
+app.set('trust proxy', config.trustProxy);
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');

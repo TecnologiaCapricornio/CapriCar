@@ -67,14 +67,16 @@ function seatStates(tipo, capacidade, ocupantes){
    e o widget interativo (js/rides.js) já esperam. Isso é o que permite
    trocar o desenho aqui sem tocar em quem consome renderSeatMapHTML.
    ========================================================= */
-const SEAT_SVG_UNIT = 38, SEAT_SVG_GAP = 9, SEAT_SVG_ROW_GAP = 11, SEAT_SVG_PAD = 20,
-  SEAT_SVG_AISLE = 20, SEAT_SVG_AISLE_INSET = 4, SEAT_SVG_WHEEL_W = 13, SEAT_SVG_WHEEL_H = 26,
-  // TAIL precisa ser maior que o rx:26 do car-body (ver bodyRect abaixo) - com
-  // menos espaço reto que o próprio raio do canto, a curva parecia "cortada"
-  // rente ao último banco em vez de arredondar com folga (mesmo em capacidades
-  // pequenas). NOSE já tinha folga de sobra (30 > 26); TAIL foi alinhado ao
-  // mesmo padrão.
-  SEAT_SVG_NOSE = 30, SEAT_SVG_TAIL = 34, SEAT_SVG_MIRROR = 8;
+const SEAT_SVG_UNIT = 36, SEAT_SVG_GAP = 10, SEAT_SVG_ROW_GAP = 30, SEAT_SVG_PAD = 11,
+  // UNIT (tamanho do banco em si) não mexe mais pra ajustar a margem -
+  // só o PAD (espaço entre banco e parede) muda. O banco fica sempre do
+  // mesmo tamanho; o que se ajusta é o respiro ao redor dele.
+  SEAT_SVG_AISLE = 16, SEAT_SVG_AISLE_INSET = 4, SEAT_SVG_WHEEL_W = 12, SEAT_SVG_WHEEL_H = 28,
+  // NOSE um pouco maior que TAIL (capô à frente), mas sem exagero - exagerar
+  // aqui espremia as fileiras de banco entre si e as jogava perto demais do
+  // eixo traseiro. ROW_GAP maior é o que separa de fato o banco da frente
+  // do resto (e cada fileira da próxima).
+  SEAT_SVG_NOSE = 36, SEAT_SVG_TAIL = 30;
 
 // Posição x de cada COLUNA da fileira padrão (porFileira[1]), corredor
 // incluso - fixa, não depende de quantos lugares a fileira atual realmente
@@ -100,17 +102,17 @@ function seatIconSVG(estado){
   if(estado === 'motorista'){
     // Volante de 3 raios (aro + raios + cubo central) - um deles para
     // baixo, dois em diagonal para cima, como um volante de verdade.
-    return '<g class="seat-icon icon-motorista" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">' +
-      '<circle r="9" fill="none"/>' +
-      '<path d="M0,0 L0,9 M0,0 L7.8,-4.5 M0,0 L-7.8,-4.5"/>' +
-      '<circle r="2.4" fill="currentColor" stroke="none"/></g>';
+    return '<g class="seat-icon icon-motorista" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+      '<circle r="8.2" fill="none"/>' +
+      '<path d="M0,0 L0,8.2 M0,0 L7.1,-4.1 M0,0 L-7.1,-4.1"/>' +
+      '<circle r="2.3" fill="currentColor" stroke="none"/></g>';
   }
   if(estado === 'ocupado'){
     return '<g class="seat-icon icon-ocupado" fill="currentColor">' +
-      '<circle cx="0" cy="-6" r="5"/><path d="M-9,9 A9,8 0 0 1 9,9 Z"/></g>';
+      '<circle cx="0" cy="-5.5" r="4.6"/><path d="M-8.3,8.3 A8.3,7.4 0 0 1 8.3,8.3 Z"/></g>';
   }
-  return '<g class="seat-icon icon-livre" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">' +
-    '<path d="M0,-7 L0,7 M-7,0 L7,0"/></g>';
+  return '<g class="seat-icon icon-livre" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">' +
+    '<path d="M0,-6.4 L0,6.4 M-6.4,0 L6.4,0"/></g>';
 }
 
 // Monta o SVG do veículo: contorno + rodas + para-brisa + corredor (quando
@@ -159,7 +161,7 @@ function renderVehicleSVG(tipo, capacidade, ocupantes){
         : (estado === 'ocupado' ? 'Lugar ocupado' : 'Lugar livre');
       seatsSvg += '<g class="seat seat-' + estado + '" role="img" aria-label="' + escapeHTML(titulo) + '">' +
         '<title>' + escapeHTML(titulo) + '</title>' +
-        '<rect x="' + x + '" y="' + y + '" width="' + SEAT_SVG_UNIT + '" height="' + SEAT_SVG_UNIT + '" rx="10"/>' +
+        '<rect x="' + x + '" y="' + y + '" width="' + SEAT_SVG_UNIT + '" height="' + SEAT_SVG_UNIT + '" rx="5"/>' +
         '<g transform="translate(' + (x + SEAT_SVG_UNIT / 2) + ',' + (y + SEAT_SVG_UNIT / 2) + ')">' + seatIconSVG(estado) + '</g>' +
         '</g>';
     });
@@ -173,26 +175,26 @@ function renderVehicleSVG(tipo, capacidade, ocupantes){
     }
   });
 
-  const glassW = maxRowW * 0.5;
-  const glassX = bodyX + (bodyW - glassW) / 2;
-  const wheelFrontY = SEAT_SVG_NOSE + SEAT_SVG_PAD + SEAT_SVG_UNIT * 0.15;
-  const wheelBackY = bodyH - SEAT_SVG_TAIL - SEAT_SVG_PAD - SEAT_SVG_UNIT * 0.15 - SEAT_SVG_WHEEL_H;
-  // As rodas ficam quase todas para fora do contorno - só uma borda fina
-  // encosta no corpo, então o traço do contorno nunca corta a roda ao meio.
-  const wheelOverlap = 2;
+  // Posição fixa perto do topo/base da carroceria, com uma margem (não
+  // coladas na borda) - não amarrada à fileira de banco mais próxima.
+  // Amarrada à fileira, com fileiras coladas (poucos lugares) as duas rodas
+  // acabavam quase encostadas uma na outra; assim o "eixo" fica sempre bem
+  // aberto, não importa quantas fileiras existam.
+  const wheelMargin = 28;
+  const wheelFrontY = wheelMargin;
+  const wheelBackY = bodyH - wheelMargin - SEAT_SVG_WHEEL_H;
+  // A roda fica encostada por fora do contorno, sem afundar pra dentro -
+  // só toca a borda, não invade a carroceria.
+  const wheelOverlap = 0;
+  const wheelRx = 4;
   const wheelsSvg =
-    '<rect class="car-wheel" x="' + (bodyX - SEAT_SVG_WHEEL_W + wheelOverlap) + '" y="' + wheelFrontY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="4"/>' +
-    '<rect class="car-wheel" x="' + (bodyX + bodyW - wheelOverlap) + '" y="' + wheelFrontY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="4"/>' +
-    '<rect class="car-wheel" x="' + (bodyX - SEAT_SVG_WHEEL_W + wheelOverlap) + '" y="' + wheelBackY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="4"/>' +
-    '<rect class="car-wheel" x="' + (bodyX + bodyW - wheelOverlap) + '" y="' + wheelBackY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="4"/>';
-  const mirrorsSvg =
-    '<rect class="car-mirror" x="' + (bodyX - SEAT_SVG_MIRROR * 0.9) + '" y="' + (SEAT_SVG_NOSE + 6) + '" width="' + SEAT_SVG_MIRROR + '" height="' + (SEAT_SVG_MIRROR * 0.6) + '" rx="2"/>' +
-    '<rect class="car-mirror" x="' + (bodyX + bodyW - SEAT_SVG_MIRROR * 0.1) + '" y="' + (SEAT_SVG_NOSE + 6) + '" width="' + SEAT_SVG_MIRROR + '" height="' + (SEAT_SVG_MIRROR * 0.6) + '" rx="2"/>';
-
+    '<rect class="car-wheel" x="' + (bodyX - SEAT_SVG_WHEEL_W + wheelOverlap) + '" y="' + wheelFrontY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="' + wheelRx + '"/>' +
+    '<rect class="car-wheel" x="' + (bodyX + bodyW - wheelOverlap) + '" y="' + wheelFrontY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="' + wheelRx + '"/>' +
+    '<rect class="car-wheel" x="' + (bodyX - SEAT_SVG_WHEEL_W + wheelOverlap) + '" y="' + wheelBackY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="' + wheelRx + '"/>' +
+    '<rect class="car-wheel" x="' + (bodyX + bodyW - wheelOverlap) + '" y="' + wheelBackY + '" width="' + SEAT_SVG_WHEEL_W + '" height="' + SEAT_SVG_WHEEL_H + '" rx="' + wheelRx + '"/>';
   return '<svg width="' + totalW + '" height="' + bodyH + '" viewBox="0 0 ' + totalW + ' ' + bodyH + '" aria-hidden="true" focusable="false">' +
-    '<rect class="car-body" x="' + bodyX + '" y="0" width="' + bodyW + '" height="' + bodyH + '" rx="26"/>' +
-    wheelsSvg + mirrorsSvg +
-    '<rect class="car-glass" x="' + glassX + '" y="' + (SEAT_SVG_NOSE * 0.35) + '" width="' + glassW + '" height="' + (SEAT_SVG_NOSE * 0.5) + '" rx="8"/>' +
+    '<rect class="car-body" x="' + bodyX + '" y="0" width="' + bodyW + '" height="' + bodyH + '" rx="14"/>' +
+    wheelsSvg +
     aisleSvg + seatsSvg +
     '</svg>';
 }

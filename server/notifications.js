@@ -337,7 +337,12 @@ async function notifyOperationReport(client, reservation, phase, actor){
   // sujeira (ver mesmo critério em reservationHasOperationReport, js/utils.js).
   const dirtyCondition = record.condicaoLimpeza === 'sujeira_interna' ? 'interna'
     : (record.condicaoLimpeza === 'sujeira_externa' ? 'externa' : null);
-  if(!hasAvarias && !photoCount && !dirtyCondition) return;
+  // Checklist de avaria preenchido (ver js/management-operations.js) - seu
+  // resumo já vai anexado a "avarias" acima na maioria dos casos, mas confere
+  // aqui também por segurança (checklist aberto sem nada marcado ainda é
+  // relevante pra quem cuida da frota saber que foi conferido).
+  const hasChecklist = !!record.checklist;
+  if(!hasAvarias && !photoCount && !dirtyCondition && !hasChecklist) return;
 
   await ensureNotificationsTable(client);
   const recipients = await resolveReservationManagers(client);
@@ -346,6 +351,11 @@ async function notifyOperationReport(client, reservation, phase, actor){
   const parts = [];
   if(dirtyCondition) parts.push(`excesso de sujeira ${dirtyCondition}`);
   if(hasAvarias) parts.push('uma observação');
+  // Cai aqui só quando o checklist foi aberto mas nada foi marcado nele nem
+  // escrito no campo de observações - o resumo do checklist normalmente já
+  // vai dentro de "avarias" (ver js/management-operations.js), então isto é
+  // só pra garantir que "parts" nunca fique vazio nesse caso raro.
+  if(hasChecklist && !hasAvarias) parts.push('um checklist de avaria');
   if(photoCount) parts.push(photoCount + (photoCount === 1 ? ' foto' : ' fotos'));
   const message = `${actor.nome} registrou ${parts.join(' e ')} na ${phaseLabel} de ${summary.route}.`;
 

@@ -29,7 +29,8 @@ function normalizeUserPermissions(permissions){
     audit:source.audit === true,
     rules:source.rules === true,
     users:source.users === true,
-    integrations:source.integrations === true
+    integrations:source.integrations === true,
+    checklist:source.checklist === true
   };
 }
 
@@ -96,7 +97,7 @@ function hasManagementPermission(permission){
 }
 
 function canAccessManagement(){
-  return isAdmin() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'integrations'].some(hasManagementPermission);
+  return isAdmin() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'integrations', 'checklist'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
@@ -139,6 +140,22 @@ function canManageIntegrations(){
   return hasManagementPermission('integrations');
 }
 
+// Dá acesso à aba Checklist do painel de gestão: ver, aprovar e editar os
+// checklists já enviados, e também registrar a retirada ou devolução de
+// qualquer reserva em nome de outra pessoa - usada pelo setor que faz esse
+// registro no lugar de quem reservou, em filiais onde não é a própria
+// pessoa que retira/devolve o carro.
+function canManageChecklist(){
+  return hasManagementPermission('checklist');
+}
+
+// Mantido como alias: várias funções em js/management-operations.js chamam
+// canRegisterOperations() pra decidir quem pode registrar retirada/devolução
+// de reserva alheia - a permissão é a mesma de canManageChecklist().
+function canRegisterOperations(){
+  return canManageChecklist();
+}
+
 function canAccessAdminSection(section){
   if(isAdmin()) return true;
   // "reservas" mostra a lista operacional (permissão "reservations") e os
@@ -160,7 +177,8 @@ function canAccessAdminSection(section){
     relatorios:'reports',
     regras:'rules',
     usuarios:'users',
-    integracoes:'integrations'
+    integracoes:'integrations',
+    checklist:'checklist'
   };
   return !!permissionBySection[section] && hasManagementPermission(permissionBySection[section]);
 }
@@ -190,7 +208,7 @@ const profileName = document.getElementById('profileName');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','auditoria','relatorios','regras','integracoes','usuarios'];
+  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','auditoria','relatorios','regras','integracoes','usuarios','checklist'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');

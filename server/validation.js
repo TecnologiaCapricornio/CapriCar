@@ -258,6 +258,52 @@ function scheduledPickupTimestamp(reservation){
 }
 
 const CLEANLINESS_CONDITIONS = ['limpo', 'sujeira_interna', 'sujeira_externa'];
+const CHECKLIST_STATUSES = ['C', 'A', 'X'];
+
+// Validação do checklist de avaria opcional (ver js/management-operations.js
+// pro formulário e a lista completa de pontos/componentes). Não trava nos
+// ids exatos esperados de cada lado (ficaria frágil a qualquer ajuste futuro
+// no diagrama/lista de componentes) - só garante formato e tamanhos
+// razoáveis, o suficiente pra impedir abuso.
+function validateChecklist(checklist){
+  if(checklist == null) return;
+  assert(typeof checklist === 'object' && !Array.isArray(checklist), 'Checklist de avaria inválido.');
+  const areas = checklist.areas;
+  if(areas !== undefined){
+    assert(Array.isArray(areas) && areas.length <= 40, 'Lista de pontos do checklist inválida.');
+    areas.forEach(area => text(area, 'um ponto marcado no checklist', 60));
+  }
+  const componentes = checklist.componentes;
+  if(componentes !== undefined){
+    assert(componentes && typeof componentes === 'object' && !Array.isArray(componentes),
+      'Lista de componentes do checklist inválida.');
+    const keys = Object.keys(componentes);
+    assert(keys.length <= 40, 'Lista de componentes do checklist excede o limite permitido.');
+    keys.forEach(key => {
+      assert(key.length <= 60, 'Chave de componente do checklist inválida.');
+      assert(CHECKLIST_STATUSES.includes(componentes[key]),
+        'Status de componente do checklist inválido.');
+    });
+  }
+  text(checklist.observacoes, 'as observações do checklist', 1000, false);
+}
+
+// Validação dos campos que quem tem a permissão "Checklist" pode sobrescrever
+// numa retirada/devolução já registrada (painel de gestão > aba Checklist).
+// Mesmas regras de validateOperation pra esses campos, sem exigir
+// registradoPor/registradoEm/fotos (não fazem parte da edição).
+function validateChecklistEdit(record){
+  assert(record && typeof record === 'object' && !Array.isArray(record), 'Registro inválido.');
+  assert(Number.isInteger(Number(record.quilometragem)) && Number(record.quilometragem) >= 0,
+    'A quilometragem deve ser um número inteiro positivo.');
+  text(record.combustivel, 'o nível de combustível', 30);
+  text(record.avarias, 'as avarias', 4000, false);
+  validateChecklist(record.checklist);
+  if(record.condicaoLimpeza){
+    assert(CLEANLINESS_CONDITIONS.includes(String(record.condicaoLimpeza)),
+      'Condição de limpeza inválida.');
+  }
+}
 
 function validateOperation(operation, previousOperation, vehicle){
   if(!operation) return;
@@ -273,6 +319,7 @@ function validateOperation(operation, previousOperation, vehicle){
     }
     text(record.combustivel, 'o nível de combustível', 30);
     text(record.avarias, 'as avarias', 4000, false);
+    validateChecklist(record.checklist);
     // "Condição de limpeza" é exigida nas duas fases (também na retirada,
     // desde esta versão) - só quando a fase está sendo registrada agora pela
     // primeira vez (a reserva ainda não tinha essa fase na versão anterior).
@@ -572,5 +619,6 @@ module.exports = {
   // Reaproveitados por server/driver-licenses.js - exportar evita que a
   // validação de data e a de mensagem de erro sigam caminhos diferentes.
   assert,
-  validDate
+  validDate,
+  validateChecklistEdit
 };

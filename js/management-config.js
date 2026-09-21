@@ -24,6 +24,7 @@ function renderAdminSection(section){
   if(section === 'regras') renderReservationRules();
   if(section === 'integracoes') renderIntegrationsManagement();
   if(section === 'usuarios') renderUserManagement();
+  if(section === 'checklist') renderChecklistManagement();
 }
 
 if(adminSectionTabs){

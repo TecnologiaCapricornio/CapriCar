@@ -19,7 +19,12 @@ function reservationHasOperationReport(reservation){
       // Quilometragem menor que o esperado, confirmada pelo usuário (ver
       // notifyOdometerDiscrepancy em server/notifications.js) - também merece
       // aparecer no filtro "Somente com registro".
-      record.quilometragemDivergente === true;
+      record.quilometragemDivergente === true ||
+      // Checklist de avaria preenchido (ver js/management-operations.js) -
+      // seu resumo já vai anexado a "avarias" acima, mas confere aqui
+      // também por segurança (ex.: checklist aberto sem nenhum item marcado
+      // ainda merece aparecer no filtro "Somente com registro").
+      !!record.checklist;
   });
 }
 

@@ -411,6 +411,7 @@ function refreshBranchSelectors(){
   if(typeof populateDestinoOptions === 'function') populateDestinoOptions();
   if(typeof populateAdminDestinoOptions === 'function') populateAdminDestinoOptions();
   if(typeof populateAdminFilters === 'function') populateAdminFilters();
+  if(typeof populateChecklistFilters === 'function') populateChecklistFilters();
   populateManagementVehicleSelectors();
 }
 

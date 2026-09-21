@@ -13,7 +13,7 @@ const USER_SELECT = `
   SELECT id, username, display_name, email, role, active, auth_provider,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports, can_view_audit,
-         can_manage_rules, can_manage_users, can_manage_integrations,
+         can_manage_rules, can_manage_users, can_manage_integrations, can_manage_checklist,
          cost_center, created_at, updated_at
     FROM users
    WHERE deleted_at IS NULL`;
@@ -30,7 +30,8 @@ function normalizePermissions(value){
     audit:permissions.audit === true,
     rules:permissions.rules === true,
     users:permissions.users === true,
-    integrations:permissions.integrations === true
+    integrations:permissions.integrations === true,
+    checklist:permissions.checklist === true
   };
 }
 
@@ -47,7 +48,7 @@ const MAX_BULK_IDS = 2000;
 const PERMISSION_LABELS = {
   reservations:'Reservas', branches:'Locais', fleet:'Veículos', maintenance:'Manutenção',
   blocks:'Bloqueios', reports:'Relatórios', audit:'Auditoria', rules:'Regras', users:'Usuários',
-  integrations:'Integrações'
+  integrations:'Integrações', checklist:'Checklist'
 };
 
 async function deactivateUserCore(client, actorId, targetId){
@@ -117,6 +118,7 @@ async function deleteUserCore(client, actorId, targetId, justification){
             can_manage_rules = FALSE,
             can_manage_users = FALSE,
             can_manage_integrations = FALSE,
+            can_manage_checklist = FALSE,
             deleted_at = NOW(),
             deleted_by = $4,
             deletion_reason = $5,
@@ -152,13 +154,14 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
             can_view_audit = $8,
             can_manage_rules = $9,
             can_manage_users = $10,
-            can_manage_integrations = $11
+            can_manage_integrations = $11,
+            can_manage_checklist = $12
       WHERE id = $1`,
     [
       targetId,
       permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
       permissions.blocks, permissions.reports, permissions.audit, permissions.rules, permissions.users,
-      permissions.integrations
+      permissions.integrations, permissions.checklist
     ]
   );
   await audit(client, actorId, 'updated', targetId, {
@@ -335,15 +338,15 @@ router.post('/', async (req, res) => {
          username, display_name, email, password_hash, role, active,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports,
-         can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations,
+         can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations, can_manage_checklist,
          cost_center
-       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NULLIF($15, ''))
+       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NULLIF($16, ''))
        RETURNING *`,
       [
         username, displayName, email || null, passwordHash,
         permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
         permissions.blocks, permissions.reports,
-        permissions.audit, permissions.rules, permissions.users, permissions.integrations,
+        permissions.audit, permissions.rules, permissions.users, permissions.integrations, permissions.checklist,
         costCenter
       ]
     );
@@ -432,12 +435,13 @@ router.patch('/:id', async (req, res) => {
       audit:current.can_view_audit,
       rules:current.can_manage_rules,
       users:current.can_manage_users,
-      integrations:current.can_manage_integrations
+      integrations:current.can_manage_integrations,
+      checklist:current.can_manage_checklist
     };
     const updated = await client.query(
       `UPDATE users
           SET display_name = $2,
-              username = $17,
+              username = $18,
               email = $3,
               password_hash = COALESCE($4, password_hash),
               active = CASE WHEN role = 'admin' THEN TRUE ELSE COALESCE($5, active) END,
@@ -451,6 +455,7 @@ router.patch('/:id', async (req, res) => {
               can_manage_rules = CASE WHEN role = 'admin' THEN TRUE ELSE $13 END,
               can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $14 END,
               can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $15 END,
+              can_manage_checklist = CASE WHEN role = 'admin' THEN TRUE ELSE $17 END,
               cost_center = $16
         WHERE id = $1
         RETURNING *`,
@@ -467,6 +472,7 @@ router.patch('/:id', async (req, res) => {
         isAdminAccount || permissions.users,
         isAdminAccount || permissions.integrations,
         costCenter,
+        isAdminAccount || permissions.checklist,
         username
       ]
     );
@@ -550,6 +556,8 @@ router.delete('/:id', async (req, res) => {
               can_view_audit = FALSE,
               can_manage_rules = FALSE,
               can_manage_users = FALSE,
+              can_manage_integrations = FALSE,
+              can_manage_checklist = FALSE,
               deleted_at = NOW(),
               deleted_by = $4,
               deletion_reason = $5,

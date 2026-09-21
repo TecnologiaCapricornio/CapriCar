@@ -21,11 +21,52 @@
 
 .admin-section-tabs{
   display:flex;
-  gap:8px;
-  overflow-x:auto;
+  flex-wrap:nowrap;
+  gap:6px;
   padding-bottom:10px;
   margin-bottom:22px;
   border-bottom:1px solid rgba(111,168,216,.2);
+}
+
+.admin-section-tabs .admin-section-btn{
+  flex:1 1 auto;
+  min-width:0;
+  padding:8px 10px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+@media (max-width:900px){
+  .admin-section-tabs{
+    gap:4px;
+  }
+  .admin-section-tabs .admin-section-btn{
+    padding:7px 6px;
+    font-size:12px;
+  }
+}
+
+/* Em celular, com 10 abas, espremer tudo numa linha só (regra acima) deixa
+   cada botão com espaço pra só uma letra - em vez de continuar encolhendo,
+   volta a rolar horizontalmente aqui, mas sem a barra de rolagem visível
+   (o dedo ainda arrasta normalmente), pra manter o rótulo de cada aba
+   legível por inteiro. */
+@media (max-width:600px){
+  .admin-section-tabs{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .admin-section-tabs::-webkit-scrollbar{
+    display:none;
+  }
+  .admin-section-tabs .admin-section-btn{
+    flex:0 0 auto;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:nowrap;
+  }
 }
 
 .admin-section-btn,
@@ -901,4 +942,120 @@
   max-width:680px;
   width:min(680px, calc(100vw - 32px));
   text-align:left;
+}
+
+/* Modal de revisão de checklist (aba Checklist do painel de gestão): precisa
+   de espaço pro diagrama de 4 vistas + a lista de componentes, igual ao
+   formulário de retirada/devolução. */
+.modal-card.checklist-review-card-modal{
+  max-width:560px;
+  width:min(560px, calc(100vw - 32px));
+  text-align:left;
+}
+
+.checklist-review-status{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:4px 0 12px;
+}
+
+/* Aba Checklist: em vez de uma lista única, os registros aparecem separados
+   em grupos - Retirada / Devolução pendentes de revisão, e Aprovados
+   (juntando as duas fases já revisadas) -, cada um com seu próprio título
+   e contador. */
+.checklist-review-groups{
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+
+.checklist-review-group-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 10px;
+  font-size:var(--fs-sm);
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:.03em;
+}
+
+/* Estilo de link discreto (texto sublinhado, sem fundo) - hoje usado só no
+   botão "Limpar seleção" da barra de seleção em massa; a aba "Arquivados"
+   agora é uma das duas pills (não precisa mais de um link separado). */
+.checklist-archived-link{
+  border:none;
+  background:none;
+  padding:2px 0;
+  color:var(--text-muted);
+  font-size:var(--fs-2xs);
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+.checklist-archived-link:hover{
+  color:var(--azul-claro);
+}
+
+/* Checkbox de seleção em cada card pendente (checklist-select-checkbox) +
+   barra "Selecionar todos" / "Arquivar selecionados" acima da lista - só
+   aparece na visão Pendente, com pelo menos um item selecionável. */
+.management-item-select{
+  display:flex;
+  align-items:center;
+  flex:0 0 auto;
+}
+
+.management-item-select input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  cursor:pointer;
+  accent-color:var(--azul-claro);
+}
+
+.management-item-info{
+  flex:1;
+  min-width:0;
+}
+
+.checklist-bulk-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 12px;
+  padding:9px 12px;
+  background:rgba(111,168,216,.06);
+  border:1px solid rgba(111,168,216,.16);
+  border-radius:var(--radius-sm);
+}
+
+.checklist-bulk-select-all{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:var(--fs-sm);
+  color:var(--texto);
+  cursor:pointer;
+}
+
+.checklist-bulk-select-all input[type="checkbox"]{
+  width:17px;
+  height:17px;
+  cursor:pointer;
+  accent-color:var(--azul-claro);
+}
+
+.checklist-bulk-actions-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-size:var(--fs-sm);
+  color:var(--text-muted);
+}
+
+.checklist-bulk-actions-right .checklist-archived-link{
+  padding:0;
 }

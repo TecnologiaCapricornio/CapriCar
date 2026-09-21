@@ -37,9 +37,24 @@ function databaseConfig(){
   };
 }
 
+// Traduz TRUST_PROXY do .env pro formato que o Express espera em
+// "trust proxy": "true"/"false" viram booleano de verdade (passar a string
+// literal "true" pro Express não funciona - ele tentaria interpretar como
+// endereço IP); qualquer outro valor (IP, CIDR, ou uma lista deles separada
+// por vírgula) passa direto. Sem a variável definida, mantém o padrão
+// seguro de só confiar em um proxy rodando na própria máquina.
+function trustProxyConfig(){
+  const value = String(process.env.TRUST_PROXY || '').trim();
+  if(!value) return 'loopback';
+  if(value.toLowerCase() === 'true') return true;
+  if(value.toLowerCase() === 'false') return false;
+  return value;
+}
+
 function appConfig(){
   return {
     port:Number(process.env.PORT || 3000),
+    trustProxy:trustProxyConfig(),
     // Só aceita conexão vindo da própria máquina por padrão (loopback) -
     // pressupõe um proxy reverso (nginx, etc.) rodando ali do lado, que é
     // quem de fato recebe tráfego externo (ver cabeçalhos de segurança e

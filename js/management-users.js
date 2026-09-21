@@ -42,7 +42,8 @@ const userPermissionInputs = {
   audit:document.getElementById('permissionAudit'),
   rules:document.getElementById('permissionRules'),
   users:document.getElementById('permissionUsers'),
-  integrations:document.getElementById('permissionIntegrations')
+  integrations:document.getElementById('permissionIntegrations'),
+  checklist:document.getElementById('permissionChecklist')
 };
 const bulkPermissionInputs = {
   reservations:document.getElementById('bulkPermissionReservations'),
@@ -54,7 +55,8 @@ const bulkPermissionInputs = {
   audit:document.getElementById('bulkPermissionAudit'),
   rules:document.getElementById('bulkPermissionRules'),
   users:document.getElementById('bulkPermissionUsers'),
-  integrations:document.getElementById('bulkPermissionIntegrations')
+  integrations:document.getElementById('bulkPermissionIntegrations'),
+  checklist:document.getElementById('bulkPermissionChecklist')
 };
 let userDeleteId = null;
 let userDeleteMode = 'single'; // 'single' | 'bulk'
@@ -82,7 +84,8 @@ const USER_PERMISSION_LABELS = {
   reports:'Relatórios',
   rules:'Regras',
   integrations:'Integrações',
-  users:'Usuários'
+  users:'Usuários',
+  checklist:'Checklist'
 };
 
 function selectedUserPermissions(){
@@ -601,7 +604,8 @@ const userEditPermissionInputs = {
   reports:document.getElementById('editPermissionReports'),
   rules:document.getElementById('editPermissionRules'),
   integrations:document.getElementById('editPermissionIntegrations'),
-  users:document.getElementById('editPermissionUsers')
+  users:document.getElementById('editPermissionUsers'),
+  checklist:document.getElementById('editPermissionChecklist')
 };
 
 let userEditingId = null;

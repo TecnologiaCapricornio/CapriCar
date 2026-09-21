@@ -2207,29 +2207,21 @@
      translúcida branca, funciona nos dois temas sem precisar de override -
      mesmo truque que .seat usava antes de virar SVG. */
   .car-body{
-    fill:rgba(255,255,255,.035);
-    stroke:var(--border);
-    stroke-width:1.5;
-  }
-
-  .car-glass{
-    fill:rgba(255,255,255,.05);
-    stroke:var(--border);
-    stroke-width:1;
+    fill:var(--surface);
+    stroke:var(--accent);
+    stroke-width:2;
   }
 
   .car-aisle{
     fill:rgba(255,255,255,.025);
   }
 
+  /* Pneu com um fundo sólido (não mais translúcido) - lembra a borracha do
+     pneu de verdade em vez de sumir contra o fundo do card. */
   .car-wheel{
-    fill:rgba(70,78,92,.85);
-    stroke:rgba(140,150,166,.4);
-    stroke-width:1;
-  }
-
-  .car-mirror{
-    fill:rgba(140,150,162,.35);
+    fill:rgba(48,52,60,.92);
+    stroke:var(--accent);
+    stroke-width:1.5;
   }
 
   .seat rect{
@@ -2355,4 +2347,341 @@
        sem centralizar só ele, sobra um vão vazio do lado direito sempre que
        ocupa menos largura que a linha de cima. */
     align-self:center;
+  }
+
+  /* ============ Checklist de avaria (retirada/devolução) ============ */
+  .checkbox-field{
+    display:flex;
+  }
+
+  .checklist-toggle-label{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:var(--fs-sm);
+    color:var(--texto);
+    cursor:pointer;
+  }
+
+  .checklist-toggle-label input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    flex:0 0 auto;
+    accent-color:var(--primary);
+    cursor:pointer;
+  }
+
+  .checklist-block{
+    background:var(--surface);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius-md);
+    padding:14px;
+    margin-bottom:14px;
+  }
+
+  .checklist-block-title{
+    font-weight:700;
+    font-size:var(--fs-sm);
+    color:var(--texto);
+    margin-bottom:6px;
+  }
+
+  /* ---- Diagrama clicável do veículo: em vez das 4 vistas juntas (ficavam
+     pequenas e apertadas), o usuário escolhe uma aba (Frente / Traseira /
+     Lateral esquerda / Lateral direita) e vê só aquela vista, bem maior.
+     Grade fixa de 2 colunas (em vez de flex-wrap, que deixava a 4ª aba
+     sozinha numa linha) - Frente/Traseira sempre em cima, as duas laterais
+     embaixo, na mesma ordem de CHECKLIST_DIAGRAM_VIEWS. ---- */
+  .checklist-diagram-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    margin:10px 0 12px;
+  }
+
+  .checklist-diagram-tab{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:8px 6px;
+    border:1px solid var(--card-border);
+    border-radius:var(--radius-sm);
+    background:var(--bg-2);
+    color:var(--text-muted);
+    font-size:var(--fs-2xs);
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+
+  .checklist-diagram-tab:hover{
+    color:var(--text);
+  }
+
+  .checklist-diagram-tab.is-active{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:#fff;
+  }
+
+  .checklist-diagram-tab-count{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    border-radius:8px;
+    background:var(--danger);
+    color:#fff;
+    font-size:10px;
+    line-height:1;
+  }
+
+  .checklist-diagram-tab.is-active .checklist-diagram-tab-count{
+    background:rgba(255,255,255,.35);
+  }
+
+  .checklist-diagram-views{
+    max-width:340px;
+    margin:0 auto;
+  }
+
+  /* Só a vista ativa fica visível - as outras continuam no DOM (mais
+     simples e rápido do que recriar tudo a cada troca de aba). */
+  .checklist-diagram-view{
+    display:none;
+  }
+
+  .checklist-diagram-view.is-active{
+    display:block;
+  }
+
+  /* Cada vista é uma ilustração realista (PNG desenhado à mão) com os
+     pontos clicáveis posicionados por cima via HTML/CSS absolute, em vez
+     de formas SVG simples - fica muito mais fácil de reconhecer cada
+     parte do carro. */
+  .checklist-diagram{
+    position:relative;
+    width:100%;
+    margin:0 auto;
+  }
+
+  .checklist-diagram-img{
+    display:block;
+    width:100%;
+    height:auto;
+    -webkit-user-drag:none;
+    user-select:none;
+  }
+
+  .checklist-points{
+    position:absolute;
+    inset:0;
+  }
+
+  /* Linhas/setas para pontos cuja bolinha fica fora do carro (ex:
+     retrovisor) - ver CHECKLIST_DIAGRAM_POINTS (tx/ty) em
+     management-operations.js. */
+  .checklist-leader-lines{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+  }
+
+  .checklist-leader-lines line{
+    stroke:var(--danger);
+    stroke-width:1.6;
+    opacity:0.85;
+  }
+
+  .checklist-point{
+    position:absolute;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    margin:-14px 0 0 -14px;
+    border-radius:50%;
+    border:2px solid var(--surface-solid);
+    background:var(--primary);
+    color:#fff;
+    font-size:13px;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,.4);
+    transition:background .15s ease, transform .15s ease;
+    transform-origin:center;
+  }
+
+  .checklist-point:hover,
+  .checklist-point:focus-visible{
+    background:var(--primary-strong);
+    transform:scale(1.15);
+  }
+
+  .checklist-point.is-marked{
+    background:var(--danger);
+  }
+
+  .checklist-point.is-marked:hover{
+    filter:brightness(1.15);
+  }
+
+  .checklist-diagram-selected{
+    font-size:var(--fs-2xs);
+    color:var(--text-muted);
+    text-align:center;
+    line-height:1.5;
+    margin-top:8px;
+  }
+
+  /* ---- Legenda numerada abaixo do diagrama ---- */
+  .checklist-diagram-legend{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:4px 14px;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--card-border);
+  }
+
+  .checklist-diagram-legend-item{
+    font-size:var(--fs-2xs);
+    color:var(--text-muted);
+    line-height:1.4;
+  }
+
+  .checklist-diagram-legend-item b{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:16px;
+    height:16px;
+    padding:0 3px;
+    margin-right:4px;
+    border-radius:5px;
+    background:var(--primary);
+    color:#fff;
+    font-size:10px;
+    font-weight:700;
+  }
+
+  @media (max-width:420px){
+    .checklist-diagram-legend{
+      grid-template-columns:1fr;
+    }
+  }
+
+  /* ---- Legenda C / A / X ---- */
+  .checklist-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin:8px 0 12px;
+    font-size:var(--fs-2xs);
+    color:var(--text-muted);
+  }
+
+  .checklist-legend-item{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .checklist-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:20px;
+    height:20px;
+    border-radius:6px;
+    font-weight:700;
+    font-size:var(--fs-2xs);
+    color:#fff;
+  }
+
+  .checklist-badge-c{ background:var(--success); }
+  .checklist-badge-a{ background:var(--warning); }
+  .checklist-badge-x{ background:var(--danger); }
+
+  /* ---- Lista de componentes ---- */
+  .checklist-components{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .checklist-component-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:6px 0;
+    border-bottom:1px solid var(--card-border);
+  }
+
+  .checklist-component-row:last-child{
+    border-bottom:none;
+  }
+
+  .checklist-component-label{
+    font-size:var(--fs-xs);
+    color:var(--texto);
+  }
+
+  .checklist-component-options{
+    display:flex;
+    gap:4px;
+    flex:0 0 auto;
+  }
+
+  .checklist-component-btn{
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    border:1px solid var(--card-border);
+    background:transparent;
+    color:var(--text-muted);
+    font-weight:700;
+    font-size:var(--fs-xs);
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+
+  .checklist-component-btn:hover{
+    border-color:var(--primary);
+  }
+
+  .checklist-component-btn[data-status="C"].is-active{
+    background:var(--success);
+    border-color:var(--success);
+    color:#fff;
+  }
+
+  .checklist-component-btn[data-status="A"].is-active{
+    background:var(--warning);
+    border-color:var(--warning);
+    color:#fff;
+  }
+
+  .checklist-component-btn[data-status="X"].is-active{
+    background:var(--danger);
+    border-color:var(--danger);
+    color:#fff;
+  }
+
+  @media (max-width:480px){
+    .checklist-component-row{
+      flex-direction:column;
+      align-items:flex-start;
+      gap:6px;
+    }
   }
