@@ -63,7 +63,7 @@ function rejectPassengerPrivateChanges(current, incoming){
   for(const field of PASSENGER_ONLY_PROTECTED_FIELDS){
     if(Object.prototype.hasOwnProperty.call(incoming, field) &&
       JSON.stringify(incoming[field]) !== JSON.stringify(current[field])){
-      throw Object.assign(new Error('VocÃª nÃ£o pode alterar os dados privados de uma reserva de outro usuÃ¡rio.'), { status:403 });
+      throw Object.assign(new Error('Você não pode alterar os dados privados de uma reserva de outro usuário.'), { status:403 });
     }
   }
 }

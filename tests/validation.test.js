@@ -511,7 +511,7 @@ test('devolução com quilometragem menor que a retirada é recusada, mas aceita
 
 test('retirada nova com quilometragem menor que o odômetro atual do veículo é recusada, mas aceita quando confirmada', () => {
   const vehicleComOdometro = [{ ...vehicles[0], odometroAtual:500 }];
-  const retiradaMenor = reservation({ operacao:{ retirada:withRetirada({ quilometragem:400 }) } });
+  const retiradaMenor = reservation({ operacao:{ retirada:withRetirada({ quilometragem:400, condicaoLimpeza:'limpo' }) } });
 
   assert.throws(
     () => validateReservations([retiradaMenor], context({ vehicles:vehicleComOdometro })),
@@ -520,14 +520,14 @@ test('retirada nova com quilometragem menor que o odômetro atual do veículo é
 
   const retiradaMenorConfirmada = {
     ...retiradaMenor,
-    operacao:{ retirada:withRetirada({ quilometragem:400, quilometragemDivergente:true }) }
+    operacao:{ retirada:withRetirada({ quilometragem:400, quilometragemDivergente:true, condicaoLimpeza:'limpo' }) }
   };
   assert.doesNotThrow(() => validateReservations(
     [retiradaMenorConfirmada],
     context({ vehicles:vehicleComOdometro })
   ));
 
-  const retiradaMaior = reservation({ operacao:{ retirada:withRetirada({ quilometragem:600 }) } });
+  const retiradaMaior = reservation({ operacao:{ retirada:withRetirada({ quilometragem:600, condicaoLimpeza:'limpo' }) } });
   assert.doesNotThrow(() => validateReservations([retiradaMaior], context({ vehicles:vehicleComOdometro })));
 });
 
