@@ -1987,6 +1987,11 @@
           </select>
           <div class="error-msg" role="alert" id="error-operationCleanliness"></div>
         </div>
+        <div class="field hidden" id="operationInspectorField">
+          <label for="operationInspector">Vistoriador</label>
+          <input type="text" id="operationInspector" maxlength="120" autocomplete="off"
+            placeholder="Nome do Vistoriador(a)">
+        </div>
         <div class="field checkbox-field">
           <label class="checklist-toggle-label" for="operationHasAvaria">
             <input type="checkbox" id="operationHasAvaria">
@@ -2121,6 +2126,11 @@
             <option value="sujeira_externa">Sujeira externa</option>
           </select>
         </div>
+        <div class="field">
+          <label for="checklistReviewInspector">Vistoriador</label>
+          <input type="text" id="checklistReviewInspector" maxlength="120" autocomplete="off"
+            placeholder="Nome do Vistoriador(a)">
+        </div>
 
         <h4>Diagrama do veículo</h4>
         <div class="checklist-diagram-wrap" id="checklistReviewDiagram" role="group"
@@ -2170,7 +2180,7 @@
   <script src="js/modals.js?v=20260903-2"></script>
   <script src="js/admin.js?v=20260908-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260917-2"></script>
+  <script src="js/management-operations.js?v=20260922-3"></script>
   <script src="js/management-config.js?v=20260916-1"></script>
   <script src="js/management-users.js?v=20260916-1"></script>
   <script src="js/management-integrations.js?v=20260908-1"></script>

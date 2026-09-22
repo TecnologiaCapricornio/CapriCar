@@ -303,6 +303,11 @@ function validateChecklistEdit(record){
     assert(CLEANLINESS_CONDITIONS.includes(String(record.condicaoLimpeza)),
       'Condição de limpeza inválida.');
   }
+  // Só existe na revisão do painel de gestão (não no registro de retirada/
+  // devolução feito por quem reservou) - por isso é sempre opcional aqui.
+  if(record.vistoriador){
+    text(record.vistoriador, 'o nome do vistoriador', 120, false);
+  }
 }
 
 function validateOperation(operation, previousOperation, vehicle){
@@ -339,6 +344,11 @@ function validateOperation(operation, previousOperation, vehicle){
     }
     text(record.registradoPor, 'o responsável pelo registro', 120);
     assert(!Number.isNaN(new Date(record.registradoEm).getTime()), 'A data do registro operacional é inválida.');
+    // Só existe quando quem registra é da gestão (não o próprio dono da
+    // reserva) - ver openOperationModal em js/management-operations.js.
+    if(record.vistoriador){
+      text(record.vistoriador, 'o nome do vistoriador', 120, false);
+    }
     const photos = Array.isArray(record.fotos) ? record.fotos : [];
     assert(photos.length <= 3, 'Cada registro pode conter no máximo 3 fotos.');
     photos.forEach(photo => {

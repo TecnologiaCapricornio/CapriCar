@@ -493,17 +493,24 @@ function bindReservationFeatureButtons(container) {
   });
   container.querySelectorAll('.operation-btn').forEach(btn => {
     btn.addEventListener('click', function () {
+      // Só o botão "Checklist" da aba de gestão (checklistPendingOperationCardHTML)
+      // tem esse atributo - o de "Minhas Reservas" (js/reservations.js), não. É o
+      // que diferencia "a própria pessoa registrando" de "a gestão registrando em
+      // nome de outra pessoa" pra mostrar o campo "Vistoriador" (ver openOperationModal),
+      // já que quem tem a permissão "Checklist" pode inclusive estar registrando a
+      // própria reserva por ali (isOwner sozinho não bastava pra distinguir isso).
+      const fromManagement = this.getAttribute('data-management') === 'true';
       if (this.getAttribute('data-pickup-info') === 'true') {
         const reservationId = this.getAttribute('data-id');
         const reservation = getReservations().find(item => String(item.id) === String(reservationId));
         if (reservation && canRegisterPickupNow(reservation)) {
-          openOperationModal(reservationId, 'retirada');
+          openOperationModal(reservationId, 'retirada', fromManagement);
         } else {
           openPickupAvailabilityModal(reservationId);
         }
         return;
       }
-      openOperationModal(this.getAttribute('data-id'), this.getAttribute('data-phase'));
+      openOperationModal(this.getAttribute('data-id'), this.getAttribute('data-phase'), fromManagement);
     });
   });
 }
@@ -562,7 +569,7 @@ const operationError = document.getElementById('operationError');
 let operationReservationId = null;
 let operationPhase = null;
 
-async function openOperationModal(reservationId, phase) {
+async function openOperationModal(reservationId, phase, fromManagement) {
   const reserva = getReservations().find(r => String(r.id) === String(reservationId));
   const currentUser = getCurrentUser();
   const isOwner = reserva && currentUser && reserva.nome === currentUser.nome;
@@ -597,6 +604,12 @@ async function openOperationModal(reservationId, phase) {
   document.getElementById('operationCleanlinessField').classList.remove('hidden');
   document.getElementById('operationCleanliness').required = true;
   document.getElementById('error-operationCleanliness').textContent = '';
+  // "Vistoriador": só aparece quando o modal foi aberto a partir da aba
+  // Checklist do painel de gestão (fromManagement) - não em "Minhas
+  // Reservas". isOwner sozinho não bastava, porque quem tem a permissão
+  // "Checklist" pode registrar a própria reserva por ali também.
+  document.getElementById('operationInspectorField').classList.toggle('hidden', !fromManagement);
+  document.getElementById('operationInspector').value = '';
   // Só um lembrete visual do valor esperado agora - não trava mais o campo
   // (min dinâmico), porque um dígito a mais digitado por engano deixava a
   // pessoa impedida de registrar a operação. Ver a confirmação de divergência
@@ -766,6 +779,7 @@ operationForm.addEventListener('submit', async function (e) {
       // notifyOperationReport em server/notifications.js.
       condicaoLimpeza: cleanlinessValue || undefined,
       quilometragemDivergente: quilometragemDivergente || undefined,
+      vistoriador: document.getElementById('operationInspector').value.trim() || undefined,
       fotos: photos,
       registradoPor: getCurrentUser().nome,
       registradoEm: new Date().toISOString()
@@ -863,7 +877,7 @@ function checklistPendingOperationCardHTML(entry){
   const vehicleForPlate = getVehicle(entry.reserva.partida, entry.reserva.carro);
   const plate = vehicleForPlate && vehicleForPlate.placa ? String(vehicleForPlate.placa).toUpperCase() : '';
   const checklistBtnHTML = '<button type="button" class="operation-btn" data-phase="' + entry.phase + '" data-id="' +
-    escapeHTML(entry.reserva.id) + '"' +
+    escapeHTML(entry.reserva.id) + '" data-management="true"' +
     (pickupAvailable ? '' : ' data-pickup-info="true" title="Consultar quando a retirada será liberada"') +
     '>Checklist</button>';
   const archiveBtnHTML = '<button type="button" class="delete-btn checklist-archive-btn" data-id="' +
@@ -1479,6 +1493,7 @@ function openChecklistReviewModal(legacyId, phase){
   document.getElementById('checklistReviewOdometer').value = record.quilometragem != null ? record.quilometragem : '';
   document.getElementById('checklistReviewFuel').value = record.combustivel || '';
   document.getElementById('checklistReviewCleanliness').value = record.condicaoLimpeza || '';
+  document.getElementById('checklistReviewInspector').value = record.vistoriador || '';
   document.getElementById('checklistReviewAvarias').value = record.avarias || '';
   document.getElementById('checklistReviewObs').value = checklist.observacoes || '';
   document.getElementById('checklistReviewError').textContent = '';
@@ -1572,6 +1587,7 @@ if(checklistReviewForm){
       combustivel:document.getElementById('checklistReviewFuel').value.trim(),
       avarias:document.getElementById('checklistReviewAvarias').value.trim(),
       condicaoLimpeza:document.getElementById('checklistReviewCleanliness').value || undefined,
+      vistoriador:document.getElementById('checklistReviewInspector').value.trim() || undefined,
       checklist:{
         areas:checklistReviewState.areas.slice(),
         componentes:{ ...checklistReviewState.componentes },

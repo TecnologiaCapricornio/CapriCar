@@ -286,13 +286,14 @@ async function upsertOperation(client, reservationId, phase, record, actor, auto
       `INSERT INTO vehicle_operations
          (reservation_id, phase, odometer_km, fuel_level, damages_notes, cleanliness_condition,
           odometer_discrepancy_confirmed, recorded_by, recorded_at, checklist,
-          checklist_approved_by, checklist_approved_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9::jsonb, $10, $11) RETURNING id`,
+          checklist_approved_by, checklist_approved_at, checklist_inspector_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9::jsonb, $10, $11, $12) RETURNING id`,
       [reservationId, dbPhase, Number(record.quilometragem), String(record.combustivel || ''),
         String(record.avarias || ''), record.condicaoLimpeza || null,
         record.quilometragemDivergente === true, actor.id,
         record.checklist ? JSON.stringify(record.checklist) : null,
-        autoApprove ? actor.id : null, autoApprove ? new Date() : null]
+        autoApprove ? actor.id : null, autoApprove ? new Date() : null,
+        record.vistoriador ? String(record.vistoriador).trim() : null]
     );
     operationId = inserted_.rows[0].id;
     inserted = true;
@@ -512,6 +513,9 @@ function fullDto(row, data){
       avarias:operation.damages_notes || '',
       ...(operation.cleanliness_condition ? { condicaoLimpeza:operation.cleanliness_condition } : {}),
       ...(operation.odometer_discrepancy_confirmed ? { quilometragemDivergente:true } : {}),
+      // Só existe depois de preenchido na revisão do checklist (painel de
+      // gestão) - não vem do registro original de retirada/devolução.
+      ...(operation.checklist_inspector_name ? { vistoriador:operation.checklist_inspector_name } : {}),
       registradoPor:operation.recorded_by_name,
       registradoEm:operation.recorded_at,
       ...(operation.checklist ? { checklist:operation.checklist } : {}),
@@ -701,12 +705,14 @@ async function updateOperationChecklist(client, legacyId, phase, action, payload
     await client.query(
       `UPDATE vehicle_operations
           SET odometer_km = $2, fuel_level = $3, damages_notes = $4, cleanliness_condition = $5,
-              checklist = $6::jsonb, checklist_edited_by = $7, checklist_edited_at = NOW()
+              checklist = $6::jsonb, checklist_edited_by = $7, checklist_edited_at = NOW(),
+              checklist_inspector_name = $8
         WHERE id = $1`,
       [
         operationId, Number(record.quilometragem), String(record.combustivel || ''),
         String(record.avarias || ''), record.condicaoLimpeza || null,
-        record.checklist ? JSON.stringify(record.checklist) : null, actor.id
+        record.checklist ? JSON.stringify(record.checklist) : null, actor.id,
+        record.vistoriador ? String(record.vistoriador).trim() : null
       ]
     );
   }else{
