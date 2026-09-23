@@ -568,6 +568,7 @@ const operationSummary = document.getElementById('operationSummary');
 const operationError = document.getElementById('operationError');
 let operationReservationId = null;
 let operationPhase = null;
+bindKmInputMask(document.getElementById('operationKm'));
 
 async function openOperationModal(reservationId, phase, fromManagement) {
   const reserva = getReservations().find(r => String(r.id) === String(reservationId));
@@ -626,7 +627,7 @@ async function openOperationModal(reservationId, phase, fromManagement) {
     // editável normalmente; isto é só um ponto de partida, não uma trava.
     const ultimaDevolucaoKm = lastVehicleDevolucaoKm(reserva.partida, reserva.carro, reservationId);
     if (ultimaDevolucaoKm != null) {
-      kmInput.value = ultimaDevolucaoKm;
+      kmInput.value = formatKmDigits(ultimaDevolucaoKm);
       kmHint.textContent = 'Preenchido com a quilometragem da última devolução deste veículo (' +
         ultimaDevolucaoKm.toLocaleString('pt-BR') + ' km) - confira antes de confirmar.';
     } else {
@@ -693,7 +694,7 @@ operationForm.addEventListener('submit', async function (e) {
       formatPickupAvailableFrom(reserva) + '.';
     return;
   }
-  const km = Number(document.getElementById('operationKm').value);
+  const km = kmInputValue(document.getElementById('operationKm'));
   const fuel = document.getElementById('operationFuel').value;
   if (!Number.isFinite(km) || km < 0 || !fuel) {
     operationError.textContent = 'Informe quilometragem e combustível.';
@@ -818,6 +819,7 @@ operationForm.addEventListener('submit', async function (e) {
    ========================================================= */
 let checklistReviewState = { areas:[], componentes:{} };
 let checklistReviewActiveView = 'frontal';
+bindKmInputMask(document.getElementById('checklistReviewOdometer'));
 // { legacyId, phase, reserva } da retirada/devolução aberta no momento no
 // modal de revisão - null quando o modal está fechado.
 let checklistReviewContext = null;
@@ -1490,7 +1492,7 @@ function openChecklistReviewModal(legacyId, phase){
     statusBadge.innerHTML += ' <span class="tag tag-info">Editado por último por ' + escapeHTML(record.editadoPor) + '</span>';
   }
 
-  document.getElementById('checklistReviewOdometer').value = record.quilometragem != null ? record.quilometragem : '';
+  document.getElementById('checklistReviewOdometer').value = record.quilometragem != null ? formatKmDigits(record.quilometragem) : '';
   document.getElementById('checklistReviewFuel').value = record.combustivel || '';
   document.getElementById('checklistReviewCleanliness').value = record.condicaoLimpeza || '';
   document.getElementById('checklistReviewInspector').value = record.vistoriador || '';
@@ -1577,7 +1579,7 @@ const checklistReviewForm = document.getElementById('checklistReviewForm');
 if(checklistReviewForm){
   checklistReviewForm.addEventListener('submit', function(e){
     e.preventDefault();
-    const km = Number(document.getElementById('checklistReviewOdometer').value);
+    const km = kmInputValue(document.getElementById('checklistReviewOdometer'));
     if(!Number.isInteger(km) || km < 0){
       document.getElementById('checklistReviewError').textContent = 'Informe uma quilometragem válida.';
       return;

@@ -6,6 +6,35 @@ function pad2(n){
   return String(n).padStart(2, '0');
 }
 
+// Campo de quilometragem (retirada/devolução e revisão de checklist): usa
+// <input type="text"> em vez de type="number" porque o teclado numérico do
+// navegador barra o "." em muitos aparelhos/locais - sem isso não dava pra
+// digitar o separador de milhar (29.189) de jeito nenhum. Em vez de exigir
+// que a pessoa digite o ponto, a formatação entra sozinha a cada tecla; o
+// valor de verdade (kmInputValue) ignora os pontos e usa só os dígitos.
+function formatKmDigits(raw){
+  const digits = String(raw == null ? '' : raw).replace(/\D/g, '').slice(0, 9);
+  return digits ? Number(digits).toLocaleString('pt-BR') : '';
+}
+
+function bindKmInputMask(input){
+  if(!input || input.dataset.kmMaskBound) return;
+  input.dataset.kmMaskBound = 'true';
+  input.addEventListener('input', function(){
+    const cleaned = formatKmDigits(this.value);
+    if(cleaned !== this.value) this.value = cleaned;
+  });
+}
+
+// Lê o valor numérico de verdade de um campo com a máscara acima (ignora os
+// pontos de milhar). Devolve NaN se estiver vazio ou não for um número -
+// quem chama decide como tratar isso (mesma convenção de Number(...)).
+function kmInputValue(input){
+  if(!input) return NaN;
+  const digits = String(input.value || '').replace(/\D/g, '');
+  return digits ? Number(digits) : NaN;
+}
+
 function reservationHasOperationReport(reservation){
   return ['retirada', 'devolucao'].some(phase => {
     const record = reservation && reservation.operacao && reservation.operacao[phase];
