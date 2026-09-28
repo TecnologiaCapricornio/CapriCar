@@ -3,8 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const uploadsDir = path.join(__dirname, 'uploads', 'operacoes');
-// CNH é documento pessoal: fica em diretório separado das fotos de ocorrência
-// para que uma eventual exposição acidental de um diretório não arraste o outro.
+// Diretório onde ficavam as fotos de CNH até a importação por e-CNH (migração
+// 033). Nada mais grava aqui; o caminho só existe para server/scripts/migrate.js
+// apagar os arquivos antigos.
 const licenseUploadsDir = path.join(__dirname, 'uploads', 'cnh');
 const STORAGE_KEY_PATTERN = /^[0-9a-f-]{36}\.(png|jpeg|jpg|gif|webp)$/i;
 
@@ -51,26 +52,10 @@ function deletePhotoFile(storageKey){
   deleteFileFrom(uploadsDir, storageKey);
 }
 
-// ---- Fotos de CNH ----
-function saveLicensePhotoFile(buffer, subtype){
-  return saveFileTo(licenseUploadsDir, buffer, subtype);
-}
-
-function readLicensePhotoFile(storageKey){
-  return readFileFrom(licenseUploadsDir, storageKey);
-}
-
-function deleteLicensePhotoFile(storageKey){
-  deleteFileFrom(licenseUploadsDir, storageKey);
-}
-
 module.exports = {
   uploadsDir,
   licenseUploadsDir,
   savePhotoFile,
   readPhotoFile,
-  deletePhotoFile,
-  saveLicensePhotoFile,
-  readLicensePhotoFile,
-  deleteLicensePhotoFile
+  deletePhotoFile
 };

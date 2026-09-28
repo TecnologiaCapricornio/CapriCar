@@ -1,12 +1,13 @@
 const express = require('express');
 const { ValidationError } = require('../validation');
 const {
-  LADOS,
+  CATEGORIAS,
   licensePayload,
   getLicenseForUser,
-  saveLicenseForUser,
-  readLicensePhoto
+  saveVerifiedLicense,
+  removeLicenseForUser
 } = require('../driver-licenses');
+const { readECnh, MAX_PDF_BYTES } = require('../ecnh');
 
 const router = express.Router();
 
@@ -15,43 +16,40 @@ router.get('/cnh', async (req, res) => {
   res.json(licensePayload(license));
 });
 
-router.put('/cnh', async (req, res) => {
-  const body = req.body || {};
-  try{
-    const license = await saveLicenseForUser(
-      req.user.id,
-      { numero:body.numero, categoria:body.categoria, validade:body.validade },
-      { frente:body.frente, verso:body.verso }
-    );
-    res.json(licensePayload(license));
-  }catch(error){
-    if(error instanceof ValidationError){
-      return res.status(400).json({ error:error.message });
+// Importação da e-CNH. O PDF chega como corpo bruto (application/pdf) e fica
+// só em memória: é lido, validado e descartado ao fim da requisição - nunca é
+// gravado em disco, no banco ou em log. Só número, categoria e validade são
+// guardados (ver server/ecnh/index.js).
+router.post(
+  '/cnh/e-cnh',
+  express.raw({ type:'application/pdf', limit:MAX_PDF_BYTES }),
+  async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try{
+      const pdf = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      const dados = await readECnh(pdf, { nomeCadastro:req.user.nome, categorias:CATEGORIAS });
+      const license = await saveVerifiedLicense(req.user.id, dados);
+      res.json(licensePayload(license));
+    }catch(error){
+      if(error instanceof ValidationError){
+        return res.status(error.status || 400).json({ error:error.message, code:error.code });
+      }
+      throw error;
     }
-    throw error;
   }
+);
+
+router.delete('/cnh', async (req, res) => {
+  await removeLicenseForUser(req.user.id);
+  res.json(licensePayload(null));
 });
 
-// Documento pessoal: servido só para o dono ou para quem administra usuários,
-// sempre com no-store, e nunca por rota estática. Responde 404 (e não 403)
-// para quem não pode ver, para não confirmar a existência do arquivo.
-router.get('/cnh/:userId/:lado', async (req, res) => {
-  const { userId, lado } = req.params;
-  const isOwner = String(userId) === String(req.user.id);
-  if(!isOwner && !req.user.permissions.users){
-    return res.status(404).json({ error:'Arquivo não encontrado.' });
-  }
-  if(!LADOS.includes(lado)){
-    return res.status(404).json({ error:'Arquivo não encontrado.' });
-  }
-
-  const photo = await readLicensePhoto(userId, lado);
-  if(!photo) return res.status(404).json({ error:'Arquivo não encontrado.' });
-
-  res.setHeader('Cache-Control', 'private, no-store');
-  res.setHeader('Content-Type', photo.contentType);
-  res.setHeader('Content-Disposition', `inline; filename="cnh-${lado}"`);
-  res.send(photo.bytes);
+// A CNH não pode mais ser digitada: responde 410 para clientes antigos (aba
+// aberta antes do deploy) em vez de aceitar dados sem verificação.
+router.put('/cnh', (req, res) => {
+  res.status(410).json({
+    error:'O cadastro manual da CNH foi desativado. Atualize a página e importe a sua e-CNH (PDF).'
+  });
 });
 
 module.exports = router;

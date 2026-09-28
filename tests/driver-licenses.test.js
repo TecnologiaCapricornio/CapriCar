@@ -5,7 +5,7 @@ const {
   licenseStatus,
   licenseStatusMessage,
   canDrive,
-  validateLicenseInput,
+  saveVerifiedLicense,
   DEFAULT_WARNING_DAYS
 } = require('../server/driver-licenses');
 
@@ -100,26 +100,24 @@ test('validade como Date não desloca o dia por fuso horário', () => {
   assert.equal(status.diasRestantes, 0, 'deve ser hoje, não ontem');
 });
 
-test('cadastro em branco é aceito e significa remover a CNH', () => {
-  assert.equal(validateLicenseInput({ numero:'', categoria:'', validade:'' }), null);
+// A gravação só aceita dados já verificados da e-CNH; a validação roda antes
+// de qualquer acesso ao banco, então estes casos não precisam de conexão.
+const verificada = { numero:'12345678900', categoria:'AB', validade:'2027-01-01', emissor:'DETRAN SP' };
+
+test('gravação recusa número de registro fora de 11 dígitos', async () => {
+  await assert.rejects(saveVerifiedLicense('u1', { ...verificada, numero:'123456789' }), /registro/i);
+  await assert.rejects(saveVerifiedLicense('u1', { ...verificada, numero:'ABCDEFGHIJK' }), /registro/i);
 });
 
-test('número da CNH exige de 9 a 11 dígitos', () => {
-  const base = { categoria:'AB', validade:'2027-01-01' };
-  assert.throws(() => validateLicenseInput({ ...base, numero:'123' }), /9 a 11 dígitos/);
-  assert.throws(() => validateLicenseInput({ ...base, numero:'123456789012' }), /9 a 11 dígitos/);
-  assert.throws(() => validateLicenseInput({ ...base, numero:'ABCDEFGHI' }), /9 a 11 dígitos/);
-  assert.equal(validateLicenseInput({ ...base, numero:'123456789' }).numero, '123456789');
+test('gravação recusa categoria fora da lista', async () => {
+  await assert.rejects(saveVerifiedLicense('u1', { ...verificada, categoria:'Z' }), /categoria/i);
 });
 
-test('categoria fora da lista é recusada e a válida é normalizada', () => {
-  const base = { numero:'12345678900', validade:'2027-01-01' };
-  assert.throws(() => validateLicenseInput({ ...base, categoria:'Z' }), /categoria/i);
-  assert.equal(validateLicenseInput({ ...base, categoria:'ab' }).categoria, 'AB');
+test('gravação recusa validade que não seja data ISO real', async () => {
+  await assert.rejects(saveVerifiedLicense('u1', { ...verificada, validade:'31/12/2027' }), /validade/i);
+  await assert.rejects(saveVerifiedLicense('u1', { ...verificada, validade:'2027-02-30' }), /validade/i);
 });
 
-test('validade precisa ser uma data real', () => {
-  const base = { numero:'12345678900', categoria:'AB' };
-  assert.throws(() => validateLicenseInput({ ...base, validade:'31/12/2027' }), /validade/i);
-  assert.throws(() => validateLicenseInput({ ...base, validade:'2027-02-30' }), /validade/i);
+test('gravação exige o órgão emissor da e-CNH', async () => {
+  await assert.rejects(saveVerifiedLicense('u1', { ...verificada, emissor:'' }), /emissor/i);
 });

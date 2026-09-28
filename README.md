@@ -33,7 +33,7 @@ A aplicação fica disponível em `http://localhost:3000`. Na primeira subida, o
 container aplica as migrações e cria o usuário `admin` automaticamente (ver
 `docker/entrypoint.sh`) - não precisa rodar `db:migrate`/`db:seed` à parte.
 
-Fotos de CNH/retirada/devolução e os dados do Postgres ficam em volumes
+Fotos de retirada/devolução e os dados do Postgres ficam em volumes
 Docker nomeados (`capricar_uploads`, `capricar_pgdata`), então sobrevivem a
 `docker compose down` (mas não a `docker compose down -v`, que apaga os
 volumes). Para reconstruir a imagem depois de alterar código:

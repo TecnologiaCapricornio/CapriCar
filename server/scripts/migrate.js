@@ -2,6 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { query, closePool } = require('../db');
 const { migrateLegacyReservations } = require('../reservations-store');
+const { licenseUploadsDir } = require('../photo-storage');
 
 const projectRoot = path.join(__dirname, '..', '..');
 
@@ -43,6 +44,19 @@ async function main(){
   }
   const migratedReservations = await migrateLegacyReservations();
   console.log(`Reservas normalizadas migradas: ${migratedReservations}`);
+  await purgeLegacyLicensePhotos();
+}
+
+// A migração 033 removeu as fotos de CNH do banco; aqui saem os arquivos.
+// Nada mais grava nesse diretório (a CNH vem só da e-CNH, sem imagem), então
+// é seguro repetir a cada execução - é o que garante a limpeza também em
+// réplicas/volumes que ainda tivessem arquivos antigos.
+async function purgeLegacyLicensePhotos(){
+  const applied = await query("SELECT 1 FROM schema_migrations WHERE name = '033_ecnh_verified_licenses.sql'");
+  if(!applied.rowCount) return;
+  const existed = await fs.stat(licenseUploadsDir).then(() => true, () => false);
+  await fs.rm(licenseUploadsDir, { recursive:true, force:true });
+  if(existed) console.log(`Fotos antigas de CNH apagadas: ${licenseUploadsDir}`);
 }
 
 main()

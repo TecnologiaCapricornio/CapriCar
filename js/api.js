@@ -5,7 +5,9 @@ const databaseRevisions = Object.create(null);
 async function apiRequest(path, options){
   const config = { credentials:'same-origin', ...(options || {}) };
   config.headers = { ...(config.headers || {}) };
-  if(config.body && typeof config.body !== 'string'){
+  // Blob/File (upload de arquivo) vai como está, com o Content-Type que o
+  // chamador informar - só objetos comuns viram JSON.
+  if(config.body && typeof config.body !== 'string' && !(config.body instanceof Blob)){
     config.headers['Content-Type'] = 'application/json';
     config.body = JSON.stringify(config.body);
   }
