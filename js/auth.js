@@ -29,6 +29,7 @@ function normalizeUserPermissions(permissions){
     audit:source.audit === true,
     rules:source.rules === true,
     users:source.users === true,
+    groups:source.groups === true,
     integrations:source.integrations === true,
     checklist:source.checklist === true
   };
@@ -81,7 +82,10 @@ function accountToSession(account){
     email:account.email || '',
     isAdmin:account.role === 'admin',
     role:account.role,
-    permissions:normalizeUserPermissions(account.permissions)
+    permissions:normalizeUserPermissions(account.permissions),
+    // Ids dos grupos do usuário - decidem quais veículos restritos ele pode
+    // reservar (ver js/vehicle-access.js).
+    grupos:Array.isArray(account.grupos) ? account.grupos.map(String) : []
   };
 }
 
@@ -96,8 +100,10 @@ function hasManagementPermission(permission){
   return !!(user && user.permissions && user.permissions[permission] === true);
 }
 
+// Aba "Gestão". O Checklist tem aba própria (ver canManageChecklist) e não
+// conta aqui: quem só tem essa permissão não vê o painel de gestão.
 function canAccessManagement(){
-  return isAdmin() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'integrations', 'checklist'].some(hasManagementPermission);
+  return isAdmin() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'groups', 'integrations'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
@@ -136,11 +142,19 @@ function canManageUsers(){
   return hasManagementPermission('users');
 }
 
+// Aba "Grupos" (Gestão): permissão própria, separada de "Usuários" (migração
+// 035) - quem administra grupos não precisa poder criar/editar contas, e
+// vice-versa. js/management-groups.js também aceita canManageFleet() para a
+// LEITURA (escolher os grupos no cadastro do veículo).
+function canManageGroups(){
+  return hasManagementPermission('groups');
+}
+
 function canManageIntegrations(){
   return hasManagementPermission('integrations');
 }
 
-// Dá acesso à aba Checklist do painel de gestão: ver, aprovar e editar os
+// Dá acesso à aba Checklist (aba principal, fora da Gestão): ver, aprovar e editar os
 // checklists já enviados, e também registrar a retirada ou devolução de
 // qualquer reserva em nome de outra pessoa - usada pelo setor que faz esse
 // registro no lugar de quem reservou, em filiais onde não é a própria
@@ -177,8 +191,8 @@ function canAccessAdminSection(section){
     relatorios:'reports',
     regras:'rules',
     usuarios:'users',
-    integracoes:'integrations',
-    checklist:'checklist'
+    grupos:'groups',
+    integracoes:'integrations'
   };
   return !!permissionBySection[section] && hasManagementPermission(permissionBySection[section]);
 }
@@ -196,6 +210,7 @@ const headerUserName = document.getElementById('headerUserName');
 const avatarInitials = document.getElementById('avatarInitials');
 const solicitanteHint = document.getElementById('solicitanteHint');
 const adminTabBtn = document.getElementById('adminTabBtn');
+const checklistTabBtn = document.getElementById('checklistTabBtn');
 
 const profileBtn = document.getElementById('profileBtn');
 const profileMenuCenter = document.getElementById('profileMenuCenter');
@@ -208,7 +223,7 @@ const profileName = document.getElementById('profileName');
 const logoutBtn = document.getElementById('logoutBtn');
 
 function configureManagementPanel(){
-  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','auditoria','relatorios','regras','integracoes','usuarios','checklist'];
+  const orderedSections = ['reservas','locais','veiculos','bloqueios','manutencao','usuarios','grupos','regras','integracoes','relatorios','auditoria'];
   const firstAllowedSection = orderedSections.find(canAccessAdminSection) || 'reservas';
   document.querySelectorAll('.admin-section-btn').forEach(btn => {
     const section = btn.getAttribute('data-admin-section');
@@ -218,10 +233,6 @@ function configureManagementPanel(){
   document.querySelectorAll('.admin-section-panel').forEach(panel => {
     panel.classList.toggle('hidden', panel.id !== 'admin-section-' + firstAllowedSection);
   });
-  const title = document.getElementById('managementPanelTitle');
-  if(title){
-    title.textContent = isAdmin() ? 'Painel de Administração' : 'Painel de Gestão';
-  }
   const newReservationBtn = document.getElementById('adminNovaReservaBtn');
   if(newReservationBtn){
     newReservationBtn.textContent = isAdmin() ? 'Nova reserva (como admin)' : 'Nova reserva (gestão)';
@@ -248,9 +259,8 @@ function showApp(user){
   profileName.textContent = user.nome;
   profileAvatarLg.textContent = initials(user.nome);
   updateSolicitanteHint();
-  adminTabBtn.textContent = isAdmin() ? 'Admin' : 'Gestão';
-  adminTabBtn.setAttribute('data-mobile-label', isAdmin() ? 'Admin' : 'Gestão');
   adminTabBtn.classList.toggle('hidden', !canAccessManagement());
+  checklistTabBtn.classList.toggle('hidden', !canManageChecklist());
   configureManagementPanel();
   switchTab('minhas');
   renderMyReservations();
@@ -266,6 +276,7 @@ function showLogin(){
   loginScreen.classList.remove('hidden');
   loginForm.reset();
   adminTabBtn.classList.add('hidden');
+  checklistTabBtn.classList.add('hidden');
 }
 
 loginForm.addEventListener('submit', async function(e){
@@ -366,9 +377,6 @@ function closeProfileMenu(){
 
 function openProfileCnhModal(){
   profileModal.classList.remove('hidden');
-  // O seletor de data da CNH só pode ser criado depois de js/modals.js ter
-  // carregado, por isso a inicialização é sob demanda (ver js/driver-license.js).
-  if(typeof ensureCnhDatePicker === 'function') ensureCnhDatePicker();
 }
 
 // Clicar no nome/avatar abre um menu ("Minha CNH", "Sair") em vez da CNH
@@ -430,6 +438,7 @@ const panels = {
   calendario: document.getElementById('panel-calendario'),
   minhas: document.getElementById('panel-minhas'),
   caronas: document.getElementById('panel-caronas'),
+  checklist: document.getElementById('panel-checklist'),
   admin: document.getElementById('panel-admin')
 };
 let tabRefreshSequence = 0;
@@ -469,6 +478,7 @@ function renderCurrentTabData(tabName, refreshedFromServer){
     renderMainCalendar();
   }
   if(tabName === 'caronas') renderAvailableRides();
+  if(tabName === 'checklist' && typeof renderChecklistManagement === 'function') renderChecklistManagement();
   if(tabName === 'nova' && refreshedFromServer){
     populateCarroOptions(true);
     populateDestinoOptions();
@@ -499,6 +509,7 @@ async function refreshTabFromServer(tabName, refreshSequence){
 
 function switchTab(tabName){
   if(tabName === 'admin' && !canAccessManagement()) return;
+  if(tabName === 'checklist' && !canManageChecklist()) return;
   if(tabName === 'nova'){
     const pendingReturn = getPendingReturnReservation(getCurrentUser());
     if(pendingReturn){

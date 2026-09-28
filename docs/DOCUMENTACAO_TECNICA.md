@@ -223,14 +223,75 @@ se configurado) para quem estava monitorando.
 
 ### 3.12 CNH ("Meu perfil")
 
-Cada usuário cadastra a própria CNH (número, categoria, validade e fotos da
-frente/verso) em "Meu perfil". A validade determina se a pessoa pode dirigir
-(vencida bloqueia; vencendo apenas avisa) e a categoria é comparada com a
-capacidade do veículo escolhido na reserva (ver seção 3.1 e
-`js/cnh-categorias.js`). Quem tem a permissão `users` também pode consultar a
-CNH de qualquer usuário, pela tela de gestão de usuários.
+A CNH só entra no sistema pela **importação da e-CNH** (PDF exportado pela
+Carteira Digital de Trânsito) — não há digitação manual nem armazenamento de
+imagem do documento (migração 033). Fluxo (`server/ecnh/`):
 
-### 3.13 Integrações
+1. `POST /api/profile/cnh/e-cnh` recebe o PDF como corpo bruto
+   (`application/pdf`, até 2 MB) e o mantém só em memória.
+2. `signature.js` confere a assinatura PAdES (`adbe.pkcs7.detached`): uma única
+   assinatura cobrindo o arquivo inteiro, resumo e assinatura RSA do CMS, cadeia
+   até a AC Raiz ICP-Brasil v5 (impressão digital fixada; certificados públicos
+   em `server/certs/icp-brasil/`), validade de cada certificado na data da
+   assinatura e signatário `O=ICP-Brasil` com CN de órgão de trânsito
+   (`DETRAN ...`, SENATRAN/DENATRAN). Não há consulta de revogação (LCR/OCSP).
+3. `card-reader.js` extrai a imagem da frente da carteira com `pdfjs-dist` e
+   faz OCR local com `tesseract.js` (idioma `por`, sem cache em disco): acha os
+   rótulos NOME / Nº REGISTRO / VALIDADE / CAT. HAB. e lê cada valor com lista
+   restrita de caracteres. Os dados não existem como texto no PDF, e o QR code
+   tem conteúdo binário proprietário — por isso OCR.
+4. `index.js` valida o que foi lido (dígitos verificadores do registro, data
+   real e plausível, categoria da lista, confiança mínima do OCR) e exige que
+   o primeiro e o último nome do cadastro apareçam no nome da CNH.
+5. `saveVerifiedLicense` grava só número, categoria, validade, emissor (CN do
+   certificado) e data da verificação. O número é único entre usuários.
+
+A validade determina se a pessoa pode dirigir (vencida bloqueia; vencendo
+apenas avisa) e a categoria é comparada com a capacidade do veículo escolhido
+na reserva (ver seção 3.1 e `js/cnh-categorias.js`). Quem tem a permissão
+`users` consulta a CNH de qualquer usuário (dados e origem, sem imagem) pela
+tela de gestão de usuários.
+
+A migração 033 apagou todas as CNHs digitadas antes dessa mudança (e suas
+fotos); `server/scripts/migrate.js` remove também os arquivos antigos em
+`server/uploads/cnh`. Os certificados da cadeia vencem em 2029 — ver
+`server/certs/icp-brasil/README.md` para a manutenção.
+
+### 3.13 Grupos e veículos restritos
+
+Grupos de usuários (`user_groups`, `user_group_members` — migração 034) são
+geridos em Gestão › Grupos por quem tem a permissão `groups` (migração 035 —
+separada de `users` desde então; contas que já administravam usuários
+receberam `groups` automaticamente na migração, para não perder acesso)
+(`server/routes/groups.js`; leitura também para `fleet`, que escolhe os grupos
+no cadastro do veículo). O veículo guarda os ids em `grupos` (coleção JSON
+`vehicles`; vazio = todos), validados contra os grupos existentes em
+`validateVehicles`. Um grupo em uso por algum veículo não pode ser excluído.
+
+Regra (`js/vehicle-access.js`, compartilhado entre navegador e servidor via
+`server/vehicle-access.js`):
+
+- **enxergar**: membro de algum dos grupos, ou qualquer permissão de gestão;
+- **reservar como motorista**: só membro — conferido em
+  `validateReservations` pelo `criadorUsuarioId` quando a reserva nasce ou
+  troca de veículo/motorista (editar horário ou registrar retirada/devolução
+  de uma reserva existente não depende do grupo).
+
+Onde a regra é aplicada no servidor: bootstrap (`GET /api/state/bootstrap`
+omite veículo, bloqueios e lembretes de manutenção para quem não pode ver —
+a gestão recebe as coleções inteiras porque as salva de volta por inteiro),
+projeção pública das reservas de outros (`publicReservationVisible` em
+`server/reservations-store.js`), entrada como passageiro no `/sync`,
+alertas de "Monitorar rota" (`server/ride-watches.js`) e
+`GET /api/catalog/vehicles`. Os grupos do usuário logado vão em
+`req.user.grupos` (carregados junto com a sessão em `server/auth.js`).
+
+Bloqueios novos (ou com período/veículo alterado) disparam notificações
+`vehicle_blocked` (`notifyVehicleBlocks` em `server/notifications.js`): para
+quem tem reserva ativa no veículo dentro do período e, em veículo restrito,
+para os membros do grupo.
+
+### 3.14 Integrações
 
 Aba exclusiva da permissão `integrations`, com sub-áreas independentes:
 
@@ -274,7 +335,9 @@ concedido individualmente, uma a uma.
 | `audit` | `can_view_audit` | Aba "Auditoria": consulta completa do log de ações. |
 | `rules` | `can_manage_rules` | Aba "Regras": limites globais de reserva (seção 5). |
 | `users` | `can_manage_users` | Aba "Usuários": cadastro, edição, exclusão lógica, operações em lote e importação via SSO; também dá acesso à CNH de qualquer usuário. |
-| `integrations` | `can_manage_integrations` | Aba "Integrações": SSO, SMTP, lembretes por e-mail e sincronização de calendário (seção 3.13). |
+| `groups` | `can_manage_groups` | Aba "Grupos" (migração 035): criar, editar e excluir grupos de usuários (seção 3.13) — separada de `users` para não exigir uma da outra. `fleet` também lê a lista, para escolher os grupos no cadastro do veículo. |
+| `integrations` | `can_manage_integrations` | Aba "Integrações": SSO, SMTP, lembretes por e-mail e sincronização de calendário (seção 3.14). |
+| `checklist` | `can_manage_checklist` | Aba "Checklist" (fora do painel de Gestão — ver seção 2 do manual): revisar, aprovar, corrigir e arquivar os checklists de retirada/devolução de qualquer reserva, e registrar retirada/devolução em nome de outra pessoa. |
 
 Todo usuário comum, com ou sem permissões, sempre pode criar e consultar as
 próprias reservas e entrar em caronas.
@@ -400,10 +463,12 @@ Arquivos:
   relacionais (DTO, upsert de local/veículo, retirada/devolução);
 - `server/branch-deletion.js`: verifica o que impede a exclusão definitiva de
   um local;
-- `server/photo-storage.js`: leitura/escrita/exclusão das fotos (operação e
-  CNH) em disco;
-- `server/driver-licenses.js`: CRUD da CNH e cálculo de status (válida,
-  vencendo, vencida);
+- `server/photo-storage.js`: leitura/escrita/exclusão das fotos de operação
+  em disco;
+- `server/driver-licenses.js`: gravação da CNH verificada e cálculo de status
+  (válida, vencendo, vencida);
+- `server/ecnh/`: importação da e-CNH — assinatura digital (`signature.js`),
+  OCR da carteira (`card-reader.js`) e validação dos campos (`index.js`);
 - `server/notifications.js`: notificações internas — persistência e a regra
   de quando notificar cada evento;
 - `server/mailer.js`: envio de e-mail — via SMTP tradicional (nodemailer) ou
@@ -712,8 +777,19 @@ Atualização de coleção (`PUT`), com controle otimista por `revision`:
 
 | Método | Endpoint | Acesso |
 |---|---|---|
-| GET/PUT | `/api/profile/cnh` | Própria CNH |
-| GET | `/api/profile/cnh/:userId/:lado` | Dono da CNH ou permissão `users`; senão `404` (não `403`, para não confirmar a existência da conta) |
+| GET | `/api/profile/cnh` | Própria CNH |
+| POST | `/api/profile/cnh/e-cnh` | Própria CNH — corpo `application/pdf` (até 2 MB); `422` com `code` quando recusada, `409` se a CNH já pertence a outro usuário |
+| DELETE | `/api/profile/cnh` | Remove a própria CNH |
+| PUT | `/api/profile/cnh` | Desativado — responde `410` (cadastro manual não existe mais) |
+
+### 11.10 Grupos
+
+| Método | Endpoint | Acesso |
+|---|---|---|
+| GET | `/api/groups` | Permissão `users` ou `fleet` |
+| POST | `/api/groups` | Permissão `users` — `{ nome, descricao, membros:[userId] }`; `409` se o nome já existe |
+| PATCH | `/api/groups/:id` | Permissão `users` — mesmo corpo; substitui a lista de membros |
+| DELETE | `/api/groups/:id` | Permissão `users`; `409` enquanto algum veículo usar o grupo |
 
 ## 12. Segurança
 

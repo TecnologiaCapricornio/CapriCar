@@ -1,0 +1,6 @@
+# O script de pós-instalação do tesseract.js só exibe um pedido de doação
+# (opencollective-postinstall) - não é necessário para o OCR da e-CNH.
+packages:
+  - .
+allowBuilds:
+  tesseract.js: false

@@ -42,6 +42,7 @@ const userPermissionInputs = {
   audit:document.getElementById('permissionAudit'),
   rules:document.getElementById('permissionRules'),
   users:document.getElementById('permissionUsers'),
+  groups:document.getElementById('permissionGroups'),
   integrations:document.getElementById('permissionIntegrations'),
   checklist:document.getElementById('permissionChecklist')
 };
@@ -55,6 +56,7 @@ const bulkPermissionInputs = {
   audit:document.getElementById('bulkPermissionAudit'),
   rules:document.getElementById('bulkPermissionRules'),
   users:document.getElementById('bulkPermissionUsers'),
+  groups:document.getElementById('bulkPermissionGroups'),
   integrations:document.getElementById('bulkPermissionIntegrations'),
   checklist:document.getElementById('bulkPermissionChecklist')
 };
@@ -85,6 +87,7 @@ const USER_PERMISSION_LABELS = {
   rules:'Regras',
   integrations:'Integrações',
   users:'Usuários',
+  groups:'Grupos',
   checklist:'Checklist'
 };
 
@@ -605,6 +608,7 @@ const userEditPermissionInputs = {
   rules:document.getElementById('editPermissionRules'),
   integrations:document.getElementById('editPermissionIntegrations'),
   users:document.getElementById('editPermissionUsers'),
+  groups:document.getElementById('editPermissionGroups'),
   checklist:document.getElementById('editPermissionChecklist')
 };
 
@@ -770,23 +774,9 @@ const userViewCnhNumero = document.getElementById('userViewCnhNumero');
 const userViewCnhCategoria = document.getElementById('userViewCnhCategoria');
 const userViewCnhCategoriaPreview = document.getElementById('userViewCnhCategoriaPreview');
 const userViewCnhValidade = document.getElementById('userViewCnhValidade');
-const userViewCnhFrente = document.getElementById('userViewCnhFrente');
-const userViewCnhVerso = document.getElementById('userViewCnhVerso');
+const userViewCnhVerificada = document.getElementById('userViewCnhVerificada');
 const userViewCloseBtn = document.getElementById('userViewCloseBtn');
 const userViewFooterCloseBtn = document.getElementById('userViewFooterCloseBtn');
-
-function renderUserViewPhotoState(el, enviada, userId, lado){
-  if(!el) return;
-  if(!enviada){
-    el.textContent = 'Nenhuma foto enviada.';
-    el.classList.remove('cnh-photo-ok');
-    return;
-  }
-  el.classList.add('cnh-photo-ok');
-  el.innerHTML = 'Foto enviada · <a href="/api/profile/cnh/' +
-    encodeURIComponent(userId) + '/' + encodeURIComponent(lado) +
-    '" target="_blank" rel="noopener">ver</a>';
-}
 
 function renderUserViewCnh(account){
   const info = CNH_BADGE[account.cnhStatus];
@@ -805,8 +795,13 @@ function renderUserViewCnh(account){
       ? cnhCategoriaPreviewHTML(cnh.categoria)
       : '';
   }
-  renderUserViewPhotoState(userViewCnhFrente, !!(cnh && cnh.fotos && cnh.fotos.frente), account.id, 'frente');
-  renderUserViewPhotoState(userViewCnhVerso, !!(cnh && cnh.fotos && cnh.fotos.verso), account.id, 'verso');
+  // Origem do dado: a CNH só existe no sistema se veio de uma e-CNH com
+  // assinatura digital conferida (ver server/ecnh/).
+  userViewCnhVerificada.classList.toggle('hidden', !cnh);
+  userViewCnhVerificada.textContent = cnh
+    ? 'Importada da e-CNH' + (cnh.emissor ? ' assinada por ' + cnh.emissor : '') +
+      (cnh.verificadaEm ? ' em ' + formatDate(cnh.verificadaEm.slice(0, 10)) : '') + '.'
+    : '';
 }
 
 function closeUserViewModal(){
