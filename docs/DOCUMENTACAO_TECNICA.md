@@ -66,6 +66,10 @@ Versão recomendada para uma nova instalação:
 - verificação da categoria da CNH do motorista contra a capacidade do
   veículo já na primeira etapa (não deixa avançar sem CNH compatível, mas
   também não bloqueia enquanto a CNH ainda está carregando);
+- motorista precisa ter CNH válida cadastrada — sem isso só é possível
+  entrar em caronas como passageiro (seção 5, "Nova reserva" e "Nova reserva
+  (admin/gestão)" seguem a mesma regra, inclusive quando lançada por outra
+  pessoa);
 - aviso de rodízio de placas quando aplicável ao trajeto/data;
 - edição pelo criador antes da retirada;
 - cancelamento antes da retirada;
@@ -257,6 +261,24 @@ fotos); `server/scripts/migrate.js` remove também os arquivos antigos em
 `server/uploads/cnh`. Os certificados da cadeia vencem em 2029 — ver
 `server/certs/icp-brasil/README.md` para a manutenção.
 
+A conta `admin` (`display_name` "Administrador") não tem, e na prática não
+consegue ter, uma CNH cadastrada: a importação exige que o primeiro e o
+último nome do cadastro apareçam no nome impresso na e-CNH (item 4 acima), e
+"Administrador" não é o nome de uma pessoa real. Isso é esperado, não um bug
+— é por isso que toda reserva nova precisa indicar um motorista cadastrado
+com CNH válida (seção 5), em vez de aceitar quem estiver logado como
+motorista por padrão.
+
+Pelo mesmo motivo, a interface (`js/auth.js`, `showApp`) esconde de quem
+está logado com `role === 'admin'` — a única conta com esse papel, não há
+como promover outra pela tela de Usuários — tanto o botão "Minha CNH" do
+menu de perfil quanto a aba "Minhas Reservas" da navegação principal, e a
+aterrissa direto na aba "Gestão" em vez de "Minhas Reservas" ao entrar.
+"Nova Reserva" continua visível, mas ao abrir é redirecionada de volta com o
+aviso de CNH obrigatória (mesma trava de `userCanDrive`, seção 3.1) — a
+conta só cria reserva para outra pessoa, pela aba "Reservas" do painel de
+Gestão.
+
 ### 3.13 Grupos e veículos restritos
 
 Grupos de usuários (`user_groups`, `user_group_members` — migração 034) são
@@ -326,7 +348,7 @@ concedido individualmente, uma a uma.
 
 | Permissão | Coluna no banco | Libera |
 |---|---|---|
-| `reservations` | `can_manage_reservations` | Aba "Reservas": editar/cancelar reserva de qualquer pessoa, encerramento administrativo, "Nova reserva (admin)". |
+| `reservations` | `can_manage_reservations` | Aba "Reservas": editar/cancelar reserva de qualquer pessoa, encerramento administrativo, "Nova reserva (admin)" — exige indicar um motorista cadastrado com CNH válida (seção 5), não aceita mais nome livre sem conta. |
 | `branches` | `can_manage_branches` | Aba "Locais": cadastrar, editar, ativar/desativar e excluir locais. |
 | `fleet` | `can_manage_fleet` | Aba "Veículos": cadastrar, editar, ativar/desativar e excluir veículos; recebe a notificação de divergência de odômetro (seção 3.6). |
 | `maintenance` | `can_manage_maintenance` | Aba "Manutenção": lembretes preventivos (seção 3.9) — independente de `fleet`. |
@@ -370,7 +392,17 @@ Outras regras:
 - reserva não pode cruzar bloqueio do veículo;
 - criador não pode ser substituído;
 - passageiro altera somente sua participação;
-- reserva concluída não pode ser alterada.
+- reserva concluída não pode ser alterada;
+- **reserva nova, ou que troca de motorista, exige um motorista com conta
+  cadastrada e ativa e CNH dentro da validade** (`server/validation.js`,
+  `licenseCurrentlyValid`) — vale tanto para quem se autorreserva (a tela
+  principal já bloqueia antes disso, `userCanDrive` em
+  `js/driver-license.js`) quanto para "Nova reserva (admin/gestão)" (seção
+  4, permissão `reservations`), que antes aceitava digitar um nome livre sem
+  conta vinculada e sem checar CNH nenhuma. Editar uma reserva já existente
+  **sem trocar veículo nem motorista** não reabre essa exigência para dados
+  antigos sem motorista vinculado (grandfathering, igual às demais regras
+  desta lista).
 
 ## 6. Arquitetura
 
@@ -615,6 +647,15 @@ BACKUP_RETENTION_DAYS=30
 
 As senhas iniciais são usadas somente se as contas ainda não existirem.
 
+`ADMIN_INITIAL_PASSWORD` precisa ter **entre 8 e 128 caracteres**
+(`server/scripts/seed.js`, `seedUsers`). Se estiver fora desse tamanho (por
+exemplo, o placeholder mais curto de algum `.env` de exemplo antigo), `npm run
+db:seed` recusa a senha, lança erro e **desfaz a transação inteira** — o
+usuário `admin` não chega a ser criado, e nenhuma senha funciona no login
+seguinte (não é a senha errada: a conta simplesmente não existe). Ajuste
+`ADMIN_INITIAL_PASSWORD` no `.env` para 8+ caracteres e rode `npm run db:seed`
+de novo antes de tentar logar (ver seção 17, "Login não funciona").
+
 ### 8.3 Preparar e iniciar
 
 ```powershell
@@ -641,7 +682,7 @@ Saúde: `http://localhost:3000/api/health`.
 | `PGPASSWORD` | Sim | Senha |
 | `SESSION_TTL_HOURS` | Não | Duração da sessão |
 | `SESSION_COOKIE_SECURE` | Não | `true` somente com HTTPS |
-| `ADMIN_INITIAL_PASSWORD` | Primeira carga | Senha inicial admin |
+| `ADMIN_INITIAL_PASSWORD` | Primeira carga | Senha inicial admin — 8 a 128 caracteres; fora disso, `db:seed` falha e não cria o usuário `admin` (ver seção 8.2) |
 | `BACKUP_DIR` | Não | Pasta de backup |
 | `BACKUP_RETENTION_DAYS` | Não | Retenção local |
 | `PG_DUMP_PATH` | Não | Caminho do `pg_dump` |
@@ -954,6 +995,16 @@ Em incidente:
 
 Verifique Node, PostgreSQL, migrações, seed, conta ativa, senha e bloqueio
 temporário por tentativas.
+
+**Nenhuma senha funciona para `admin`, logo após a primeira instalação.**
+Sintoma: o servidor sobe normalmente, mas o login do `admin` sempre recusa,
+mesmo com a senha certa de `ADMIN_INITIAL_PASSWORD`. Causa provável: essa
+variável tinha menos de 8 caracteres quando `npm run db:seed` rodou — o seed
+recusa a senha e desfaz a transação inteira (seção 8.2), então o usuário
+`admin` nunca chegou a ser criado no banco. Solução: ajuste
+`ADMIN_INITIAL_PASSWORD` no `.env` para 8 a 128 caracteres e rode `npm run
+db:seed` novamente (no Docker, reinicie o container - `docker/entrypoint.sh`
+roda o mesmo seed a cada start).
 
 ### `role "capricar_app" already exists`
 

@@ -58,6 +58,12 @@ o menu de perfil, com acesso a "Meu perfil" (CNH — seção 8) e a opção de
 sair. O botão de lua/sol alterna entre tema claro e escuro; a escolha fica
 salva no navegador — sem nada salvo, o padrão é o tema claro.
 
+A conta `admin` não reserva veículo em nome dela mesma (não tem, e não
+consegue ter, uma CNH cadastrada — seção 8) e não aparece pra ela nem
+"Minhas Reservas" nem "Minha CNH" no menu do avatar; ao entrar, ela cai
+direto em "Gestão". Toda reserva feita por essa conta é lançada em nome de
+outra pessoa, pela aba "Reservas" do painel de Gestão (seção 10.1).
+
 ## 3. Nova Reserva
 
 O formulário é dividido em duas etapas.
@@ -233,6 +239,15 @@ Reúne duas coisas na mesma tela:
   Ativas/Concluídas, com botão para criar uma reserva em nome de outra
   pessoa ("Nova reserva como admin/gestão") e para editar/cancelar qualquer
   reserva.
+
+  Em "Nova reserva como admin/gestão", o campo de motorista precisa ser
+  preenchido escolhendo um nome da lista de sugestões (usuários cadastrados
+  no CapriCar) — um nome digitado sem selecionar a sugestão não é aceito, e
+  a pessoa escolhida precisa ter uma CNH válida cadastrada em "Meu perfil"
+  (seção 8). Isso vale mesmo para o administrador: a conta `admin` não tem
+  CNH própria (o nome "Administrador" nunca vai bater com uma CNH de
+  verdade), então toda reserva lançada por ela também precisa indicar um
+  motorista de carne e osso, cadastrado no sistema.
 
 ### 10.2 Locais
 

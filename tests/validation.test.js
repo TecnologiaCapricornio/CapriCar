@@ -34,10 +34,19 @@ const rules = {
   pickupAdvanceMinutes:15
 };
 
+// CNH válida padrão usada pelo motorista das reservas de teste - a maioria
+// dos testes aqui não está testando a regra de motorista/CNH em si (ver "só
+// reserva nova, ou que troca de motorista, exige conta com CNH válida" logo
+// abaixo), então tanto reservation() quanto context() já vêm com um
+// motorista 'u1' válido por padrão, para não precisar repetir isso em cada
+// teste alheio ao assunto.
+const validLicense = { numero:'12345678901', categoria:'B', validade:isoIn(365) };
+
 function reservation(overrides){
   return {
     id:'r1',
     nome:'Usuário Teste',
+    criadorUsuarioId:'u1',
     partida:'São Paulo',
     destino:'São Carlos',
     carro:'89',
@@ -54,7 +63,12 @@ function reservation(overrides){
 }
 
 function context(overrides){
-  return { branches, vehicles, blocks:[], rules, ...(overrides || {}) };
+  return {
+    branches, vehicles, blocks:[], rules,
+    activeUserIds:new Set(['u1', 'user-1', 'user-2']),
+    licensesByUserId:new Map([['u1', validLicense], ['user-1', validLicense], ['user-2', validLicense]]),
+    ...(overrides || {})
+  };
 }
 
 test('aceita cadastros e uma reserva válida', () => {
@@ -309,7 +323,7 @@ test('reserva já confirmada não grandfathered por um bloqueio criado depois, m
 
 test('recusa CNH de categoria insuficiente para a capacidade do veículo', () => {
   const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
-  const licensesByUserId = new Map([['u1', { categoria:'B' }]]);
+  const licensesByUserId = new Map([['u1', { ...validLicense, categoria:'B' }]]);
   assert.throws(
     () => validateReservations(
       [reservation({ carro:'99', criadorUsuarioId:'u1' })],
@@ -323,24 +337,76 @@ test('aceita CNH de categoria D para veículo de mais de 8 lugares, e categoria 
   const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
   assert.doesNotThrow(() => validateReservations(
     [reservation({ carro:'99', criadorUsuarioId:'u1' })],
-    context({ vehicles:onibus, licensesByUserId:new Map([['u1', { categoria:'D' }]]) })
+    context({ vehicles:onibus, licensesByUserId:new Map([['u1', { ...validLicense, categoria:'D' }]]) })
   ));
   assert.doesNotThrow(() => validateReservations(
     [reservation({ criadorUsuarioId:'u1' })],
-    context({ licensesByUserId:new Map([['u1', { categoria:'C' }]]) })
+    context({ licensesByUserId:new Map([['u1', { ...validLicense, categoria:'C' }]]) })
   ));
 });
 
-test('sem conta vinculada ou sem CNH cadastrada, a checagem de categoria é pulada', () => {
+test('com CNH válida mas sem categoria cadastrada, a checagem de categoria x capacidade é pulada', () => {
   const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
   assert.doesNotThrow(() => validateReservations(
-    [reservation({ carro:'99' })],
-    context({ vehicles:onibus })
-  ));
-  assert.doesNotThrow(() => validateReservations(
     [reservation({ carro:'99', criadorUsuarioId:'u1' })],
-    context({ vehicles:onibus, licensesByUserId:new Map([['u1', { categoria:'' }]]) })
+    context({ vehicles:onibus, licensesByUserId:new Map([['u1', { ...validLicense, categoria:'' }]]) })
   ));
+});
+
+test('só reserva nova, ou que troca de motorista, exige conta cadastrada com CNH válida', () => {
+  const onibus = [{ ...vehicles[0], id:'v2', codigo:'99', capacidade:20 }];
+
+  // Sem motorista nenhum: recusada.
+  assert.throws(
+    () => validateReservations(
+      [reservation({ carro:'99', criadorUsuarioId:undefined })],
+      context({ vehicles:onibus })
+    ),
+    /motorista com conta cadastrada/
+  );
+  // Motorista indicado, mas sem conta ativa no sistema (id inventado, ou de
+  // uma conta desativada/excluída) - recusada mesmo com uma CNH cadastrada
+  // para esse id, porque activeUserIds é quem prova que a conta existe.
+  assert.throws(
+    () => validateReservations(
+      [reservation({ carro:'99', criadorUsuarioId:'sem-conta' })],
+      context({ vehicles:onibus, licensesByUserId:new Map([['sem-conta', validLicense]]) })
+    ),
+    /motorista com conta cadastrada/
+  );
+  // Conta existe, mas sem CNH cadastrada.
+  assert.throws(
+    () => validateReservations(
+      [reservation({ carro:'99', criadorUsuarioId:'u1' })],
+      context({ vehicles:onibus, licensesByUserId:new Map() })
+    ),
+    /CNH válida/
+  );
+  // Conta existe, CNH vencida.
+  assert.throws(
+    () => validateReservations(
+      [reservation({ carro:'99', criadorUsuarioId:'u1' })],
+      context({ vehicles:onibus, licensesByUserId:new Map([['u1', { ...validLicense, validade:isoIn(-1) }]]) })
+    ),
+    /CNH válida/
+  );
+
+  // Editar uma reserva já existente SEM trocar veículo nem motorista não
+  // reabre essa exigência para dados antigos sem motorista vinculado (dado
+  // legado, de antes da regra existir) - só motivo muda aqui.
+  const legado = reservation({ carro:'99', criadorUsuarioId:undefined });
+  assert.doesNotThrow(() => validateReservations(
+    [{ ...legado, motivo:'Edição do motivo, sem trocar carro/motorista' }],
+    context({ vehicles:onibus, currentReservations:[legado] })
+  ));
+  // Mas trocar o motorista (mesmo em edição) volta a exigir CNH válida.
+  assert.throws(
+    () => validateReservations(
+      [{ ...legado, criadorUsuarioId:'sem-conta' }],
+      context({ vehicles:onibus, currentReservations:[legado] })
+    ),
+    /motorista com conta cadastrada/
+  );
 });
 
 test('recusa marcação HTML e identificadores duplicados', () => {
