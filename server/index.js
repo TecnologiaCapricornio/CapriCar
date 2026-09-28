@@ -14,6 +14,7 @@ const reservationRoutes = require('./routes/reservations');
 const settingsRoutes = require('./routes/settings');
 const rideWatchRoutes = require('./routes/ride-watches');
 const profileRoutes = require('./routes/profile');
+const groupRoutes = require('./routes/groups');
 const { sweepEmailReminders, sweepDriverLicenseReminders, sweepMaintenanceReminders } = require('./reminders');
 
 const app = express();
@@ -65,6 +66,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth/sso', ssoRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', requireAuth, userRoutes);
+app.use('/api/groups', requireAuth, groupRoutes);
 app.use('/api/catalog', requireAuth, catalogRoutes);
 app.use('/api/state', requireAuth, stateRoutes);
 app.use('/api/notifications', requireAuth, notificationRoutes);

@@ -1,4 +1,6 @@
 const { query } = require('./db');
+const { canSeeVehicle, indexVehicles, vehicleForReservation } = require('./vehicle-access');
+const { publicUser, USER_GROUP_IDS_SQL } = require('./auth');
 const { resolveVehicle } = require('./calendar-sync');
 const { ensureNotificationsTable, insertNotification, reservationSummary } = require('./notifications');
 const { getEmailReminderSettings, renderTemplate, reservationTokens } = require('./reminders');
@@ -47,13 +49,36 @@ async function notifyRideWatchMatches(client, reservation, actor){
   const vehicle = await resolveVehicle(reservation.carro, reservation.partida);
   if(!vehicle || Number(vehicle.capacity) <= 1) return [];
 
+  // Veículo restrito a grupo: só avisa quem pode ver o veículo (membro do
+  // grupo ou gestão) - para os demais ele nem aparece (ver
+  // server/vehicle-access.js). Os grupos estão no veículo da coleção JSON.
+  const vehiclesResult = await client.query("SELECT value FROM application_state WHERE collection_name = 'vehicles'");
+  const jsonVehicle = vehicleForReservation(
+    reservation,
+    indexVehicles(vehiclesResult.rows[0] && Array.isArray(vehiclesResult.rows[0].value) ? vehiclesResult.rows[0].value : [])
+  );
+
   const result = await client.query(
-    `SELECT id, user_id, origin, destination, starts_on, ends_on
-       FROM ride_watches
-      WHERE active = TRUE AND user_id <> $1`,
+    `SELECT u.*, ${USER_GROUP_IDS_SQL},
+            w.id AS watch_id, w.user_id AS watch_user_id, w.origin AS watch_origin,
+            w.destination AS watch_destination, w.starts_on AS watch_starts_on, w.ends_on AS watch_ends_on
+       FROM ride_watches w
+       JOIN users u ON u.id = w.user_id
+      WHERE w.active = TRUE AND w.user_id <> $1`,
     [actor.id]
   );
-  const watches = result.rows.map(watchRowToObject);
+  // u.* e w.* têm colunas com o mesmo nome (id): as do monitoramento vêm com
+  // prefixo watch_ para não serem sobrescritas.
+  const watches = result.rows
+    .filter(row => canSeeVehicle(jsonVehicle, publicUser(row)))
+    .map(row => watchRowToObject({
+      id:row.watch_id,
+      user_id:row.watch_user_id,
+      origin:row.watch_origin,
+      destination:row.watch_destination,
+      starts_on:row.watch_starts_on,
+      ends_on:row.watch_ends_on
+    }));
   const matches = watches.filter(watch => watchMatchesReservation(watch, reservation));
   if(!matches.length) return [];
 

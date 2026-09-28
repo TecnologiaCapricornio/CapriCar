@@ -466,6 +466,114 @@ async function generateUserReminders(user){
   }
 }
 
+/* =========================================================
+   Bloqueio de veículo
+
+   Quando a gestão cria um bloqueio (ou muda o período/veículo de um que
+   já existia), avisa:
+     - quem tem reserva ativa naquele veículo dentro do período - a
+       reserva não é cancelada sozinha, só sinalizada;
+     - em veículo restrito a grupo, todos os membros do grupo, para que
+       saibam que o carro deles ficará indisponível.
+   ========================================================= */
+
+const formatBrDate = iso => {
+  const [year, month, day] = String(iso || '').split('-');
+  return year && month && day ? `${day}/${month}/${year}` : String(iso || '');
+};
+
+const blockReasonLabel = tipo => {
+  const text = String(tipo || '').replace(/[_-]+/g, ' ').trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : 'Bloqueio';
+};
+
+const blockVehicleKey = block => `${String(block.local || '').toLowerCase()}|${String(block.carro || '').toLowerCase()}`;
+
+// Bloqueios novos, ou cujo veículo/período mudou. Puro.
+function changedBlocks(previousBlocks, nextBlocks){
+  const previousById = new Map((previousBlocks || []).map(block => [String(block.id), block]));
+  return (nextBlocks || []).filter(block => {
+    const previous = previousById.get(String(block.id));
+    return !previous ||
+      blockVehicleKey(previous) !== blockVehicleKey(block) ||
+      previous.dataInicio !== block.dataInicio ||
+      previous.dataFim !== block.dataFim;
+  });
+}
+
+// Reservas ainda por acontecer ou em andamento, no mesmo veículo, que
+// encostam no período do bloqueio (datas inclusivas). Puro.
+function reservationsAffectedByBlock(block, reservations){
+  const key = blockVehicleKey(block);
+  return (reservations || []).filter(reservation =>
+    // Status do DTO (ver statusToDto em server/reservations-store.js).
+    ['confirmada', 'em uso'].includes(String(reservation.status || 'confirmada')) &&
+    `${String(reservation.partida || '').toLowerCase()}|${String(reservation.carro || '').toLowerCase()}` === key &&
+    String(reservation.dataIda) <= String(block.dataFim) &&
+    String(reservation.dataVolta) >= String(block.dataInicio)
+  );
+}
+
+// `vehicles`: coleção de veículos (para nome e grupos). `groupMemberIds`:
+// função async (groupIds) -> [userId] (ver server/groups.js).
+async function notifyVehicleBlocks(client, { previousBlocks, nextBlocks, vehicles, reservations, actor, groupMemberIds }){
+  const blocks = changedBlocks(previousBlocks, nextBlocks);
+  if(!blocks.length) return;
+  await ensureNotificationsTable(client);
+  const vehiclesByKey = new Map((vehicles || []).map(vehicle => [
+    `${String(vehicle.local || '').toLowerCase()}|${String(vehicle.codigo || '').toLowerCase()}`,
+    vehicle
+  ]));
+
+  for(const block of blocks){
+    const vehicle = vehiclesByKey.get(blockVehicleKey(block));
+    const vehicleName = vehicle
+      ? [vehicle.marca, vehicle.modelo].filter(Boolean).join(' ') + (vehicle.placa ? ` (${vehicle.placa})` : '')
+      : String(block.carro || 'Veículo');
+    const period = block.dataInicio === block.dataFim
+      ? `em ${formatBrDate(block.dataInicio)}`
+      : `de ${formatBrDate(block.dataInicio)} a ${formatBrDate(block.dataFim)}`;
+    const reason = blockReasonLabel(block.tipo);
+    const dedupeBase = `block:${block.id}:${block.dataInicio}:${block.dataFim}:${blockVehicleKey(block)}`;
+    const notified = new Set([String(actor && actor.id)]);
+
+    for(const reservation of reservationsAffectedByBlock(block, reservations)){
+      const summary = reservationSummary(reservation);
+      const recipients = await resolveReservationUsers(client, reservation, true);
+      for(const userId of recipients){
+        if(notified.has(userId)) continue;
+        notified.add(userId);
+        await insertNotification(client, {
+          userId,
+          type:'vehicle_blocked',
+          title:'Veículo da sua reserva foi bloqueado',
+          message:`${vehicleName} ficará indisponível ${period} (${reason}). A reserva ${summary.route}` +
+            `${summary.when ? `, de ${summary.when},` : ''} está nesse período - fale com a gestão da frota.`,
+          reservationId:String(reservation.id || ''),
+          dedupeKey:`${dedupeBase}:reservation:${reservation.id}`,
+          metadata:{ blockId:String(block.id), vehicle:vehicleName, reason, start:block.dataInicio, end:block.dataFim }
+        });
+      }
+    }
+
+    const groups = vehicle && Array.isArray(vehicle.grupos) ? vehicle.grupos : [];
+    if(groups.length && typeof groupMemberIds === 'function'){
+      for(const userId of await groupMemberIds(groups)){
+        if(notified.has(userId)) continue;
+        notified.add(userId);
+        await insertNotification(client, {
+          userId,
+          type:'vehicle_blocked',
+          title:'Veículo indisponível',
+          message:`${vehicleName} ficará indisponível ${period} (${reason}).`,
+          dedupeKey:`${dedupeBase}:member`,
+          metadata:{ blockId:String(block.id), vehicle:vehicleName, reason, start:block.dataInicio, end:block.dataFim }
+        });
+      }
+    }
+  }
+}
+
 module.exports = {
   ensureNotificationsTable,
   // Consumida por server/ride-watches.js e server/reminders.js. Ficou de fora
@@ -479,6 +587,9 @@ module.exports = {
   notifyReservationPassengerRemovals,
   notifyOperationReport,
   notifyOdometerDiscrepancy,
+  notifyVehicleBlocks,
+  changedBlocks,
+  reservationsAffectedByBlock,
   resolveReservationManagers,
   resolveFleetManagers,
   reminderTypesForReservation,

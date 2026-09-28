@@ -117,6 +117,7 @@ function openVehicleEditModal(vehicleId){
     ? String(vehicle.odometroAtual)
     : '';
   fleetEditError.textContent = '';
+  fillGroupPicker(document.getElementById('fleetEditVehicleGroups'), vehicleGroupIds(vehicle));
   fleetEditModal.classList.remove('hidden');
   fleetEditVehiclePlateInput.focus();
 }
@@ -352,7 +353,13 @@ fleetEditForm.addEventListener('submit', function(e){
     vehicle.alugado = alugado;
     vehicle.centroCusto = centroCusto;
     vehicle.odometroAtual = odometerRaw ? Number(odometerRaw) : undefined;
+    const previousGroups = vehicleGroupIds(vehicle).join(',');
+    vehicle.grupos = readGroupPicker(document.getElementById('fleetEditVehicleGroups'));
     saveVehicles(list);
+    if(previousGroups !== vehicle.grupos.join(',')){
+      logAudit('alterou o acesso de', 'veículo', vehicle.id,
+        placa + ' · ' + (vehicleAccessSummary(vehicle) || 'Disponível para todos'));
+    }
     if(oldLocal !== local){
       const blocksUpdated = getVehicleBlocks();
       blocksUpdated.forEach(block => {
@@ -483,9 +490,20 @@ function renderBranchManagement(){
   });
 }
 
+let fleetGroupsLoaded = false;
+
 function renderFleetManagement(){
   if(!canManageFleet()) return;
   refreshBranchSelectors();
+  // Nomes dos grupos (resumo "Restrito: ..." e seletor do cadastro) - na
+  // primeira abertura a lista ainda não veio do servidor; renderiza de novo
+  // quando chegar.
+  if(!fleetGroupsLoaded){
+    fleetGroupsLoaded = true;
+    loadUserGroups(true).then(renderFleetManagement).catch(error => console.warn('Não foi possível carregar os grupos:', error));
+  }
+  const vehicleGroupsPicker = document.getElementById('vehicleGroups');
+  if(vehicleGroupsPicker) renderGroupPicker(vehicleGroupsPicker, readGroupPicker(vehicleGroupsPicker));
   const vehicles = getVehicles();
   vehiclesList.innerHTML = vehicles.length ? vehicles.map(vehicle =>
     '<div class="management-item' + (vehicle.ativo === false ? ' is-inactive' : '') + '">' +
@@ -493,7 +511,9 @@ function renderFleetManagement(){
         (vehicle.placa ? '<br>' + plateBadgeHTML(vehicle.placa) : '') + '</strong>' +
       '<small>' + escapeHTML(vehicle.local) + ' · ' + Number(vehicle.capacidade || CAPACIDADE_MAXIMA) + ' lugares · ' +
         (vehicle.odometroAtual != null && vehicle.odometroAtual !== '' ? Number(vehicle.odometroAtual).toLocaleString('pt-BR') + ' km · ' : '') +
-        (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small></div>' +
+        (vehicle.ativo === false ? 'Inativo' : 'Ativo') + '</small>' +
+        (isRestrictedVehicle(vehicle) ? '<span class="tag tag-info vehicle-access-tag">' + escapeHTML(vehicleAccessSummary(vehicle)) + '</span>' : '') +
+      '</div>' +
       '<div class="management-actions"><button type="button" class="secondary-btn vehicle-edit-btn" data-id="' + escapeHTML(vehicle.id) + '">Editar</button>' +
       '<button type="button" class="secondary-btn vehicle-toggle-btn" data-id="' + escapeHTML(vehicle.id) + '">' + (vehicle.ativo === false ? 'Ativar' : 'Desativar') + '</button>' +
       '<button type="button" class="delete-btn vehicle-delete-btn" data-id="' + escapeHTML(vehicle.id) + '">Excluir</button></div>' +
@@ -609,6 +629,7 @@ if(vehicleForm){
       alugado: vehicleRentedInput ? vehicleRentedInput.checked : false,
       centroCusto: vehicleCostCenterInput ? vehicleCostCenterInput.value.trim() : '',
       odometroAtual: odometerRaw ? Number(odometerRaw) : undefined,
+      grupos: readGroupPicker(document.getElementById('vehicleGroups')),
       ativo: true
     };
     list.push(vehicle);
@@ -626,6 +647,7 @@ if(vehicleForm){
     logAudit('cadastrou', 'veículo', vehicle.id,
       local + ' · ' + vehicle.marca + ' ' + vehicle.modelo + ' · ' + placa);
     vehicleForm.reset();
+    renderGroupPicker(document.getElementById('vehicleGroups'), []);
     vehicleCapacityInput.max = String(seatLayoutFor('carro').capacidadeMaxima);
     vehicleCapacityInput.value = '5';
     if(vehicleTypeSelect) vehicleTypeSelect.value = 'carro';

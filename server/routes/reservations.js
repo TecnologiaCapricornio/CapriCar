@@ -1,4 +1,6 @@
 const express = require('express');
+const { canSeeVehicle, indexVehicles, vehicleForReservation } = require('../vehicle-access');
+const { loadGroupMembership } = require('../groups');
 const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
 const {
@@ -176,11 +178,15 @@ async function validationContext(client, driverIds){
   // criadorUsuarioId; sem conta vinculada, essa checagem é pulada (ver
   // comentário lá).
   const licensesByUserId = await getLicensesForUsers(driverIds || []);
+  // Grupos dos motoristas: veículo restrito só aceita motorista membro (ver
+  // server/vehicle-access.js e a checagem em validateReservations).
+  const groupMembershipByUserId = await loadGroupMembership(driverIds || [], client);
   return {
     vehicles:Array.isArray(values.vehicles) ? values.vehicles : [],
     blocks:Array.isArray(values.blocks) ? values.blocks : [],
     rules:values.rules || {},
-    licensesByUserId
+    licensesByUserId,
+    groupMembershipByUserId
   };
 }
 
@@ -261,6 +267,18 @@ router.post('/sync', async (req, res) => {
       ...context,
       currentReservations:current
     });
+
+    // Entrar como passageiro numa reserva de outra pessoa (caminho de
+    // mergePassengerOnlyChange) exige poder ver o veículo: carona em veículo
+    // restrito a grupo é só para quem o grupo alcança.
+    const vehiclesIndex = indexVehicles(context.vehicles);
+    for(const change of prepared){
+      if(change.type !== 'upsert' || !change.previous || manager || ownsReservation(change.previous, req.user)) continue;
+      const vehicle = vehicleForReservation(change.reservation, vehiclesIndex);
+      if(vehicle && !canSeeVehicle(vehicle, req.user)){
+        throw Object.assign(new Error('Este veículo é de uso restrito a um grupo do qual você não faz parte.'), { status:403 });
+      }
+    }
 
     const graphEventIds = await getReservationGraphEventIds(
       client,

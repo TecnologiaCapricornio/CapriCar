@@ -138,7 +138,9 @@ function getRecommendedVehicleCodigoForBranch(local){
     return vehicleRecommendationCache.get(local);
   }
   const codigo = getRecommendedVehicleCodigo(local, {
-    vehicles: getVehicles(),
+    // Só entre os veículos que a pessoa pode dirigir (grupos - ver
+    // getVehiclesForCurrentDriver em js/storage.js).
+    vehicles: typeof getVehiclesForCurrentDriver === 'function' ? getVehiclesForCurrentDriver() : getVehicles(),
     reservations: getReservations(),
     blocks: getVehicleBlocks(),
     today: todayISO(),

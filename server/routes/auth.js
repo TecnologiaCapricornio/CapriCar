@@ -1,7 +1,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { hashPassword, verifyPassword, hashSessionToken } = require('../security');
-const { SESSION_COOKIE, parseCookies, cookieOptions, issueSession, publicUser, requireAuth } = require('../auth');
+const { SESSION_COOKIE, parseCookies, cookieOptions, issueSession, publicUser, requireAuth, USER_GROUP_IDS_SQL } = require('../auth');
 const { loginMethodConfig } = require('../config');
 const {
   LOGIN_WINDOW_MS,
@@ -41,11 +41,11 @@ router.post('/login', async (req, res) => {
   }
 
   const result = await query(
-    `SELECT *
-       FROM users
-      WHERE LOWER(username) = $1
-        AND active = TRUE
-        AND deleted_at IS NULL
+    `SELECT u.*, ${USER_GROUP_IDS_SQL}
+       FROM users u
+      WHERE LOWER(u.username) = $1
+        AND u.active = TRUE
+        AND u.deleted_at IS NULL
       LIMIT 1`,
     [username]
   );

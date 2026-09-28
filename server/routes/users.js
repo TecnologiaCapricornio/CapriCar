@@ -4,19 +4,10 @@ const { hashPassword, createSessionToken } = require('../security');
 const { publicUser, requirePermission } = require('../auth');
 const { isValidEmail } = require('../validation');
 const { importSsoUsers, resolveSsoConfig } = require('../sso');
-const { getLicensesForUsers, licenseStatus, todayISO } = require('../driver-licenses');
+const { listManagedUsers } = require('../user-listing');
 
 const router = express.Router();
 router.use(requirePermission('users'));
-
-const USER_SELECT = `
-  SELECT id, username, display_name, email, role, active, auth_provider,
-         can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
-         can_manage_blocks, can_view_reports, can_view_audit,
-         can_manage_rules, can_manage_users, can_manage_integrations, can_manage_checklist,
-         cost_center, created_at, updated_at
-    FROM users
-   WHERE deleted_at IS NULL`;
 
 function normalizePermissions(value){
   const permissions = value || {};
@@ -30,6 +21,7 @@ function normalizePermissions(value){
     audit:permissions.audit === true,
     rules:permissions.rules === true,
     users:permissions.users === true,
+    groups:permissions.groups === true,
     integrations:permissions.integrations === true,
     checklist:permissions.checklist === true
   };
@@ -48,7 +40,7 @@ const MAX_BULK_IDS = 2000;
 const PERMISSION_LABELS = {
   reservations:'Reservas', branches:'Locais', fleet:'Veículos', maintenance:'Manutenção',
   blocks:'Bloqueios', reports:'Relatórios', audit:'Auditoria', rules:'Regras', users:'Usuários',
-  integrations:'Integrações', checklist:'Checklist'
+  groups:'Grupos', integrations:'Integrações', checklist:'Checklist'
 };
 
 async function deactivateUserCore(client, actorId, targetId){
@@ -117,6 +109,7 @@ async function deleteUserCore(client, actorId, targetId, justification){
             can_view_audit = FALSE,
             can_manage_rules = FALSE,
             can_manage_users = FALSE,
+            can_manage_groups = FALSE,
             can_manage_integrations = FALSE,
             can_manage_checklist = FALSE,
             deleted_at = NOW(),
@@ -154,14 +147,15 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
             can_view_audit = $8,
             can_manage_rules = $9,
             can_manage_users = $10,
-            can_manage_integrations = $11,
-            can_manage_checklist = $12
+            can_manage_groups = $11,
+            can_manage_integrations = $12,
+            can_manage_checklist = $13
       WHERE id = $1`,
     [
       targetId,
       permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
       permissions.blocks, permissions.reports, permissions.audit, permissions.rules, permissions.users,
-      permissions.integrations, permissions.checklist
+      permissions.groups, permissions.integrations, permissions.checklist
     ]
   );
   await audit(client, actorId, 'updated', targetId, {
@@ -171,24 +165,7 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
 }
 
 router.get('/', async (req, res) => {
-  const result = await query(USER_SELECT + " ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name");
-
-  // Uma consulta só para todas as CNHs, e não uma por usuário - a lista de
-  // usuários é paginada no cliente, então o N+1 apareceria em cheio aqui.
-  const licenses = await getLicensesForUsers(result.rows.map(row => row.id));
-  const hoje = todayISO();
-
-  res.json({
-    users:result.rows.map(row => {
-      const user = publicUser(row);
-      const cnh = licenses.get(String(row.id)) || null;
-      const status = licenseStatus(cnh, hoje);
-      user.cnh = cnh;
-      user.cnhStatus = status.estado;
-      user.cnhDiasRestantes = status.diasRestantes;
-      return user;
-    })
-  });
+  res.json({ users:await listManagedUsers() });
 });
 
 router.post('/sso-import', async (req, res) => {
@@ -338,15 +315,15 @@ router.post('/', async (req, res) => {
          username, display_name, email, password_hash, role, active,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports,
-         can_view_audit, can_manage_rules, can_manage_users, can_manage_integrations, can_manage_checklist,
+         can_view_audit, can_manage_rules, can_manage_users, can_manage_groups, can_manage_integrations, can_manage_checklist,
          cost_center
-       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NULLIF($16, ''))
+       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''))
        RETURNING *`,
       [
         username, displayName, email || null, passwordHash,
         permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
         permissions.blocks, permissions.reports,
-        permissions.audit, permissions.rules, permissions.users, permissions.integrations, permissions.checklist,
+        permissions.audit, permissions.rules, permissions.users, permissions.groups, permissions.integrations, permissions.checklist,
         costCenter
       ]
     );
@@ -435,6 +412,7 @@ router.patch('/:id', async (req, res) => {
       audit:current.can_view_audit,
       rules:current.can_manage_rules,
       users:current.can_manage_users,
+      groups:current.can_manage_groups,
       integrations:current.can_manage_integrations,
       checklist:current.can_manage_checklist
     };
@@ -456,6 +434,7 @@ router.patch('/:id', async (req, res) => {
               can_manage_users = CASE WHEN role = 'admin' THEN TRUE ELSE $14 END,
               can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $15 END,
               can_manage_checklist = CASE WHEN role = 'admin' THEN TRUE ELSE $17 END,
+              can_manage_groups = CASE WHEN role = 'admin' THEN TRUE ELSE $19 END,
               cost_center = $16
         WHERE id = $1
         RETURNING *`,
@@ -473,7 +452,8 @@ router.patch('/:id', async (req, res) => {
         isAdminAccount || permissions.integrations,
         costCenter,
         isAdminAccount || permissions.checklist,
-        username
+        username,
+        isAdminAccount || permissions.groups
       ]
     );
     await audit(client, req.user.id, 'updated', current.id, {
@@ -556,6 +536,7 @@ router.delete('/:id', async (req, res) => {
               can_view_audit = FALSE,
               can_manage_rules = FALSE,
               can_manage_users = FALSE,
+              can_manage_groups = FALSE,
               can_manage_integrations = FALSE,
               can_manage_checklist = FALSE,
               deleted_at = NOW(),

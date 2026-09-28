@@ -58,6 +58,16 @@ function getVehicles(){
   return readCollection(VEHICLES_KEY, []);
 }
 
+// Veículos que o usuário logado pode reservar como MOTORISTA. Difere de
+// getVehicles() só para quem é da gestão: ela recebe todos os veículos (para
+// administrar), mas veículo restrito a grupo só pode ser dirigido por membro
+// (ver js/vehicle-access.js). Para os demais, o servidor já nem envia os
+// veículos de grupos alheios.
+function getVehiclesForCurrentDriver(){
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  return getVehicles().filter(vehicle => canDriveVehicle(vehicle, user && user.grupos));
+}
+
 function saveVehicles(list){
   writeCollection(VEHICLES_KEY, list);
   syncFleetGlobals();

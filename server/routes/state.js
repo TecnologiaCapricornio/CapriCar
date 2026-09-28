@@ -2,22 +2,16 @@ const express = require('express');
 const { query, withTransaction } = require('../db');
 const { validateCollection } = require('../validation');
 const { userCanManage } = require('../auth');
-const { getLicensesForUsers, licenseStatus } = require('../driver-licenses');
+const { listManagedUsers, todaySaoPaulo } = require('../user-listing');
 const { normalizedStatus } = require('../services/reservation-lifecycle');
 const { getBranchDeletionBlockers } = require('../branch-deletion');
 const { listAllReservations } = require('../reservations-store');
+const { hasAnyManagementPermission, canSeeVehicle, vehicleKey } = require('../vehicle-access');
+const { listGroupIds, activeMemberIdsOfGroups } = require('../groups');
+const { notifyVehicleBlocks } = require('../notifications');
 
 const router = express.Router();
 const COLLECTIONS = ['branches', 'vehicles', 'blocks', 'rules', 'maintenanceReminders'];
-
-function todaySaoPaulo(){
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone:'America/Sao_Paulo',
-    year:'numeric',
-    month:'2-digit',
-    day:'2-digit'
-  }).format(new Date());
-}
 
 function requireCollectionAccess(req, res, next){
   const name = req.params.name;
@@ -55,6 +49,22 @@ router.get('/bootstrap', async (req, res) => {
     revisions[row.collection_name] = Number(row.revision);
   });
 
+  // Veículo restrito a grupo não chega a quem não é membro nem da gestão -
+  // nem ele, nem os bloqueios e lembretes dele. Quem tem permissão de
+  // gestão recebe tudo: fleet/blocks/maintenance salvam a coleção INTEIRA de
+  // volta (PUT abaixo), então uma cópia filtrada apagaria o que faltasse.
+  if(!hasAnyManagementPermission(req.user) && Array.isArray(collections.vehicles)){
+    const hidden = new Set(collections.vehicles
+      .filter(vehicle => !canSeeVehicle(vehicle, req.user))
+      .map(vehicle => vehicleKey(vehicle.local, vehicle.codigo)));
+    if(hidden.size){
+      const visible = item => !hidden.has(vehicleKey(item.local, item.carro));
+      collections.vehicles = collections.vehicles.filter(vehicle => !hidden.has(vehicleKey(vehicle.local, vehicle.codigo)));
+      if(Array.isArray(collections.blocks)) collections.blocks = collections.blocks.filter(visible);
+      if(Array.isArray(collections.maintenanceReminders)) collections.maintenanceReminders = collections.maintenanceReminders.filter(visible);
+    }
+  }
+
   const auditResult = userCanManage(req.user, 'audit')
     ? await query(
       `SELECT a.id, a.created_at,
@@ -67,17 +77,10 @@ router.get('/bootstrap', async (req, res) => {
     )
     : { rows:[] };
 
-  const usersResult = userCanManage(req.user, 'users')
-    ? await query(
-      `SELECT id, username, display_name AS nome, email, role, active, auth_provider,
-              can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
-              can_manage_blocks, can_view_reports, can_view_audit,
-              can_manage_rules, can_manage_users, can_manage_integrations
-         FROM users
-        WHERE deleted_at IS NULL
-        ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`
-    )
-    : { rows:[] };
+  // Mesma listagem de GET /api/users (ver ../user-listing): a tela Gestão ›
+  // Usuários edita a partir destes dados e reenvia permissões e centro de
+  // custo no PATCH, então qualquer campo faltando aqui seria apagado lá.
+  const users = userCanManage(req.user, 'users') ? await listManagedUsers() : [];
 
   const userDirectoryResult = await query(
     `SELECT id, display_name AS nome
@@ -85,43 +88,6 @@ router.get('/bootstrap', async (req, res) => {
       WHERE active = TRUE AND deleted_at IS NULL
       ORDER BY display_name`
   );
-
-  // Mesmo CNH que a listagem de /api/users já resolve (getLicensesForUsers,
-  // sem N+1) - aqui também, para quem tem a permissão "Usuários" enxergar
-  // os dados/fotos da CNH de qualquer usuário ao gerenciar o cadastro.
-  const licenses = userCanManage(req.user, 'users')
-    ? await getLicensesForUsers(usersResult.rows.map(row => row.id))
-    : new Map();
-  const hoje = todaySaoPaulo();
-
-  const users = usersResult.rows.map(row => {
-    const cnh = licenses.get(String(row.id)) || null;
-    const status = licenseStatus(cnh, hoje);
-    return {
-      id:row.id,
-      username:row.username,
-      nome:row.nome,
-      email:row.email || '',
-      role:row.role,
-      active:row.active,
-      authProvider:row.auth_provider || 'local',
-      permissions:{
-        reservations:row.can_manage_reservations,
-        branches:row.can_manage_branches,
-        fleet:row.can_manage_fleet,
-        maintenance:row.can_manage_maintenance,
-        blocks:row.can_manage_blocks,
-        reports:row.can_view_reports,
-        audit:row.can_view_audit,
-        rules:row.can_manage_rules,
-        users:row.can_manage_users,
-        integrations:row.can_manage_integrations
-      },
-      cnh,
-      cnhStatus:status.estado,
-      cnhDiasRestantes:status.diasRestantes
-    };
-  });
 
   const audit = auditResult.rows.map(row => ({
     id:String(row.id),
@@ -194,7 +160,8 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
       vehicles:req.params.name === 'vehicles' ? value : (values.vehicles || []),
       blocks:req.params.name === 'blocks' ? value : (values.blocks || []),
       rules:req.params.name === 'rules' ? value : (values.rules || null),
-      currentVehicles:req.params.name === 'vehicles' ? current : (values.vehicles || [])
+      currentVehicles:req.params.name === 'vehicles' ? current : (values.vehicles || []),
+      groupIds:req.params.name === 'vehicles' ? await listGroupIds(client) : undefined
     });
     if(req.params.name === 'branches'){
       const incomingIds = new Set(value.map(branch => String(branch.id)));
@@ -216,8 +183,29 @@ router.put('/:name', requireCollectionAccess, async (req, res) => {
        RETURNING revision`,
       [req.params.name, JSON.stringify(value), req.user.id]
     );
-    return { revision:Number(saved.rows[0].revision) };
+    return {
+      revision:Number(saved.rows[0].revision),
+      previous:current,
+      vehicles:values.vehicles || []
+    };
   });
+
+  // Aviso de bloqueio: depois de salvo e fora da transação - se a
+  // notificação falhar, o bloqueio continua valendo (e é o que importa).
+  if(req.params.name === 'blocks'){
+    try{
+      await notifyVehicleBlocks({ query }, {
+        previousBlocks:savedState.previous,
+        nextBlocks:value,
+        vehicles:savedState.vehicles,
+        reservations:await listAllReservations({ query }),
+        actor:req.user,
+        groupMemberIds:groupIds => activeMemberIdsOfGroups(groupIds)
+      });
+    }catch(error){
+      console.error('Falha ao notificar bloqueio de veículo:', error.message);
+    }
+  }
   res.json({ ok:true, revision:savedState.revision });
 });
 
