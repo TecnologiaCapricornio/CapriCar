@@ -229,6 +229,26 @@ async function main(){
     assert.equal(created.response.status, 201, created.body && created.body.error);
     createdUserId = created.body.user.id;
 
+    // Reserva nova exige motorista com CNH válida cadastrada (ver
+    // server/validation.js, licenseCurrentlyValid) - inserida direto no
+    // banco, já que a única forma "de produto" de cadastrar uma é a
+    // importação da e-CNH (assinatura digital de verdade, inviável aqui).
+    // numero/categoria/validade/emissor/verificada_em são NOT NULL desde a
+    // migração 033 (endurecida quando a CNH digitada foi desativada).
+    // Categoria D cobre qualquer capacidade de veículo (ver
+    // js/cnh-categorias.js), então o slot sorteado por findSlot() nunca
+    // esbarra na checagem de categoria x capacidade. A linha é removida
+    // junto com o usuário em cleanup() (driver_licenses tem ON DELETE
+    // CASCADE em user_id - ver db/migrations/021_driver_licenses.sql).
+    await withTransaction(client => client.query(
+      `INSERT INTO driver_licenses (user_id, numero, categoria, validade, emissor, verificada_em)
+       VALUES ($1, $2, 'D', $3, 'DETRAN Teste de Integração', NOW())`,
+      [createdUserId, String(Date.now()).slice(-11), addDays(
+        new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date()),
+        365
+      )]
+    ));
+
     const duplicate = await request('/api/users', {
       method:'POST',
       headers:auth(admin.cookie),

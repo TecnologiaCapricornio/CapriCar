@@ -307,7 +307,7 @@ function openAdminReservaModal(reservaId, mode){
   adminReservaForm.classList.toggle('self-edit-wizard', reservationEditMode === 'self');
 
   if(reservaId == null){
-    adminReservaTitle.textContent = isAdmin() ? 'Nova reserva (como admin)' : 'Nova reserva (gestão)';
+    adminReservaTitle.textContent = 'Nova reserva';
     aNomeInput.value = '';
     aNomeInput.dataset.userId = '';
     aNomeAutocomplete.refresh();
@@ -432,6 +432,26 @@ adminReservaForm.addEventListener('submit', async function(e){
 
   let valid = true;
   if(!nome){ setAdminFieldError('nome', 'Informe o nome do responsável.'); valid = false; }
+  // Reserva NOVA feita pela gestão (não a autoedição, que já usa a própria
+  // conta) precisa de um motorista cadastrado - o servidor (server/
+  // validation.js) sempre recusa um nome sem conta vinculada ou sem CNH
+  // válida, mas confere aqui também pra dar o erro antes de salvar. A
+  // categoria da CNH de outra pessoa só é visível no navegador de quem tem a
+  // permissão "Usuários" (getSystemUsers()); sem ela, quem confere é o
+  // servidor mesmo - o erro dele aparece em setAdminError após o envio.
+  if(nome && reservationEditMode !== 'self' && adminEditingId == null){
+    const ownerAccountPreview = findPassengerDirectoryUser(nome);
+    if(!ownerAccountPreview){
+      setAdminFieldError('nome', 'Selecione um usuário cadastrado na lista de sugestões. Não é possível criar reservas com um nome sem conta vinculada.');
+      valid = false;
+    } else {
+      const accountWithCnh = getSystemUsers().find(item => String(item.id) === String(ownerAccountPreview.id));
+      if(accountWithCnh && accountWithCnh.cnhStatus !== 'valida' && accountWithCnh.cnhStatus !== 'vencendo'){
+        setAdminFieldError('nome', 'O motorista selecionado não possui CNH válida cadastrada.');
+        valid = false;
+      }
+    }
+  }
   if(!partida){ setAdminFieldError('partida', 'Selecione o local de partida.'); valid = false; }
   if(!destino){ setAdminFieldError('destino', 'Selecione ou informe o destino.'); valid = false; }
   if(destino && partida && destino === partida){ setAdminFieldError('destino', 'O destino deve ser diferente da partida.'); valid = false; }

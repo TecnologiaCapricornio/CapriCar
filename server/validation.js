@@ -98,6 +98,15 @@ function dateDays(iso){
   return Math.floor(new Date(`${iso}T00:00:00Z`).getTime() / 86400000);
 }
 
+// Mesmo critério de server/driver-licenses.js::canDrive (CNH "valida" ou
+// "vencendo" dirige, "vencida" ou "ausente" não) - reimplementado aqui, sem
+// importar de lá, para não criar dependência circular (driver-licenses.js já
+// importa assert/validDate/ValidationError deste módulo).
+function licenseCurrentlyValid(license, todayDay){
+  if(!license || !license.numero || !license.validade || !validDate(license.validade)) return false;
+  return dateDays(license.validade) >= todayDay;
+}
+
 function todaySaoPaulo(){
   return new Intl.DateTimeFormat('en-CA', {
     timeZone:'America/Sao_Paulo',
@@ -572,12 +581,29 @@ function validateReservations(value, context){
     if(vehicle){
       assert(passengers.length + Number(reservation.passageirosConfirmados || 0) <= Number(vehicle.capacidade),
         'A quantidade de ocupantes excede a capacidade do veículo.');
-      // Só valida quando o motorista tem conta vinculada E CNH cadastrada -
-      // sem isso não há categoria nenhuma pra comparar (reserva com motorista
-      // digitado à mão, sem conta, continua passando por aqui como sempre).
-      const driverLicense = reservation.criadorUsuarioId
-        ? context.licensesByUserId && context.licensesByUserId.get(String(reservation.criadorUsuarioId))
+      const driverId = reservation.criadorUsuarioId ? String(reservation.criadorUsuarioId) : '';
+      const driverLicense = driverId
+        ? context.licensesByUserId && context.licensesByUserId.get(driverId)
         : null;
+      // Reserva NOVA, ou que troca de motorista, precisa indicar uma conta
+      // cadastrada e ativa com CNH dentro da validade - vale tanto pro
+      // usuário se autorreservando (já barrado antes pelo front, ver
+      // userCanDrive em js/driver-license.js) quanto pro admin/gestor
+      // lançando reserva para outra pessoa pelo painel de gestão (js/
+      // admin.js), que antes digitava um nome livre sem checar CNH nenhuma.
+      // Reusa vehicleOrDriverChanged (calculado acima) para também recusar
+      // uma EDIÇÃO que troque o motorista por alguém sem CNH - sem isso a
+      // troca driblaria a regra só por não ser uma reserva nova.
+      if(vehicleOrDriverChanged){
+        assert(driverId && context.activeUserIds instanceof Set && context.activeUserIds.has(driverId),
+          'Indique um motorista com conta cadastrada no sistema para esta reserva.');
+        assert(licenseCurrentlyValid(driverLicense, todayDay),
+          'O motorista indicado não possui CNH válida cadastrada. Peça para cadastrar a CNH em "Meu perfil" antes de reservar.');
+      }
+      // Categoria x capacidade: continua condicionada a ter CNH com
+      // categoria cadastrada (não fica preso ao !previousReservation acima
+      // porque a CNH pode trocar de categoria/vencer durante a vida da
+      // reserva, e o restante do fluxo de edição já revalida a cada /sync).
       if(driverLicense && driverLicense.categoria){
         const capacidadeVeiculo = Number(vehicle.capacidade);
         assert(isUnchanged || cnhAtendeCapacidade(driverLicense.categoria, capacidadeVeiculo),

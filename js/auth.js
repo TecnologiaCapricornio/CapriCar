@@ -211,6 +211,7 @@ const avatarInitials = document.getElementById('avatarInitials');
 const solicitanteHint = document.getElementById('solicitanteHint');
 const adminTabBtn = document.getElementById('adminTabBtn');
 const checklistTabBtn = document.getElementById('checklistTabBtn');
+const minhasTabBtn = document.getElementById('minhasTabBtn');
 
 const profileBtn = document.getElementById('profileBtn');
 const profileMenuCenter = document.getElementById('profileMenuCenter');
@@ -235,7 +236,7 @@ function configureManagementPanel(){
   });
   const newReservationBtn = document.getElementById('adminNovaReservaBtn');
   if(newReservationBtn){
-    newReservationBtn.textContent = isAdmin() ? 'Nova reserva (como admin)' : 'Nova reserva (gestão)';
+    newReservationBtn.textContent = 'Nova reserva';
   }
 }
 
@@ -261,8 +262,20 @@ function showApp(user){
   updateSolicitanteHint();
   adminTabBtn.classList.toggle('hidden', !canAccessManagement());
   checklistTabBtn.classList.toggle('hidden', !canManageChecklist());
+  // A conta admin (role 'admin', única - não há como promover outra conta a
+  // admin pela tela de Usuários) nunca consegue ter CNH: a importação da
+  // e-CNH exige que o nome do cadastro bata com o nome impresso no
+  // documento, e "Administrador" não é o nome de uma pessoa real (ver
+  // server/ecnh/index.js). Mostrar "Minha CNH" pra essa conta só oferece uma
+  // opção que sempre falha - por isso ela nem aparece no menu do perfil.
+  if(profileMenuCnhBtn) profileMenuCnhBtn.classList.toggle('hidden', isAdmin());
+  // Mesmo motivo: o admin não reserva em nome dele mesmo (não tem CNH pra
+  // isso), só cria reserva para outra pessoa pelo painel de Gestão. "Minhas
+  // Reservas" (e "Nova Reserva", que já barra o admin ao clicar - ver
+  // switchTab abaixo) ficariam sempre vazias/bloqueadas pra essa conta.
+  if(minhasTabBtn) minhasTabBtn.classList.toggle('hidden', isAdmin());
   configureManagementPanel();
-  switchTab('minhas');
+  switchTab(isAdmin() ? 'admin' : 'minhas');
   renderMyReservations();
   renderCarSelector();
   renderMainCalendar();

@@ -181,12 +181,25 @@ async function validationContext(client, driverIds){
   // Grupos dos motoristas: veículo restrito só aceita motorista membro (ver
   // server/vehicle-access.js e a checagem em validateReservations).
   const groupMembershipByUserId = await loadGroupMembership(driverIds || [], client);
+  // Toda reserva NOVA precisa de um motorista com conta ativa (ver
+  // validateReservations) - licensesByUserId sozinho não prova que a conta
+  // existe (uma pessoa sem CNH cadastrada teria simplesmente nenhuma linha
+  // ali, igual a um id inventado), então confere direto na tabela users.
+  const ids = [...new Set((driverIds || []).map(String))];
+  const activeUsersResult = ids.length
+    ? await client.query(
+      'SELECT id::text AS id FROM users WHERE id = ANY($1::uuid[]) AND active = TRUE AND deleted_at IS NULL',
+      [ids]
+    )
+    : { rows:[] };
+  const activeUserIds = new Set(activeUsersResult.rows.map(row => row.id));
   return {
     vehicles:Array.isArray(values.vehicles) ? values.vehicles : [],
     blocks:Array.isArray(values.blocks) ? values.blocks : [],
     rules:values.rules || {},
     licensesByUserId,
-    groupMembershipByUserId
+    groupMembershipByUserId,
+    activeUserIds
   };
 }
 

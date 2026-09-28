@@ -140,6 +140,11 @@ const reservationContext = (membership, overrides) => ({
   blocks:[],
   rules:{ maxConsecutiveDays:10, maxAdvanceDays:30, maxReservationsInWindow:5, reservationBufferMinutes:0, pickupAdvanceMinutes:15 },
   groupMembershipByUserId:new Map(Object.entries(membership || {}).map(([id, groups]) => [id, new Set(groups)])),
+  // Motorista/conta válidos por padrão - estes testes são sobre a regra de
+  // grupo/veículo restrito, não sobre a exigência de motorista com CNH
+  // válida (ver tests/validation.test.js para essa regra em si).
+  activeUserIds:new Set([MEMBRO, OUTRO]),
+  licensesByUserId:new Map([[MEMBRO, { numero:'12345678901', categoria:'B', validade:isoIn(365) }]]),
   ...(overrides || {})
 });
 
