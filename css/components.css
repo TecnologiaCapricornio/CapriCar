@@ -105,13 +105,14 @@
   /* Fundo sozinho (--surface) quase não se distingue de --surface-sunken
      (o trilho) em nenhum dos dois temas - a diferença de luminância é
      mínima. --primary-soft-strong é um TINGIMENTO azul (não só mais claro/
-     escuro), o que o olho capta mesmo com pouca diferença de luminância -
-     e combina com o texto em --accent, que garante a aba ativa ser
-     reconhecível nos dois temas. */
+     escuro), o que o olho capta mesmo com pouca diferença de luminância e
+     já basta pra aba ativa ser reconhecível - o texto usa --text (a mesma
+     cor de um título comum), não --accent: só o fundo precisa "avisar",
+     o texto não precisa de mais um sinal por cima. */
   .tab-btn.active{
     background:var(--primary-soft-strong);
     border:1px solid transparent;
-    color:var(--accent);
+    color:var(--text);
     font-weight:700;
     box-shadow:var(--shadow-sm);
   }
@@ -371,7 +372,7 @@
 
   /* Mesmo raciocínio de .tab-btn.active acima. */
   .reservation-view-btn.active{
-    color:var(--accent);
+    color:var(--text);
     font-weight:700;
     background:var(--primary-soft-strong);
     border-color:transparent;

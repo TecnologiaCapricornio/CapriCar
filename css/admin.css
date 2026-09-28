@@ -52,11 +52,12 @@
 
 /* Mesmo raciocínio de .tab-btn.active em css/components.css: --primary-soft-strong
    tinge de azul (não só clareia/escurece), o que se percebe mesmo com pouca
-   diferença de luminância para o trilho (--surface-sunken). */
+   diferença de luminância para o trilho (--surface-sunken); o texto fica em
+   --text, igual a um título comum. */
 .admin-section-tabs .admin-section-btn.active{
   background:var(--primary-soft-strong);
   border-color:transparent;
-  color:var(--accent);
+  color:var(--text);
   font-weight:700;
   box-shadow:var(--shadow-sm);
 }
