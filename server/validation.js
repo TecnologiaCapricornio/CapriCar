@@ -645,7 +645,6 @@ function validateCollection(name, value, context){
 module.exports = {
   ValidationError,
   validateCollection,
-  validateRules,
   validateBranches,
   validateVehicles,
   validateBlocks,
@@ -655,7 +654,6 @@ module.exports = {
   isValidEmail,
   VEHICLE_TYPES,
   VEHICLE_CAPACITY_LIMITS,
-  VEHICLE_CAPACITY_LIMIT_DEFAULT,
   // Reaproveitados por server/driver-licenses.js - exportar evita que a
   // validação de data e a de mensagem de erro sigam caminhos diferentes.
   assert,

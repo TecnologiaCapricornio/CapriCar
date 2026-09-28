@@ -44,4 +44,4 @@ async function listManagedUsers(){
   });
 }
 
-module.exports = { USER_SELECT, listManagedUsers, todaySaoPaulo };
+module.exports = { listManagedUsers, todaySaoPaulo };

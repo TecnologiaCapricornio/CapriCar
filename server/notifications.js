@@ -590,15 +590,10 @@ module.exports = {
   notifyVehicleBlocks,
   changedBlocks,
   reservationsAffectedByBlock,
-  resolveReservationManagers,
-  resolveFleetManagers,
   reminderTypesForReservation,
   reservationStart,
   reservationEnd,
   reservationIsCompleted,
   reservationSummary,
-  resolveReservationUsers,
-  userParticipates,
-  userOwnsReservation,
-  normalizeName
+  resolveReservationUsers
 };

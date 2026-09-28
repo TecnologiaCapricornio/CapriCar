@@ -80,8 +80,6 @@ app.use('/api/profile', requireAuth, profileRoutes);
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));
 app.use('/js', express.static(path.join(rootDir, 'js'), { fallthrough:false }));
-app.get('/logo.png', (req, res) => res.sendFile(path.join(rootDir, 'logo.png')));
-app.get('/bg.jpg', (req, res) => res.sendFile(path.join(rootDir, 'bg.jpg')));
 app.get('/', (req, res) => res.sendFile(path.join(rootDir, 'index.html')));
 
 app.use((req, res) => {

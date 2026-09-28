@@ -6,6 +6,10 @@ server/uploads/
 backups/
 tools/
 dist/
+# Pasta de saída manual para relatórios baixados (ex.: js/management-reports.js
+# gera o PDF/Excel no navegador, para download - nenhum código do app escreve
+# aqui); um relatório já apareceu commitado sem querer nesta pasta.
+output/
 logs/
 config.yml
 ~$*.docx

@@ -101,13 +101,6 @@ function resetChecklistState() {
   CHECKLIST_COMPONENTS.forEach(item => { checklistState.componentes[item.key] = 'C'; });
 }
 
-// Índice global (1-based) de cada ponto, igual à ordem/numeração de
-// CHECKLIST_DIAGRAM_POINTS - usado tanto dentro de cada vista quanto na
-// legenda, para o número bater nas duas listas.
-function checklistPointIndex(pointId) {
-  return CHECKLIST_DIAGRAM_POINTS.findIndex(p => p.id === pointId);
-}
-
 // Em vez de mostrar as 4 vistas juntas (ficavam pequenas e apertadas), o
 // usuário escolhe uma aba (Frente / Traseira / Lateral esquerda / Lateral
 // direita) e vê só aquela vista, bem maior. O estado é reiniciado em

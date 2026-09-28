@@ -111,4 +111,4 @@ if(require.main === module){
   });
 }
 
-module.exports = { createBackup, removeExpiredBackups };
+module.exports = { createBackup };

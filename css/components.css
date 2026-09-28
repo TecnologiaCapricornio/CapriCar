@@ -1558,49 +1558,10 @@
     margin-bottom:6px;
   }
 
-  /* ---- Widget de lista de passageiros nomeados ---- */
-  .passenger-list{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    margin-bottom:6px;
-  }
-
-  .passenger-row{
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
-
   .passenger-input-wrap{
     position:relative;
     flex:1;
     min-width:0;
-  }
-
-  .passenger-row input[type="text"]{
-    width:100%;
-    background:var(--surface);
-    border:1px solid var(--border-strong);
-    border-radius:var(--radius-sm);
-    color:var(--text);
-    padding:10px 12px;
-    font-size:var(--fs-base);
-    transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-  }
-
-  .passenger-row input[type="text"]::placeholder{
-    color:var(--text-subtle);
-  }
-
-  .passenger-row input[type="text"]:hover{
-    border-color:var(--text-subtle);
-  }
-
-  .passenger-row input[type="text"]:focus{
-    outline:none;
-    border-color:var(--primary);
-    box-shadow:0 0 0 3px var(--focus-ring);
   }
 
   /* Destaque visual quando o campo está vinculado a um usuário corporativo
@@ -1627,27 +1588,6 @@
     font-weight:700;
     font-size:.95rem;
     pointer-events:none;
-  }
-
-  /* Remover passageiro: destrutivo discreto (outline), redondo por ser
-     um botão só de ícone ao lado do campo. */
-  .passenger-remove-btn{
-    background:transparent;
-    color:var(--danger-text);
-    border:1px solid var(--danger-border);
-    width:32px;
-    height:32px;
-    flex-shrink:0;
-    border-radius:50%;
-    cursor:pointer;
-    font-size:1rem;
-    line-height:1;
-    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
-  }
-
-  .passenger-remove-btn:hover{
-    background:var(--danger-surface);
-    border-color:var(--danger);
   }
 
   .passenger-add-btn{

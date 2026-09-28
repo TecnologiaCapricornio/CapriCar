@@ -140,4 +140,4 @@ async function sendTestMail(settings, to){
   });
 }
 
-module.exports = { getSmtpSettings, sendMail, sendTestMail, buildGraphMailPayload };
+module.exports = { sendMail, sendTestMail, buildGraphMailPayload };

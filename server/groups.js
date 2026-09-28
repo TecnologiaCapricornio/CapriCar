@@ -154,7 +154,6 @@ async function vehiclesUsingGroup(db, groupId){
 }
 
 module.exports = {
-  MAX_MEMBERS,
   listGroups,
   getGroup,
   listGroupIds,

@@ -7,15 +7,10 @@
    mínimo. Nenhum componente deve declarar cor solta - tudo sai
    daqui, e é isso que mantém os dois temas homogêneos.
 
-   Duas camadas, nesta ordem de precedência:
-
-   1. TOKENS SEMÂNTICOS  - nomeados pela FUNÇÃO que exercem
-      (--primary, --danger, --surface). São a fonte da verdade
-      e o que todo código novo deve usar.
-
-   2. ALIASES LEGADOS    - os nomes antigos de COR (--azul-royal,
-      --vermelho) reapontados para os semânticos. Existem só para
-      não quebrar usos antigos; não use em código novo.
+   Tudo abaixo é TOKEN SEMÂNTICO - nomeado pela FUNÇÃO que exerce
+   (--primary, --danger, --surface), não pela cor. É o que impede a
+   volta dos bugs de contraste que um nome como --vermelho não
+   evitaria por si só.
 
    Os valores de :root são o tema claro (o padrão - ver
    js/theme-init.js). css/themes.css redefine as cores para o
@@ -30,9 +25,6 @@
        Azul Claro (284 C) e Verde (555 C). Laranja/rosa não fazem
        parte da paleta institucional. */
     --brand:#0033a0;
-    --brand-deep:#151f6d;
-    --brand-soft:#6cace4;
-    --brand-green:#28724f;
 
     /* ---- Tipografia ----
        Source Sans é a fonte de apoio oficial da marca (a
@@ -45,8 +37,6 @@
        blocos aninhados dentro de um cartão; surface-hover =
        linha/opção sob o mouse. */
     --bg-1:#f4f5f7;
-    --bg-2:#eceef1;
-    --bg-3:#e2e5e9;
     --surface:#ffffff;
     --surface-solid:#ffffff;
     --surface-2:#f8f9fa;
@@ -111,7 +101,6 @@
     --shadow-sm:0 1px 2px rgba(16,24,40,.05);
     --shadow-md:0 4px 12px rgba(16,24,40,.08),0 1px 3px rgba(16,24,40,.05);
     --shadow-lg:0 16px 40px rgba(16,24,40,.14),0 2px 6px rgba(16,24,40,.06);
-    --sombra:var(--shadow-sm);
 
     /* ---- Forma ---- */
     --radius-lg:12px;
@@ -132,19 +121,5 @@
     --fs-sm:0.9375rem;
     --fs-base:1rem;
     --fs-md:1.125rem;
-    --fs-lg:1.25rem;
     --fs-xl:1.4rem;
-    --fs-2xl:2rem;
-
-    /* ---- Aliases legados (não usar em código novo) ---- */
-    --azul-royal:var(--primary-strong);
-    --azul-royal-2:var(--primary);
-    --azul-claro:var(--accent);
-    --card-bg:var(--surface);
-    --card-bg-solid:var(--surface-solid);
-    --card-border:var(--border);
-    --texto:var(--text);
-    --texto-muted:var(--text-muted);
-    --vermelho:var(--danger);
-    --verde:var(--success);
   }

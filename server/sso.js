@@ -271,15 +271,11 @@ async function importSsoUsers(){
 }
 
 module.exports = {
-  getMsalClient,
   getAuthCodeUrl,
   acquireTokenFromCode,
   getGraphAppToken,
   resolveOrCreateSsoUser,
   importSsoUsers,
   resolveSsoConfig,
-  getAllowedEntraDomains,
-  getCostCenterAttribute,
-  normalizeCostCenterAttribute,
-  isEmailDomainAllowed
+  normalizeCostCenterAttribute
 };

@@ -304,6 +304,5 @@ module.exports = {
   shutdownOcr,
   // Expostos para testes.
   findLabels,
-  fieldBoxes,
-  encodePng
+  fieldBoxes
 };

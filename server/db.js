@@ -34,5 +34,5 @@ async function closePool(){
   }
 }
 
-module.exports = { getPool, query, withTransaction, closePool };
+module.exports = { query, withTransaction, closePool };
 
