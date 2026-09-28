@@ -1,116 +1,125 @@
 /* =========================================================
    Tokens do CapriCar
 
-   Duas camadas, nesta ordem de precedência:
+   Linguagem visual: sóbria e corporativa. Superfícies sólidas
+   (sem vidro/blur), cor da marca reservada para ação e estado
+   selecionado, sombras curtas, cantos moderados e movimento
+   mínimo. Nenhum componente deve declarar cor solta - tudo sai
+   daqui, e é isso que mantém os dois temas homogêneos.
 
-   1. TOKENS SEMÂNTICOS  - nomeados pela FUNÇÃO que exercem
-      (--primary, --danger, --surface). São a fonte da verdade
-      e o que todo código novo deve usar.
+   Tudo abaixo é TOKEN SEMÂNTICO - nomeado pela FUNÇÃO que exerce
+   (--primary, --danger, --surface), não pela cor. É o que impede a
+   volta dos bugs de contraste que um nome como --vermelho não
+   evitaria por si só.
 
-   2. ALIASES LEGADOS    - os nomes antigos de COR (--azul-royal,
-      --vermelho) reapontados para os semânticos. Existem só para
-      não quebrar os ~170 usos espalhados pelo CSS atual; não use
-      em código novo.
-
-   Nomear pela função é o que impede a volta dos bugs de contraste:
-   um token chamado --danger tem que funcionar nos dois temas por
-   definição, enquanto --vermelho não obriga a nada.
-
-   Os valores aqui são o tema escuro (padrão). css/themes.css
-   redefine os semânticos por tema - os aliases seguem junto
-   automaticamente, sem precisar ser redeclarados lá.
+   Os valores de :root são o tema claro (o padrão - ver
+   js/theme-init.js). css/themes.css redefine as cores para o
+   tema escuro; escalas (raio, tipografia, espaçamento, movimento)
+   são as mesmas nos dois temas.
    ========================================================= */
 :root{
-    /* ---- Marca Capricórnio ----
-       Calibrado a partir do navy real da logo em capricornio.com.br
-       (#001A52, amostrado por pixel direto da imagem, mesmo matiz 221°
-       do azul que já usávamos - só mais escuro). --brand-accent é o
-       rosa/magenta (#CC3366) usado no site oficial em toda navegação
-       e CTAs; reservado aqui para uso pontual futuro, ainda sem
-       aplicação em nenhum componente. */
-    --brand-deep:#00133d;
-    --brand:#001a52;
-    --brand-soft:#6c92e4;
-    --brand-signal:#ff6a13;
-    --brand-accent:#cc3366;
+    color-scheme:light;
 
-    /* ---- Superfícies e traços ---- */
-    --bg-1:#101f30;
-    --bg-2:#1a3050;
-    --bg-3:#1e3a5a;
-    --surface:rgba(20,38,60,0.55);
-    --surface-solid:#1a2f48;
-    --border:rgba(210,228,245,0.12);
+    /* ---- Marca Capricórnio (miniguia oficial de marca) ----
+       Azul Principal (Pantone 286 C), Azul Escuro (2756 C),
+       Azul Claro (284 C) e Verde (555 C). Laranja/rosa não fazem
+       parte da paleta institucional. */
+    --brand:#0033a0;
+
+    /* ---- Tipografia ----
+       Source Sans é a fonte de apoio oficial da marca (a
+       institucional, Facit, é paga e não tem CDN). */
+    --font-sans:'Source Sans 3','Source Sans Pro','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-heading:var(--font-sans);
+
+    /* ---- Superfícies e traços ----
+       bg-1 = fundo da página; surface = cartões; surface-2 =
+       blocos aninhados dentro de um cartão; surface-hover =
+       linha/opção sob o mouse. */
+    --bg-1:#f4f5f7;
+    --surface:#ffffff;
+    --surface-solid:#ffffff;
+    --surface-2:#f8f9fa;
+    --surface-hover:#f1f3f5;
+    --surface-sunken:#f1f3f5;
+    --border:#e1e4e8;
+    --border-strong:#c9ced5;
 
     /* ---- Texto ---- */
-    --text:#f0f4f9;
-    --text-muted:#a9bdd1;
+    --text:#1a2230;
+    --text-muted:#5a6472;
+    --text-subtle:#687180;
     --on-primary:#ffffff;
 
     /* ---- Ação primária ----
-       --primary e --primary-strong são FUNDO de botão (texto branco
-       por cima), então precisam ser escuros nos dois temas.
-       --accent é cor de TEXTO/ÍCONE de destaque, e inverte por tema. */
-    --primary:#3a6a95;
-    --primary-strong:#1e3a5a;
-    --accent:#6fa8d8;
+       --primary é FUNDO de botão (texto branco por cima): o Azul
+       Principal da marca, 10.7:1 com branco. --accent é cor de
+       TEXTO/ÍCONE de destaque (links, abas ativas por sublinhado). */
+    --primary:#0033a0;
+    --primary-hover:#002a85;
+    --primary-strong:#151f6d;
+    --primary-soft:rgba(0,51,160,.07);
+    --primary-soft-strong:rgba(0,51,160,.12);
+    --accent:#0033a0;
+    --focus-ring:rgba(0,51,160,.30);
 
     /* ---- Estados semânticos ----
-       Quatro tokens por estado, e a distinção entre os dois primeiros
-       importa: --x é a cor SÓLIDA (ícone, bolinha, preenchimento), que
-       aparece sobre o fundo da página; --x-text é a cor do TEXTO quando
-       ele está sobre --x-surface. No tema escuro as duas divergem, porque
-       um verde que funciona como ícone fica ilegível como texto sobre
-       fundo tingido. É o que alimenta a tabela de variantes de aviso. */
-    --info:#6fa8d8;
-    --info-text:#cfe6fa;
-    --info-surface:rgba(64,150,224,0.14);
-    --info-border:rgba(64,150,224,0.42);
+       --x é a cor SÓLIDA (ícone, bolinha, borda de destaque);
+       --x-text é o TEXTO sobre --x-surface. */
+    --info:#2c5aa0;
+    --info-text:#1d3f78;
+    --info-surface:#eef3fb;
+    --info-border:#c8d6ee;
 
-    --success:#33d488;
-    --success-text:#8ee9bd;
-    --success-surface:rgba(47,184,125,0.14);
-    --success-border:rgba(47,184,125,0.40);
+    --success:#28724f;
+    --success-text:#1e5a3e;
+    --success-surface:#edf6f1;
+    --success-border:#bfdccc;
 
-    --warning:#ebb248;
-    --warning-text:#ffe0a3;
-    --warning-surface:rgba(235,178,72,0.15);
-    --warning-border:rgba(235,178,72,0.42);
+    --warning:#a26a00;
+    --warning-text:#6f4a00;
+    --warning-surface:#fdf6e6;
+    --warning-border:#ecd7a4;
 
-    --danger:#ef5b6a;
-    --danger-text:#ffb3ba;
-    --danger-surface:rgba(226,96,109,0.14);
-    --danger-border:rgba(226,96,109,0.42);
+    --danger:#b42318;
+    --danger-text:#912018;
+    --danger-surface:#fdf1f0;
+    --danger-border:#f0c7c2;
+    --danger-solid:#b42318;
+    --danger-solid-hover:#991d14;
+
+    --neutral-surface:#f1f3f5;
+    --neutral-border:#dde1e6;
+    --neutral-text:#434c58;
+
+    /* ---- Overlay de modal ---- */
+    --overlay:rgba(17,24,39,.45);
+
+    /* ---- Sombras ----
+       Curtas e neutras. sm = cartão; md = elemento flutuante
+       pequeno (dropdown); lg = modal/painel. */
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+    --shadow-md:0 4px 12px rgba(16,24,40,.08),0 1px 3px rgba(16,24,40,.05);
+    --shadow-lg:0 16px 40px rgba(16,24,40,.14),0 2px 6px rgba(16,24,40,.06);
 
     /* ---- Forma ---- */
-    --sombra: 0 20px 45px rgba(6,14,24,0.5);
-    --radius-lg:20px;
-    --radius-md:14px;
-    --radius-sm:10px;
+    --radius-lg:12px;
+    --radius-md:10px;
+    --radius-sm:8px;
+    --radius-xs:6px;
+    --radius-pill:999px;
+
+    /* ---- Movimento ---- */
+    --ease:cubic-bezier(.2,0,0,1);
+    --dur-fast:120ms;
+    --dur:180ms;
 
     /* Escala tipográfica. --fs-2xs é o piso legível (13px) - nenhum texto
-       com informação real deveria usar algo menor que isso. Os três
-       primeiros degraus (2xs/xs/sm) subiram ~1px em relação ao original:
-       em tela de 14" Full HD, texto pequeno e com peso alto (ver comentários
-       de "halação" no resto do CSS) ficava difícil de ler com nitidez. */
+       com informação real deveria usar algo menor que isso. */
     --fs-2xs:0.8125rem;
     --fs-xs:0.875rem;
     --fs-sm:0.9375rem;
     --fs-base:1rem;
     --fs-md:1.125rem;
-    --fs-lg:1.25rem;
     --fs-xl:1.4rem;
-    --fs-2xl:2rem;
-
-    /* ---- Aliases legados (não usar em código novo) ---- */
-    --azul-royal:var(--primary-strong);
-    --azul-royal-2:var(--primary);
-    --azul-claro:var(--accent);
-    --card-bg:var(--surface);
-    --card-bg-solid:var(--surface-solid);
-    --card-border:var(--border);
-    --texto:var(--text);
-    --texto-muted:var(--text-muted);
-    --vermelho:var(--danger);
-    --verde:var(--success);
   }

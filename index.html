@@ -15,15 +15,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/variables.css?v=20260903-1">
-  <link rel="stylesheet" href="css/base.css?v=20260908-1">
-  <link rel="stylesheet" href="css/components.css?v=20260918-5">
-  <link rel="stylesheet" href="css/calendar.css?v=20260908-1">
-  <link rel="stylesheet" href="css/admin.css?v=20260908-2">
-  <link rel="stylesheet" href="css/responsive.css?v=20260908-2">
-  <link rel="stylesheet" href="css/themes.css?v=20260908-2">
+  <link rel="stylesheet" href="css/variables.css?v=20260927-1">
+  <link rel="stylesheet" href="css/base.css?v=20260927-1">
+  <link rel="stylesheet" href="css/components.css?v=20260927-1">
+  <link rel="stylesheet" href="css/calendar.css?v=20260927-1">
+  <link rel="stylesheet" href="css/admin.css?v=20260927-1">
+  <link rel="stylesheet" href="css/responsive.css?v=20260927-1">
+  <link rel="stylesheet" href="css/themes.css?v=20260927-1">
 </head>
 
 <body>
@@ -103,8 +103,10 @@
           Disponíveis</button>
         <button type="button" class="tab-btn" data-tab="calendario" data-mobile-label="Calendário">Calendário</button>
         <button type="button" class="tab-btn" data-tab="nova" data-mobile-label="Nova Reserva">Nova Reserva</button>
-        <button type="button" class="tab-btn hidden" data-tab="admin" data-mobile-label="Admin"
-          id="adminTabBtn">Admin</button>
+        <button type="button" class="tab-btn hidden" data-tab="checklist" data-mobile-label="Checklist"
+          id="checklistTabBtn">Checklist</button>
+        <button type="button" class="tab-btn hidden" data-tab="admin" data-mobile-label="Gestão"
+          id="adminTabBtn">Gestão</button>
       </nav>
 
       <div class="header-right">
@@ -427,7 +429,7 @@
           </div>
 
           <details class="ride-watch-panel">
-            <summary>🔔 Monitorar uma rota</summary>
+            <summary>Monitorar uma rota</summary>
             <div class="ride-watch-form-wrap">
               <p class="ride-watch-hint">Não pode dirigir ou quer ir de carona? Monitore uma rota e receba um aviso, no portal e por
                 e-mail, quando alguém criar uma reserva compatível com a vaga disponível.</p>
@@ -480,10 +482,10 @@
         </div>
       </section>
 
-      <!-- ---- Admin ---- -->
+      <!-- ---- Gestão ---- -->
       <section class="tab-panel hidden" id="panel-admin">
         <div class="card">
-          <h2 id="managementPanelTitle">Painel de Administração</h2>
+          <h2 id="managementPanelTitle">Painel de Gestão</h2>
 
           <div class="admin-section-tabs" id="adminSectionTabs">
             <button type="button" class="admin-section-btn active" data-admin-section="reservas">Reservas</button>
@@ -491,12 +493,12 @@
             <button type="button" class="admin-section-btn" data-admin-section="veiculos">Veículos</button>
             <button type="button" class="admin-section-btn" data-admin-section="bloqueios">Bloqueios</button>
             <button type="button" class="admin-section-btn" data-admin-section="manutencao">Manutenção</button>
-            <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
-            <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
+            <button type="button" class="admin-section-btn" data-admin-section="usuarios">Usuários</button>
+            <button type="button" class="admin-section-btn" data-admin-section="grupos">Grupos</button>
             <button type="button" class="admin-section-btn" data-admin-section="regras">Regras</button>
             <button type="button" class="admin-section-btn" data-admin-section="integracoes">Integrações</button>
-            <button type="button" class="admin-section-btn" data-admin-section="usuarios">Usuários</button>
-            <button type="button" class="admin-section-btn" data-admin-section="checklist">Checklist</button>
+            <button type="button" class="admin-section-btn" data-admin-section="relatorios">Relatórios</button>
+            <button type="button" class="admin-section-btn" data-admin-section="auditoria">Auditoria</button>
           </div>
 
           <div class="admin-section-panel" id="admin-section-reservas">
@@ -615,6 +617,11 @@
                   <input type="number" id="vehicleOdometer" min="0" step="1" placeholder="Ex.: 45000"
                     autocomplete="off">
                 </div>
+                <fieldset class="field group-picker-field">
+                  <legend>Quem pode enxergar e reservar</legend>
+                  <div class="group-picker" id="vehicleGroups"></div>
+                  <small class="field-hint">Sem nenhum grupo marcado, o veículo fica disponível para todos.</small>
+                </fieldset>
                 <button type="submit" class="submit-btn">Adicionar veículo</button>
               </form>
             </div>
@@ -1013,90 +1020,266 @@
             </div>
             &nbsp;
             <div class="admin-subcard">
-              <h3>Lembretes automáticos por e-mail</h3>
-              <p class="rules-explanation">Tokens disponíveis nos campos abaixo: <code>{{nome}}</code>,
-                <code>{{numeroReserva}}</code>, <code>{{origem}}</code>, <code>{{destino}}</code>,
-                <code>{{dataIda}}</code>, <code>{{horarioRetirada}}</code>, <code>{{dataVolta}}</code>,
-                <code>{{horarioDevolucao}}</code>, <code>{{veiculo}}</code>, <code>{{placaBadge}}</code>. O token
-                <code>{{passageiros}}</code> só está disponível no aviso de passageiro na carona.
-              </p>
-              <form id="emailRemindersForm" class="compact-form">
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderUpcomingEnabled"> Lembrete de
-                    reserva próxima</label>
-                  <input type="text" id="reminderUpcomingSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderUpcomingBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
+              <div class="reminders-head">
+                <div>
+                  <h3>Lembretes automáticos por e-mail</h3>
+                  <p class="field-hint" id="emailRemindersSummary"></p>
                 </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderPickupEnabled"> Lembrete de
-                    retirada pendente</label>
-                  <input type="text" id="reminderPickupSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderPickupBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderReturnEnabled"> Lembrete de
-                    devolução pendente</label>
-                  <input type="text" id="reminderReturnSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderReturnBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderPassengerJoinedEnabled"> Aviso
-                    ao motorista quando alguém entra na carona</label>
-                  <input type="text" id="reminderPassengerJoinedSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderPassengerJoinedBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderRideWatchMatchEnabled"> Aviso de
-                    carona monitorada disponível</label>
-                  <input type="text" id="reminderRideWatchMatchSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderRideWatchMatchBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderCnhExpiringEnabled"> Aviso de
-                    CNH vencendo ou vencida</label>
-                  <input type="text" id="reminderCnhExpiringSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderCnhExpiringBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                  <div class="form-hint">
-                    Enviado 30, 15 e 1 dia antes do vencimento, e uma vez depois de vencida —
-                    quatro avisos no total, não diariamente. Tokens próprios deste aviso:
-                    <code>{{mensagem}}</code>, <code>{{situacaoCurta}}</code>,
-                    <code>{{validade}}</code>, <code>{{categoria}}</code>,
-                    <code>{{diasRestantes}}</code>.
-                  </div>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderMaintenanceDueEnabled"> Aviso
-                    de manutenção da frota próxima</label>
-                  <input type="text" id="reminderMaintenanceDueSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderMaintenanceDueBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                  <div class="form-hint">
-                    Enviado a quem tem permissão de frota quando uma troca de óleo, pneus ou outra manutenção
-                    cadastrada em Manutenção se aproxima (por quilometragem ou por data). Tokens próprios deste
-                    aviso: <code>{{tipoManutencao}}</code>, <code>{{mensagem}}</code>, <code>{{proximaKm}}</code>,
-                    <code>{{proximaData}}</code>.
-                  </div>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderPassengerRemovedEnabled"> Aviso
-                    a quem foi removido de uma carona</label>
-                  <input type="text" id="reminderPassengerRemovedSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderPassengerRemovedBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                </div>
-                <div class="field">
-                  <label class="permission-option"><input type="checkbox" id="reminderPassengerLeftEnabled"> Aviso ao
-                    motorista quando alguém sai da carona</label>
-                  <input type="text" id="reminderPassengerLeftSubject" placeholder="Assunto do e-mail">
-                  <textarea id="reminderPassengerLeftBody" rows="3" placeholder="Corpo do e-mail (HTML)"></textarea>
-                  <div class="form-hint">
-                    Tokens próprios destes dois avisos: <code>{{outraParte}}</code> (quem removeu, ou quem saiu),
-                    <code>{{motivo}}</code> com a mensagem escrita na hora, e <code>{{blocoMotivo}}</code>, que
-                    monta a citação já formatada e some sozinho quando ninguém escreveu nada.
-                  </div>
-                </div>
+                <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
+                  agora</button>
+              </div>
+              <form id="emailRemindersForm" class="compact-form reminders-form">
+                <section class="reminder-group" aria-labelledby="reminderGroup0">
+                  <h4 class="reminder-group-title" id="reminderGroup0">Reservas</h4>
+                  <ul class="reminder-list">
+                    <li class="reminder-item" data-reminder="reservationUpcoming">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderUpcomingEnabled" aria-label="Enviar &quot;Reserva próxima&quot;">
+                        <div class="reminder-info">
+                          <strong>Reserva próxima</strong>
+                          <small>Até 24 horas antes da retirada</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderUpcomingEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderUpcomingEditor">
+                        <div class="field">
+                          <label for="reminderUpcomingSubject">Assunto</label>
+                          <input type="text" id="reminderUpcomingSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderUpcomingBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderUpcomingBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="reminder-item" data-reminder="pickupOverdue">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderPickupEnabled" aria-label="Enviar &quot;Retirada pendente&quot;">
+                        <div class="reminder-info">
+                          <strong>Retirada pendente</strong>
+                          <small>Horário de retirada passou sem registro</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderPickupEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderPickupEditor">
+                        <div class="field">
+                          <label for="reminderPickupSubject">Assunto</label>
+                          <input type="text" id="reminderPickupSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderPickupBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderPickupBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="reminder-item" data-reminder="returnOverdue">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderReturnEnabled" aria-label="Enviar &quot;Devolução pendente&quot;">
+                        <div class="reminder-info">
+                          <strong>Devolução pendente</strong>
+                          <small>Horário de devolução passou sem registro</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderReturnEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderReturnEditor">
+                        <div class="field">
+                          <label for="reminderReturnSubject">Assunto</label>
+                          <input type="text" id="reminderReturnSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderReturnBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderReturnBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </section>
+                <section class="reminder-group" aria-labelledby="reminderGroup1">
+                  <h4 class="reminder-group-title" id="reminderGroup1">Caronas</h4>
+                  <ul class="reminder-list">
+                    <li class="reminder-item" data-reminder="passengerJoined">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderPassengerJoinedEnabled" aria-label="Enviar &quot;Alguém entrou na carona&quot;">
+                        <div class="reminder-info">
+                          <strong>Alguém entrou na carona</strong>
+                          <small>Avisa o motorista</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderPassengerJoinedEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderPassengerJoinedEditor">
+                        <div class="field">
+                          <label for="reminderPassengerJoinedSubject">Assunto</label>
+                          <input type="text" id="reminderPassengerJoinedSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderPassengerJoinedBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderPassengerJoinedBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge passageiros"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="reminder-item" data-reminder="passengerLeft">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderPassengerLeftEnabled" aria-label="Enviar &quot;Alguém saiu da carona&quot;">
+                        <div class="reminder-info">
+                          <strong>Alguém saiu da carona</strong>
+                          <small>Avisa o motorista</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderPassengerLeftEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderPassengerLeftEditor">
+                        <div class="field">
+                          <label for="reminderPassengerLeftSubject">Assunto</label>
+                          <input type="text" id="reminderPassengerLeftSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderPassengerLeftBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderPassengerLeftBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge outraParte motivo blocoMotivo"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="reminder-item" data-reminder="passengerRemoved">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderPassengerRemovedEnabled" aria-label="Enviar &quot;Removido de uma carona&quot;">
+                        <div class="reminder-info">
+                          <strong>Removido de uma carona</strong>
+                          <small>Avisa quem foi removido</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderPassengerRemovedEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderPassengerRemovedEditor">
+                        <div class="field">
+                          <label for="reminderPassengerRemovedSubject">Assunto</label>
+                          <input type="text" id="reminderPassengerRemovedSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderPassengerRemovedBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderPassengerRemovedBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge outraParte motivo blocoMotivo"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="reminder-item" data-reminder="rideWatchMatch">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderRideWatchMatchEnabled" aria-label="Enviar &quot;Carona monitorada disponível&quot;">
+                        <div class="reminder-info">
+                          <strong>Carona monitorada disponível</strong>
+                          <small>Quando surge uma rota monitorada</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderRideWatchMatchEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderRideWatchMatchEditor">
+                        <div class="field">
+                          <label for="reminderRideWatchMatchSubject">Assunto</label>
+                          <input type="text" id="reminderRideWatchMatchSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderRideWatchMatchBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderRideWatchMatchBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome numeroReserva origem destino dataIda horarioRetirada dataVolta horarioDevolucao veiculo placaBadge"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </section>
+                <section class="reminder-group" aria-labelledby="reminderGroup2">
+                  <h4 class="reminder-group-title" id="reminderGroup2">Documentos e frota</h4>
+                  <ul class="reminder-list">
+                    <li class="reminder-item" data-reminder="cnhExpiring">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderCnhExpiringEnabled" aria-label="Enviar &quot;CNH vencendo ou vencida&quot;">
+                        <div class="reminder-info">
+                          <strong>CNH vencendo ou vencida</strong>
+                          <small>30, 15 e 1 dia antes, e uma vez após vencer</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderCnhExpiringEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderCnhExpiringEditor">
+                        <div class="field">
+                          <label for="reminderCnhExpiringSubject">Assunto</label>
+                          <input type="text" id="reminderCnhExpiringSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderCnhExpiringBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderCnhExpiringBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome mensagem situacaoCurta validade categoria diasRestantes"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="reminder-item" data-reminder="maintenanceDue">
+                      <div class="reminder-row">
+                        <input type="checkbox" id="reminderMaintenanceDueEnabled" aria-label="Enviar &quot;Manutenção próxima&quot;">
+                        <div class="reminder-info">
+                          <strong>Manutenção próxima</strong>
+                          <small>Para quem gerencia a frota</small>
+                        </div>
+                        <button type="button" class="secondary-btn reminder-edit-btn" aria-expanded="false"
+                          aria-controls="reminderMaintenanceDueEditor">Editar modelo</button>
+                      </div>
+                      <div class="reminder-editor hidden" id="reminderMaintenanceDueEditor">
+                        <div class="field">
+                          <label for="reminderMaintenanceDueSubject">Assunto</label>
+                          <input type="text" id="reminderMaintenanceDueSubject" placeholder="Assunto do e-mail">
+                        </div>
+                        <div class="field">
+                          <label for="reminderMaintenanceDueBody">Corpo do e-mail (HTML)</label>
+                          <textarea id="reminderMaintenanceDueBody" rows="8" placeholder="Corpo do e-mail (HTML)"></textarea>
+                        </div>
+                        <div class="reminder-tokens" data-tokens="nome veiculo placaBadge tipoManutencao mensagem proximaKm proximaData"></div>
+                        <div class="reminder-editor-actions">
+                          <button type="button" class="secondary-btn reminder-restore-btn">Restaurar padrão</button>
+                          <button type="button" class="secondary-btn reminder-preview-btn">Pré-visualizar</button>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </section>
                 <div class="error-msg" role="alert" id="emailRemindersError"></div>
                 <div class="user-form-actions">
-                  <button type="button" class="secondary-btn" id="emailRemindersRunNowBtn">Executar varredura
-                    agora</button>
                   <button type="submit" class="submit-btn">Salvar lembretes</button>
                 </div>
               </form>
@@ -1163,15 +1346,16 @@
                       Reservas</label>
                     <label class="permission-option"><input type="checkbox" id="permissionBranches"> Locais</label>
                     <label class="permission-option"><input type="checkbox" id="permissionFleet"> Veículos</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
                     <label class="permission-option"><input type="checkbox" id="permissionMaintenance">
                       Manutenção</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionAudit"> Auditoria</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionUsers"> Usuários</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionGroups"> Grupos</label>
                     <label class="permission-option"><input type="checkbox" id="permissionRules"> Regras</label>
                     <label class="permission-option"><input type="checkbox" id="permissionIntegrations">
                       Integrações</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionUsers"> Usuários</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
+                    <label class="permission-option"><input type="checkbox" id="permissionAudit"> Auditoria</label>
                     <label class="permission-option"><input type="checkbox" id="permissionChecklist"> Checklist</label>
                   </div>
                   <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar
@@ -1209,13 +1393,14 @@
                   <option value="reservations">Reservas</option>
                   <option value="branches">Locais</option>
                   <option value="fleet">Veículos</option>
-                  <option value="maintenance">Manutenção</option>
                   <option value="blocks">Bloqueios</option>
-                  <option value="audit">Auditoria</option>
-                  <option value="reports">Relatórios</option>
+                  <option value="maintenance">Manutenção</option>
+                  <option value="users">Usuários</option>
+                  <option value="groups">Grupos</option>
                   <option value="rules">Regras</option>
                   <option value="integrations">Integrações</option>
-                  <option value="users">Usuários</option>
+                  <option value="reports">Relatórios</option>
+                  <option value="audit">Auditoria</option>
                   <option value="checklist">Checklist</option>
                 </select>
               </div>
@@ -1243,9 +1428,27 @@
             <div class="user-pagination" id="userPagination"></div>
           </div>
 
-          <div class="admin-section-panel hidden" id="admin-section-checklist">
-            <div class="admin-subcard">
-              <h3>Checklists de retirada e devolução</h3>
+          <div class="admin-section-panel hidden" id="admin-section-grupos">
+            <div class="admin-subcard group-section-head">
+              <div>
+                <h3>Grupos de usuários</h3>
+                <p class="field-hint">Use grupos para reservar um veículo a um time. No cadastro do veículo, marque os
+                  grupos que podem enxergá-lo e reservá-lo; quem não for membro não vê o veículo. A gestão continua
+                  vendo e administrando bloqueios, manutenção e relatórios dele.</p>
+              </div>
+              <button type="button" class="submit-btn" id="groupNewBtn">+ Novo grupo</button>
+            </div>
+            &nbsp;
+            <div id="groupsList" class="management-list"></div>
+          </div>
+
+        </div>
+  </section>
+
+      <!-- ---- Checklist (aba própria: permissão "Checklist") ---- -->
+      <section class="tab-panel hidden" id="panel-checklist">
+        <div class="card">
+              <h2>Checklists de retirada e devolução</h2>
               <p class="form-hint">Checklists de retirada/devolução de todas as reservas. A permissão "Checklist"
                 dá acesso a registrar, revisar, aprovar e corrigir.</p>
               <div class="reservation-view-tabs" aria-label="Filtrar checklists">
@@ -1287,11 +1490,8 @@
                 </div>
               </div>
               <div id="checklistReviewList" class="checklist-review-groups"></div>
-            </div>
-          </div>
         </div>
-  </div>
-  </section>
+      </section>
 
   </main>
 
@@ -1342,55 +1542,63 @@
 
         <div id="cnhAlert" class="hidden"></div>
 
-        <form id="cnhForm" class="compact-form" novalidate>
-          <div class="row">
-            <div class="field">
-              <label for="cnhNumero">Número</label>
-              <input type="text" id="cnhNumero" inputmode="numeric" maxlength="11"
-                placeholder="Somente números" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="cnhCategoria">Categoria</label>
-              <select id="cnhCategoria">
-                <option value="">Selecione...</option>
-              </select>
-            </div>
-            <div class="field" id="field-cnhValidade">
-              <label for="cnhValidade">Validade</label>
-              <div class="date-input-wrapper" id="wrap-cnhValidade">
-                <input type="date" id="cnhValidade" readonly autocomplete="off">
-              </div>
-            </div>
+        <!-- Dados só de leitura: a CNH entra exclusivamente pela e-CNH (ver
+             js/driver-license.js e server/ecnh/). -->
+        <dl class="cnh-summary hidden" id="cnhSummary">
+          <div>
+            <dt>Nº de registro</dt>
+            <dd id="cnhResumoNumero"></dd>
           </div>
-
-          <div id="cnhCategoriaPreview"></div>
-          <button type="button" class="cnh-categoria-guia-btn" id="cnhCategoriaGuiaBtn">Ver guia de categorias</button>
-          <div id="cnhCategoriaLegend" class="hidden"></div>
-
-          <div class="row">
-            <div class="field">
-              <label for="cnhFrente">Foto da frente</label>
-              <input type="file" id="cnhFrente" accept="image/*">
-              <small class="cnh-photo-state" id="cnhFrenteEstado"></small>
-            </div>
-            <div class="field">
-              <label for="cnhVerso">Foto do verso</label>
-              <input type="file" id="cnhVerso" accept="image/*">
-              <small class="cnh-photo-state" id="cnhVersoEstado"></small>
-            </div>
+          <div>
+            <dt>Categoria</dt>
+            <dd id="cnhResumoCategoria"></dd>
           </div>
-
-          <div class="form-hint">
-            As fotos ficam visíveis só para você e para quem administra usuários, e
-            nunca são publicadas em endereço aberto. Máximo de 1 MB cada.
+          <div>
+            <dt>Validade</dt>
+            <dd id="cnhResumoValidade"></dd>
           </div>
+        </dl>
+        <p class="cnh-verified hidden" id="cnhVerificada"></p>
 
+        <div id="cnhCategoriaPreview"></div>
+        <button type="button" class="cnh-categoria-guia-btn" id="cnhCategoriaGuiaBtn">Ver guia de categorias</button>
+        <div id="cnhCategoriaLegend" class="hidden"></div>
+
+        <div class="cnh-import">
+          <h5 class="cnh-import-title" id="cnhImportTitle">Importar e-CNH</h5>
+          <ol class="cnh-import-steps">
+            <li>No aplicativo <strong>Carteira Digital de Trânsito</strong>, abra a sua CNH e exporte o documento em PDF.</li>
+            <li>Selecione o arquivo abaixo. O CapriCar confere a assinatura digital do DETRAN e preenche número, categoria e validade automaticamente.</li>
+          </ol>
+          <label class="cnh-file-picker" for="cnhArquivo" id="cnhArquivoLabel">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3"></path>
+            </svg>
+            <span>
+              <strong id="cnhArquivoTexto">Selecionar PDF da e-CNH</strong>
+              <small>Arquivo .pdf exportado pelo aplicativo, até 2 MB</small>
+            </span>
+          </label>
+          <input type="file" id="cnhArquivo" class="visually-hidden" accept="application/pdf,.pdf">
+          <div class="cnh-import-status hidden" id="cnhImportStatus" role="status" aria-live="polite"></div>
           <div class="error-msg" role="alert" id="cnhError"></div>
-          <div class="user-form-actions">
-            <button type="button" class="secondary-btn" id="cnhRemoverBtn">Remover CNH</button>
-            <button type="submit" class="submit-btn">Salvar CNH</button>
-          </div>
-        </form>
+        </div>
+
+        <aside class="cnh-privacy" aria-labelledby="cnhPrivacyTitle">
+          <h5 id="cnhPrivacyTitle">Sua privacidade (LGPD)</h5>
+          <ul>
+            <li>O arquivo da e-CNH <strong>não é armazenado</strong>. Ele é lido em memória pelo servidor do CapriCar só durante o envio e descartado logo em seguida.</li>
+            <li>Guardamos apenas o necessário para liberar reservas como motorista: <strong>número de registro, categoria e validade</strong>.</li>
+            <li>Foto, CPF, RG, filiação, data de nascimento e assinatura <strong>não são guardados</strong>. O nome impresso na CNH é usado só para confirmar que o documento é seu, e também não é guardado.</li>
+            <li>O documento não é enviado para nenhum serviço externo: a leitura acontece no próprio CapriCar.</li>
+            <li>Você pode remover os dados da sua CNH quando quiser.</li>
+          </ul>
+        </aside>
+
+        <div class="user-form-actions cnh-actions">
+          <button type="button" class="secondary-btn" id="cnhRemoverBtn">Remover CNH</button>
+        </div>
       </section>
     </div>
   </div>
@@ -1637,6 +1845,40 @@
   </div>
 
   <!-- ===================== Modal de Edição de Veículo ===================== -->
+  <!-- ===================== Grupo de usuários ===================== -->
+  <div class="modal-overlay hidden" id="groupModal">
+    <div class="modal-card group-modal-card">
+      <button type="button" class="modal-close" id="groupModalCloseBtn" aria-label="Fechar">&times;</button>
+      <h3 id="groupModalTitle">Novo grupo</h3>
+      <p>Os membros enxergam e reservam os veículos restritos a este grupo.</p>
+      <form id="groupForm" novalidate>
+        <div class="field">
+          <label for="groupName">Nome do grupo</label>
+          <input type="text" id="groupName" maxlength="80" placeholder="Ex.: Assistência técnica" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="groupDescription">Descrição (opcional)</label>
+          <input type="text" id="groupDescription" maxlength="240" placeholder="Ex.: Uso exclusivo da matriz"
+            autocomplete="off">
+        </div>
+        <div class="field">
+          <div class="group-members-head">
+            <label for="groupMemberSearch">Membros</label>
+            <small id="groupMemberCount">0 selecionados</small>
+          </div>
+          <input type="text" id="groupMemberSearch" placeholder="Buscar por nome, usuário ou centro de custo"
+            autocomplete="off">
+          <div class="group-member-list" id="groupMemberList"></div>
+        </div>
+        <div class="error-msg" role="alert" id="groupFormError"></div>
+        <div class="fleet-edit-actions">
+          <button type="button" class="secondary-btn" id="groupCancelBtn">Cancelar</button>
+          <button type="submit" class="submit-btn">Salvar grupo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="fleetEditModal">
     <div class="modal-card fleet-edit-card">
       <button type="button" class="modal-close" id="fleetEditCloseBtn" aria-label="Fechar">&times;</button>
@@ -1703,6 +1945,12 @@
               Atualizado automaticamente a cada retirada/devolução. Edite aqui para corrigir uma divergência.
             </div>
           </div>
+          <fieldset class="field group-picker-field">
+            <legend>Quem pode enxergar e reservar</legend>
+            <div class="group-picker" id="fleetEditVehicleGroups"></div>
+            <small class="field-hint">Sem nenhum grupo marcado, o veículo fica disponível para todos. Reservas já
+              feitas continuam valendo se um grupo for removido.</small>
+          </fieldset>
         </div>
         <div class="error-msg fleet-edit-error" role="alert" id="fleetEditError"></div>
         <div class="fleet-edit-actions">
@@ -1766,15 +2014,16 @@
               Reservas</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionBranches"> Locais</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionBlocks"> Bloqueios</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionMaintenance">
               Manutenção</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionBlocks"> Bloqueios</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionAudit"> Auditoria</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionGroups"> Grupos</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionRules"> Regras</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionIntegrations">
               Integrações</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="editPermissionAudit"> Auditoria</label>
             <label class="permission-option"><input type="checkbox" id="editPermissionChecklist"> Checklist</label>
           </div>
         </div>
@@ -1847,16 +2096,7 @@
             <div class="field-value" id="userViewCnhValidade"></div>
           </div>
         </div>
-        <div class="row">
-          <div class="field">
-            <label>Foto da frente</label>
-            <small class="cnh-photo-state" id="userViewCnhFrente"></small>
-          </div>
-          <div class="field">
-            <label>Foto do verso</label>
-            <small class="cnh-photo-state" id="userViewCnhVerso"></small>
-          </div>
-        </div>
+        <p class="cnh-verified hidden" id="userViewCnhVerificada"></p>
       </section>
 
       <div class="user-form-actions">
@@ -1907,15 +2147,16 @@
               Reservas</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionBranches"> Locais</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionFleet"> Veículos</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionBlocks"> Bloqueios</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionMaintenance">
               Manutenção</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionBlocks"> Bloqueios</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionAudit"> Auditoria</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionGroups"> Grupos</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionRules"> Regras</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionIntegrations">
               Integrações</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionUsers"> Usuários</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionReports"> Relatórios</label>
+            <label class="permission-option"><input type="checkbox" id="bulkPermissionAudit"> Auditoria</label>
             <label class="permission-option"><input type="checkbox" id="bulkPermissionChecklist"> Checklist</label>
           </div>
         </div>
@@ -2168,26 +2409,28 @@
   <script src="js/utils.js?v=20260922-1"></script>
   <script src="js/styled-select.js?v=20260902-1"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
-  <script src="js/api.js?v=20260903-1"></script>
+  <script src="js/api.js?v=20260927-1"></script>
+  <script src="js/vehicle-access.js?v=20260927-1"></script>
   <script src="js/storage.js?v=20260903-2"></script>
   <script src="js/vehicle-recommendation.js?v=20260902-3"></script>
-  <script src="js/notifications.js?v=20260826-2"></script>
+  <script src="js/notifications.js?v=20260927-1"></script>
   <!-- Antes de rides.js, que chama renderSeatMapHTML ao montar os cards. -->
   <script src="js/seat-map.js?v=20260918-15"></script>
   <script src="js/rides.js?v=20260903-1"></script>
-  <script src="js/reservations.js?v=20260904-1"></script>
-  <script src="js/calendar.js?v=20260903-2"></script>
+  <script src="js/reservations.js?v=20260927-1"></script>
+  <script src="js/calendar.js?v=20260927-1"></script>
   <script src="js/modals.js?v=20260903-2"></script>
-  <script src="js/admin.js?v=20260908-1"></script>
+  <script src="js/admin.js?v=20260927-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
-  <script src="js/management-operations.js?v=20260922-4"></script>
-  <script src="js/management-config.js?v=20260916-1"></script>
-  <script src="js/management-users.js?v=20260916-1"></script>
-  <script src="js/management-integrations.js?v=20260908-1"></script>
-  <!-- Depois de management-integrations.js: os botões são gerados a partir
-       do REMINDER_FIELDS declarado lá. -->
-  <script src="js/management-email-preview.js?v=20260903-1"></script>
-  <script src="js/management-fleet.js?v=20260904-2"></script>
+  <script src="js/management-operations.js?v=20260927-1"></script>
+  <script src="js/management-config.js?v=20260927-1"></script>
+  <script src="js/management-users.js?v=20260927-1"></script>
+  <script src="js/management-groups.js?v=20260927-1"></script>
+  <script src="js/management-integrations.js?v=20260927-1"></script>
+  <!-- Depois de management-integrations.js: a prévia lê o REMINDER_FIELDS
+       declarado lá. -->
+  <script src="js/management-email-preview.js?v=20260927-1"></script>
+  <script src="js/management-fleet.js?v=20260927-1"></script>
   <script src="js/management-blocks.js?v=20260826-2"></script>
   <!-- Depois de management-fleet.js (populateManagementVehicleSelectors)
        e de storage.js (getMaintenanceReminders/saveMaintenanceReminders). -->
@@ -2196,8 +2439,8 @@
   <script src="js/management-reports.js?v=20260908-1"></script>
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
-  <script src="js/driver-license.js?v=20260903-1"></script>
-  <script src="js/auth.js?v=20260916-1"></script>
+  <script src="js/driver-license.js?v=20260927-1"></script>
+  <script src="js/auth.js?v=20260927-1"></script>
   <script src="js/app.js?v=20260903-1"></script>
 
 </body>

@@ -282,6 +282,18 @@ function openQuickReserveModal(dataIda, selectedRange){
   const info = getSelectedCarInfo();
   if(!info) return;
 
+  // Quem é da gestão enxerga no calendário os veículos restritos a grupo, mas
+  // só membro do grupo reserva como motorista (ver js/vehicle-access.js).
+  const selectedVehicle = getVehicle(info.local, info.carro);
+  if(selectedVehicle && !canDriveVehicle(selectedVehicle, currentUser.grupos)){
+    showSiteAlert(
+      'Este veículo é de uso restrito a um grupo do qual você não faz parte. Você pode acompanhar a agenda dele, ' +
+      'mas só membros do grupo podem reservá-lo como motoristas.',
+      { title:'Veículo de uso restrito', type:'info' }
+    );
+    return;
+  }
+
   if(typeof checkCnhCategoriaParaVeiculo === 'function' &&
     !checkCnhCategoriaParaVeiculo(getVehicle(info.local, info.carro))){
     return;

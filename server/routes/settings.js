@@ -10,7 +10,8 @@ const {
   sweepEmailReminders,
   sweepDriverLicenseReminders,
   sweepMaintenanceReminders,
-  getEmailReminderSettings
+  getEmailReminderSettings,
+  DEFAULT_TEMPLATES
 } = require('../reminders');
 const { getCalendarSyncSettings, sendTestCalendarEvent } = require('../calendar-sync');
 
@@ -217,7 +218,10 @@ router.post('/smtp/test', async (req, res) => {
 
 router.get('/email-reminders', async (req, res) => {
   const settings = await getEmailReminderSettings();
-  res.json(settings);
+  // `padroes`: os modelos de fábrica, para o botão "Restaurar padrão" da tela.
+  // Chave à parte - o PUT abaixo só lê os tipos conhecidos, então ela nunca
+  // volta a ser salva.
+  res.json({ ...settings, padroes:DEFAULT_TEMPLATES });
 });
 
 router.put('/email-reminders', async (req, res) => {

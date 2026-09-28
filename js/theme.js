@@ -28,7 +28,7 @@ function updateThemeControls(){
     button.setAttribute('aria-pressed', isLight ? 'true' : 'false');
   });
   const themeColor = document.querySelector('meta[name="theme-color"]');
-  if(themeColor) themeColor.setAttribute('content', isLight ? '#f5f6f8' : '#1b1d21');
+  if(themeColor) themeColor.setAttribute('content', isLight ? '#f4f5f7' : '#111317');
 }
 
 function setActiveTheme(theme){

@@ -1,5 +1,6 @@
 const express = require('express');
 const { query } = require('../db');
+const { hasAnyManagementPermission, canSeeVehicle, indexVehicles, vehicleForReservation } = require('../vehicle-access');
 
 const router = express.Router();
 
@@ -18,7 +19,17 @@ router.get('/vehicles', async (req, res) => {
        JOIN branches b ON b.id = v.branch_id
       ORDER BY b.name, v.model, v.code`
   );
-  res.json({ vehicles:result.rows });
+  // Mesma regra do bootstrap: veículo restrito a grupo não aparece para quem
+  // não é membro nem da gestão (grupos ficam no veículo da coleção JSON).
+  if(hasAnyManagementPermission(req.user)) return res.json({ vehicles:result.rows });
+  const state = await query("SELECT value FROM application_state WHERE collection_name = 'vehicles'");
+  const index = indexVehicles(state.rows[0] && Array.isArray(state.rows[0].value) ? state.rows[0].value : []);
+  res.json({
+    vehicles:result.rows.filter(row => {
+      const vehicle = vehicleForReservation({ partida:row.branch_name, carro:row.code }, index);
+      return !vehicle || canSeeVehicle(vehicle, req.user);
+    })
+  });
 });
 
 router.get('/reservation-rules', async (req, res) => {

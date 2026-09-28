@@ -20,14 +20,6 @@ function getPassageirosConfirmados(reserva){
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function escapeHtml(str){
-  return String(str == null ? '' : str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function initialFrom(nome){
   const trimmed = String(nome || '').trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
@@ -73,13 +65,13 @@ function renderOccupancyHTML(reserva, options){
     const isDriver = p.nome === reserva.nome;
     chipsHtml +=
       '<div class="occupant-chip' + (isDriver ? ' is-driver' : '') + '">' +
-        '<span class="occupant-avatar">' + escapeHtml(initialFrom(p.nome)) + '</span>' +
-        '<span>' + escapeHtml(p.nome) + '</span>' +
+        '<span class="occupant-avatar">' + escapeHTML(initialFrom(p.nome)) + '</span>' +
+        '<span>' + escapeHTML(p.nome) + '</span>' +
         (isDriver ? '<span class="occupant-role">Motorista</span>' : '') +
         (allowRemove && !isDriver
-          ? '<button type="button" class="occupant-remove-btn" data-reservation-id="' + escapeHtml(reserva.id) +
-            '" data-user-id="' + escapeHtml(p.usuarioId || '') + '" title="Remover passageiro" aria-label="Remover ' +
-            escapeHtml(p.nome) + '">&times;</button>'
+          ? '<button type="button" class="occupant-remove-btn" data-reservation-id="' + escapeHTML(reserva.id) +
+            '" data-user-id="' + escapeHTML(p.usuarioId || '') + '" title="Remover passageiro" aria-label="Remover ' +
+            escapeHTML(p.nome) + '">&times;</button>'
           : '') +
       '</div>';
   });
@@ -177,111 +169,6 @@ function attachPersonAutocomplete(input, options){
   return { element:inputWrap, refresh:updateMatchedState };
 }
 
-// Widget reutilizável de "lista de passageiros nomeados" — usado nos 3 formulários
-// (Nova Reserva, Reserva Rápida do Calendário e Modal do Admin). Mantém zero duplicação
-// de lógica de adicionar/remover linhas entre os formulários.
-// options.maxPassageiros: quantidade máxima de linhas de passageiro (padrão CAPACIDADE_MAXIMA - 1).
-function createPassengerListWidget(containerId, options){
-  const opts = options || {};
-  const maxPassageiros = opts.maxPassageiros || (CAPACIDADE_MAXIMA - 1);
-  const container = document.getElementById(containerId);
-
-  const listEl = document.createElement('div');
-  listEl.className = 'passenger-list';
-  const addBtn = document.createElement('button');
-  addBtn.type = 'button';
-  addBtn.className = 'passenger-add-btn';
-  addBtn.textContent = '+ Adicionar passageiro';
-  const hintEl = document.createElement('div');
-  hintEl.className = 'passenger-list-hint hidden';
-  hintEl.textContent = 'Capacidade máxima atingida (' + CAPACIDADE_MAXIMA + ' pessoas)';
-
-  container.innerHTML = '';
-  container.appendChild(listEl);
-  container.appendChild(addBtn);
-  container.appendChild(hintEl);
-
-  function updateAddBtnState(){
-    const atMax = listEl.children.length >= maxPassageiros;
-    addBtn.classList.toggle('hidden', atMax);
-    hintEl.classList.toggle('hidden', !atMax);
-  }
-
-  function addRow(value){
-    if(listEl.children.length >= maxPassageiros) return;
-    const initial = value && typeof value === 'object'
-      ? { nome:String(value.nome || ''), usuarioId:String(value.usuarioId || '') }
-      : { nome:String(value || ''), usuarioId:'' };
-    const row = document.createElement('div');
-    row.className = 'passenger-row';
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'Busque um usuário ou digite o nome do visitante';
-    input.autocomplete = 'off';
-    input.value = initial.nome;
-    input.dataset.userId = initial.usuarioId;
-    const inputWrap = attachPersonAutocomplete(input).element;
-
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'passenger-remove-btn';
-    removeBtn.textContent = '×';
-    removeBtn.addEventListener('click', function(){
-      row.remove();
-      updateAddBtnState();
-    });
-    row.appendChild(inputWrap);
-    row.appendChild(removeBtn);
-    listEl.appendChild(row);
-    updateAddBtnState();
-    return input;
-  }
-
-  addBtn.addEventListener('click', function(){
-    const input = addRow('');
-    if(input) input.focus();
-  });
-
-  function getNomes(){
-    return Array.from(listEl.querySelectorAll('input[type="text"]')).map(i => i.value);
-  }
-
-  function getPassengers(){
-    return Array.from(listEl.querySelectorAll('input[type="text"]')).map(input => ({
-      nome:input.value,
-      usuarioId:input.dataset.userId || ''
-    }));
-  }
-
-  function setNomes(nomes){
-    listEl.innerHTML = '';
-    (nomes || []).forEach(nome => addRow(nome));
-    updateAddBtnState();
-  }
-
-  function setPassengers(passengers){
-    listEl.innerHTML = '';
-    (passengers || []).forEach(passenger => addRow(passenger));
-    updateAddBtnState();
-  }
-
-  function clear(){
-    listEl.innerHTML = '';
-    updateAddBtnState();
-  }
-
-  updateAddBtnState();
-
-  return {
-    getNomes:getNomes,
-    getPassengers:getPassengers,
-    setNomes:setNomes,
-    setPassengers:setPassengers,
-    clear:clear,
-    addRow:addRow
-  };
-}
-
 // Widget de ocupação editável direto no mapa de lugares - substitui, no modal
 // admin, a dupla "lista de campos de nome" + "mapa somente leitura" que existia
 // antes (redundante: as duas peças mostravam a mesma informação ao mesmo tempo).
@@ -328,8 +215,8 @@ function createInteractiveOccupancyWidget(containerId, options){
     const chip = document.createElement('div');
     chip.className = 'occupant-chip is-driver';
     chip.innerHTML =
-      '<span class="occupant-avatar">' + escapeHtml(initialFrom(nome)) + '</span>' +
-      '<span>' + escapeHtml(nome || '—') + '</span>' +
+      '<span class="occupant-avatar">' + escapeHTML(initialFrom(nome)) + '</span>' +
+      '<span>' + escapeHTML(nome || '—') + '</span>' +
       '<span class="occupant-role">Motorista</span>';
     return chip;
   }

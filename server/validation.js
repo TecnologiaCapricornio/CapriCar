@@ -1,4 +1,5 @@
 const { DEFAULT_RESERVATION_RULES } = require('../js/reservation-defaults');
+const { isRestrictedVehicle, canDriveVehicle } = require('./vehicle-access');
 const { cnhAtendeCapacidade, cnhCategoriaMinimaPara } = require('../js/cnh-categorias');
 
 class ValidationError extends Error {
@@ -141,7 +142,9 @@ function validateBranches(value){
   });
 }
 
-function validateVehicles(value, branches, currentVehicles){
+// `groupIds`: Set com os ids de user_groups existentes (migração 034). Ausente
+// = não confere a existência (chamadores antigos/testes que não usam grupos).
+function validateVehicles(value, branches, currentVehicles, groupIds){
   assert(Array.isArray(value) && value.length <= 5000, 'Lista de veículos inválida.');
   ensureUniqueIds(value, 'veículos');
   const branchNames = new Set(branches.map(branch => String(branch.nome).toLowerCase()));
@@ -185,6 +188,16 @@ function validateVehicles(value, branches, currentVehicles){
     if(vehicle.odometroAtual !== undefined && vehicle.odometroAtual !== null && vehicle.odometroAtual !== ''){
       assert(Number.isInteger(Number(vehicle.odometroAtual)) && Number(vehicle.odometroAtual) >= 0,
         'O odômetro atual do veículo deve ser um número inteiro positivo.');
+    }
+    // Grupos com acesso (ver server/vehicle-access.js). Vazio/ausente = todos.
+    if(vehicle.grupos !== undefined && vehicle.grupos !== null){
+      assert(Array.isArray(vehicle.grupos) && vehicle.grupos.length <= 50, 'Os grupos do veículo são inválidos.');
+      const grupos = vehicle.grupos.map(String);
+      assert(grupos.every(id => /^[0-9a-f-]{36}$/i.test(id)), 'Os grupos do veículo são inválidos.');
+      assert(new Set(grupos).size === grupos.length, 'O veículo tem um grupo repetido.');
+      if(groupIds){
+        assert(grupos.every(id => groupIds.has(id)), 'Um dos grupos do veículo não existe mais. Recarregue a página e revise o cadastro.');
+      }
     }
     const key = `${branch.toLowerCase()}|${code.toLowerCase()}`;
     assert(!keys.has(key), 'Já existe um veículo com essa placa.');
@@ -530,6 +543,23 @@ function validateReservations(value, context){
 
     const vehicle = vehicleMap.get(`${branch.toLowerCase()}|${car.toLowerCase()}`);
     assert(isUnchanged || (vehicle && vehicle.ativo !== false), 'O veículo selecionado não está disponível.');
+    // Veículo restrito a grupo: o MOTORISTA precisa ser membro. Só é
+    // conferido quando a reserva nasce ou troca de veículo/motorista - editar
+    // horário, registrar retirada/devolução ou entrar como passageiro numa
+    // reserva que já existia não depende do grupo (quem saiu do grupo ainda
+    // precisa conseguir devolver o carro). Sem conta vinculada não há como
+    // conferir, então é recusado.
+    const vehicleOrDriverChanged = !previousReservation ||
+      String(previousReservation.partida || '').toLowerCase() !== branch.toLowerCase() ||
+      String(previousReservation.carro || '').toLowerCase() !== car.toLowerCase() ||
+      String(previousReservation.criadorUsuarioId || '') !== String(reservation.criadorUsuarioId || '');
+    if(vehicle && vehicleOrDriverChanged && isRestrictedVehicle(vehicle)){
+      const driverId = reservation.criadorUsuarioId ? String(reservation.criadorUsuarioId) : '';
+      const membership = context.groupMembershipByUserId instanceof Map ? context.groupMembershipByUserId : new Map();
+      assert(driverId && canDriveVehicle(vehicle, membership.get(driverId)),
+        'Este veículo é de uso restrito a um grupo, e o motorista não faz parte dele. ' +
+        'Só membros do grupo com acesso podem reservá-lo como motoristas.');
+    }
     const passengers = Array.isArray(reservation.passageiros) ? reservation.passageiros : [];
     const passengerNames = passengers.map(passenger =>
       text(passenger && passenger.nome, 'o nome do passageiro', 120).toLowerCase()
@@ -605,7 +635,7 @@ function validateReservations(value, context){
 function validateCollection(name, value, context){
   if(name === 'rules') return validateRules(value);
   if(name === 'branches') return validateBranches(value);
-  if(name === 'vehicles') return validateVehicles(value, context.branches || [], context.currentVehicles || []);
+  if(name === 'vehicles') return validateVehicles(value, context.branches || [], context.currentVehicles || [], context.groupIds);
   if(name === 'blocks') return validateBlocks(value, context.vehicles || []);
   if(name === 'maintenanceReminders') return validateMaintenanceReminders(value, context.vehicles || []);
   if(name === 'reservations') return validateReservations(value, context);
@@ -615,7 +645,6 @@ function validateCollection(name, value, context){
 module.exports = {
   ValidationError,
   validateCollection,
-  validateRules,
   validateBranches,
   validateVehicles,
   validateBlocks,
@@ -625,7 +654,6 @@ module.exports = {
   isValidEmail,
   VEHICLE_TYPES,
   VEHICLE_CAPACITY_LIMITS,
-  VEHICLE_CAPACITY_LIMIT_DEFAULT,
   // Reaproveitados por server/driver-licenses.js - exportar evita que a
   // validação de data e a de mensagem de erro sigam caminhos diferentes.
   assert,

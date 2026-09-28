@@ -95,19 +95,19 @@ function buildPrintableAuditReport(list){
     '<style>' +
       '@page{size:A4 landscape;margin:12mm}' +
       '*{box-sizing:border-box}' +
-      'body{margin:0;color:#172b3d;background:#fff;font:11px Arial,sans-serif}' +
-      '.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid #3a6a95}' +
-      '.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:11px;background:#1e3a5a;color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px}' +
-      'h1{margin:0;color:#1e3a5a;font-size:21px}' +
-      '.subtitle,.meta{color:#62778a}.meta{text-align:right;line-height:1.5}' +
-      '.filters{margin:10px 0;padding:8px 10px;border-radius:7px;background:#edf3f8;color:#3e566b}' +
+      'body{margin:0;color:#1a2230;background:#fff;font:11px Arial,sans-serif}' +
+      '.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid #0033a0}' +
+      '.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:11px;background:#151f6d;color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px}' +
+      'h1{margin:0;color:#151f6d;font-size:21px}' +
+      '.subtitle,.meta{color:#5a6472}.meta{text-align:right;line-height:1.5}' +
+      '.filters{margin:10px 0;padding:8px 10px;border-radius:7px;background:#f1f3f5;color:#434c58}' +
       'table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}' +
       'thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}' +
-      'th{padding:8px 7px;background:#1e3a5a;color:#fff;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.25px}' +
-      'td{padding:7px;border:1px solid #dbe5ed;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}' +
-      'tbody tr:nth-child(even){background:#f5f9fc}.empty{text-align:center;padding:22px;color:#62778a}' +
+      'th{padding:8px 7px;background:#151f6d;color:#fff;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.25px}' +
+      'td{padding:7px;border:1px solid #e1e4e8;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}' +
+      'tbody tr:nth-child(even){background:#f8f9fa}.empty{text-align:center;padding:22px;color:#5a6472}' +
       'th:nth-child(1){width:16%}th:nth-child(2){width:16%}th:nth-child(3){width:14%}th:nth-child(4){width:14%}th:nth-child(5){width:40%}' +
-      '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #dbe5ed;color:#7b8d9c;text-align:right;font-size:9px}' +
+      '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #e1e4e8;color:#737c89;text-align:right;font-size:9px}' +
       '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '</style></head><body>' +
       '<header class="header"><div class="brand"><div class="mark">CC</div><div><h1>Auditoria</h1>' +
@@ -381,27 +381,27 @@ function buildPrintableReport(list){
       // o Chrome pode ignorar a margem do @page se o diálogo de impressão
       // estiver com "Margens: Nenhuma" (lembrado de uma impressão anterior),
       // e aí o conteúdo saía colado nas bordas mesmo com @page definido.
-      'body{margin:0;padding:10mm 14mm;color:#172b3d;background:#fff;font:11px Arial,sans-serif}' +
-      '.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid #3a6a95}' +
-      '.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:11px;background:#1e3a5a;color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px}' +
-      'h1{margin:0;color:#1e3a5a;font-size:21px}h2{margin:22px 0 9px;color:#1e3a5a;font-size:14px}' +
-      '.subtitle,.meta,small{color:#62778a}.meta{text-align:right;line-height:1.5}' +
-      '.filters{margin:10px 0;padding:8px 10px;border-radius:7px;background:#edf3f8;color:#3e566b}' +
+      'body{margin:0;padding:10mm 14mm;color:#1a2230;background:#fff;font:11px Arial,sans-serif}' +
+      '.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid #0033a0}' +
+      '.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:11px;background:#151f6d;color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px}' +
+      'h1{margin:0;color:#151f6d;font-size:21px}h2{margin:22px 0 9px;color:#151f6d;font-size:14px}' +
+      '.subtitle,.meta,small{color:#5a6472}.meta{text-align:right;line-height:1.5}' +
+      '.filters{margin:10px 0;padding:8px 10px;border-radius:7px;background:#f1f3f5;color:#434c58}' +
       '.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:13px 0}' +
-      '.summary div{padding:10px;border:1px solid #d8e4ed;border-radius:8px;background:#f8fbfd}' +
-      '.summary strong{display:block;color:#1e3a5a;font-size:18px}.summary span{color:#62778a}' +
+      '.summary div{padding:10px;border:1px solid #e1e4e8;border-radius:8px;background:#f8f9fa}' +
+      '.summary strong{display:block;color:#151f6d;font-size:18px}.summary span{color:#5a6472}' +
       'table{width:100%;border-collapse:collapse;table-layout:fixed}' +
       'thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}' +
-      'th{padding:8px 7px;background:#1e3a5a;color:#fff;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.25px}' +
-      'td{padding:7px;border:1px solid #dbe5ed;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}' +
-      'tbody tr:nth-child(even){background:#f5f9fc}.center{text-align:center}.right{text-align:right}' +
-      '.status{display:inline-block;padding:3px 6px;border-radius:9px;background:#dceaf5;color:#244d70;font-weight:700}' +
-      '.pending{color:#9a5d25;font-style:italic}.empty{text-align:center;padding:22px;color:#62778a}' +
+      'th{padding:8px 7px;background:#151f6d;color:#fff;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.25px}' +
+      'td{padding:7px;border:1px solid #e1e4e8;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}' +
+      'tbody tr:nth-child(even){background:#f8f9fa}.center{text-align:center}.right{text-align:right}' +
+      '.status{display:inline-block;padding:3px 6px;border-radius:9px;background:#eef3fb;color:#0033a0;font-weight:700}' +
+      '.pending{color:#9a5d25;font-style:italic}.empty{text-align:center;padding:22px;color:#5a6472}' +
       '.overview th:nth-child(1){width:6%}.overview th:nth-child(2){width:15%}.overview th:nth-child(3){width:15%}.overview th:nth-child(4){width:13%}' +
       '.overview th:nth-child(5){width:15%}.overview th:nth-child(6){width:8%}.overview th:nth-child(7){width:9%}.overview th:nth-child(8){width:11%}' +
       '.operations th:nth-child(1){width:15%}.operations th:nth-child(2),.operations th:nth-child(3){width:19%}' +
       '.operations th:nth-child(4){width:21%}.operations th:nth-child(5){width:26%}' +
-      '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #dbe5ed;color:#7b8d9c;text-align:right;font-size:9px}' +
+      '.footer{margin-top:12px;padding-top:7px;border-top:1px solid #e1e4e8;color:#737c89;text-align:right;font-size:9px}' +
       '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '</style></head><body>' +
       '<header class="header"><div class="brand"><div><h1>Relatório de utilização</h1>' +

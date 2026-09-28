@@ -29,4 +29,4 @@ async function graphRequest(method, path, body){
   return text ? JSON.parse(text) : null;
 }
 
-module.exports = { graphRequest, GRAPH_BASE };
+module.exports = { graphRequest };

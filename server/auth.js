@@ -65,10 +65,20 @@ function permissionsFromRow(row){
     audit:row.can_view_audit === true,
     rules:row.can_manage_rules === true,
     users:row.can_manage_users === true,
+    groups:row.can_manage_groups === true,
     integrations:row.can_manage_integrations === true,
     checklist:row.can_manage_checklist === true
   };
 }
+
+// Ids dos grupos do usuário (migração 034), como coluna `group_ids` da
+// consulta que carrega a linha de `users u`. Usado pela regra de veículos
+// restritos (ver ./vehicle-access.js).
+const USER_GROUP_IDS_SQL = `COALESCE((
+  SELECT ARRAY_AGG(m.group_id::text ORDER BY m.group_id)
+    FROM user_group_members m
+   WHERE m.user_id = u.id
+), '{}') AS group_ids`;
 
 function publicUser(row){
   return {
@@ -80,7 +90,8 @@ function publicUser(row){
     role:row.role,
     active:row.active,
     authProvider:row.auth_provider || 'local',
-    permissions:permissionsFromRow(row)
+    permissions:permissionsFromRow(row),
+    grupos:Array.isArray(row.group_ids) ? row.group_ids.map(String) : []
   };
 }
 
@@ -88,7 +99,7 @@ async function loadAuthenticatedUser(req){
   const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
   if(!token) return null;
   const result = await query(
-    `SELECT u.*
+    `SELECT u.*, ${USER_GROUP_IDS_SQL}
        FROM user_sessions s
        JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1
@@ -123,6 +134,7 @@ function requirePermission(permission){
 }
 
 module.exports = {
+  USER_GROUP_IDS_SQL,
   SESSION_COOKIE,
   parseCookies,
   cookieOptions,

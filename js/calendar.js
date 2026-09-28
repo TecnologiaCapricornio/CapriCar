@@ -121,14 +121,16 @@ function getCarsForSelectedBranch(){
 // Paleta fixa por posição do veículo na lista do local (mesma ordem do
 // <select>) - assim cada veículo sempre cai na mesma cor entre renders,
 // sem precisar guardar um mapa à parte. Só é usada quando nenhum veículo
-// específico está selecionado e o local tem mais de um.
+// específico está selecionado e o local tem mais de um. As cores em si
+// (sóbrias, com um valor por tema) ficam em css/calendar.css (--cat-N);
+// aqui só referenciamos as variáveis.
 const CALENDAR_VEHICLE_COLORS = [
-  { accent:'#7bc4f1', bg1:'rgba(58,106,149,.97)', bg2:'rgba(39,80,115,.97)' },   // azul (padrão)
-  { accent:'#6fe3a8', bg1:'rgba(47,140,99,.97)', bg2:'rgba(28,94,66,.97)' },     // verde
-  { accent:'#f0b95c', bg1:'rgba(158,110,34,.97)', bg2:'rgba(117,80,22,.97)' },   // âmbar
-  { accent:'#b89af0', bg1:'rgba(103,74,150,.97)', bg2:'rgba(72,50,109,.97)' },   // roxo
-  { accent:'#f095b0', bg1:'rgba(150,60,90,.97)', bg2:'rgba(109,40,65,.97)' },    // rosa
-  { accent:'#6fd8dd', bg1:'rgba(30,120,125,.97)', bg2:'rgba(18,85,90,.97)' }     // ciano
+  { accent:'var(--cat-1)', bg:'var(--cat-1-surface)' },   // azul (padrão)
+  { accent:'var(--cat-2)', bg:'var(--cat-2-surface)' },   // verde
+  { accent:'var(--cat-3)', bg:'var(--cat-3-surface)' },   // âmbar
+  { accent:'var(--cat-4)', bg:'var(--cat-4-surface)' },   // ardósia
+  { accent:'var(--cat-5)', bg:'var(--cat-5-surface)' },   // vinho
+  { accent:'var(--cat-6)', bg:'var(--cat-6-surface)' }    // petróleo
 ];
 
 // Índice do veículo da reserva na lista do local selecionado, ou -1 se não
@@ -581,7 +583,7 @@ function buildReservationEvent(reservation, iso){
   const colorStyle = colorIndex >= 0
     ? (function(){
       const color = CALENDAR_VEHICLE_COLORS[colorIndex % CALENDAR_VEHICLE_COLORS.length];
-      return ';--event-accent:' + color.accent + ';--event-bg-1:' + color.bg1 + ';--event-bg-2:' + color.bg2;
+      return ';--event-accent:' + color.accent + ';--event-bg:' + color.bg;
     })()
     : '';
   return '<button type="button" class="week-reservation-event' + clippedClass + densityClass + '"' +

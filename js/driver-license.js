@@ -1,20 +1,28 @@
 /* =========================================================
    CNH do usuário (aba "Meu perfil")
 
-   O servidor é a fonte da verdade do estado de vencimento: esta tela só
-   renderiza o que /api/profile/cnh devolve (status, mensagem, dias
-   restantes). Não recalcular a regra aqui é o que garante que portal,
-   e-mail e notificação digam sempre a mesma coisa.
+   A CNH não é digitada: o usuário envia o PDF da e-CNH e o servidor
+   confere a assinatura digital do DETRAN, lê número, categoria e
+   validade e devolve o resultado (ver server/ecnh/). O arquivo vai
+   direto para POST /api/profile/cnh/e-cnh e não é guardado nem aqui
+   nem lá - por isso não há pré-visualização nem cópia local.
+
+   O servidor também é a fonte da verdade do estado de vencimento:
+   esta tela só renderiza o que /api/profile/cnh devolve (status,
+   mensagem, dias restantes), para portal, e-mail e notificação
+   dizerem sempre a mesma coisa.
    ========================================================= */
 
-const cnhForm = document.getElementById('cnhForm');
-const cnhNumeroInput = document.getElementById('cnhNumero');
-const cnhCategoriaSelect = document.getElementById('cnhCategoria');
-const cnhValidadeInput = document.getElementById('cnhValidade');
-const cnhFrenteInput = document.getElementById('cnhFrente');
-const cnhVersoInput = document.getElementById('cnhVerso');
-const cnhFrenteEstado = document.getElementById('cnhFrenteEstado');
-const cnhVersoEstado = document.getElementById('cnhVersoEstado');
+const cnhArquivoInput = document.getElementById('cnhArquivo');
+const cnhArquivoLabel = document.getElementById('cnhArquivoLabel');
+const cnhArquivoTexto = document.getElementById('cnhArquivoTexto');
+const cnhImportTitle = document.getElementById('cnhImportTitle');
+const cnhImportStatus = document.getElementById('cnhImportStatus');
+const cnhSummaryEl = document.getElementById('cnhSummary');
+const cnhResumoNumero = document.getElementById('cnhResumoNumero');
+const cnhResumoCategoria = document.getElementById('cnhResumoCategoria');
+const cnhResumoValidade = document.getElementById('cnhResumoValidade');
+const cnhVerificadaEl = document.getElementById('cnhVerificada');
 const cnhErrorEl = document.getElementById('cnhError');
 const cnhAlertEl = document.getElementById('cnhAlert');
 const cnhDriveBadge = document.getElementById('cnhDriveBadge');
@@ -23,7 +31,9 @@ const cnhCategoriaPreviewEl = document.getElementById('cnhCategoriaPreview');
 const cnhCategoriaGuiaBtn = document.getElementById('cnhCategoriaGuiaBtn');
 const cnhCategoriaLegendEl = document.getElementById('cnhCategoriaLegend');
 
-const MAX_CNH_PHOTO_BYTES = 1024 * 1024;
+// Mesmo limite de server/ecnh/index.js - conferido aqui só para avisar antes
+// de enviar; quem decide é o servidor.
+const MAX_ECNH_BYTES = 2 * 1024 * 1024;
 
 // Último payload recebido do servidor. Outras telas (nova reserva, cartão do
 // painel) consultam por aqui em vez de refazer a chamada.
@@ -72,15 +82,6 @@ function checkCnhCategoriaParaVeiculo(vehicle){
     { title:'Categoria da CNH insuficiente', type:'warning' }
   );
   return false;
-}
-
-function fileToDataUrl(file){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
-    reader.readAsDataURL(file);
-  });
 }
 
 function renderCnhAlert(state){
@@ -155,45 +156,46 @@ function renderCategoriaPreview(categoria){
     : '';
 }
 
-function renderPhotoState(el, enviada, userId, lado){
-  if(!el) return;
-  if(!enviada){
-    el.textContent = 'Nenhuma foto enviada.';
-    el.classList.remove('cnh-photo-ok');
+function renderLicenseSummary(cnh){
+  const temCnh = !!(cnh && cnh.numero);
+  cnhSummaryEl.classList.toggle('hidden', !temCnh);
+  cnhVerificadaEl.classList.toggle('hidden', !temCnh);
+  if(!temCnh){
+    cnhResumoNumero.textContent = '';
+    cnhResumoCategoria.textContent = '';
+    cnhResumoValidade.textContent = '';
+    cnhVerificadaEl.textContent = '';
     return;
   }
-  el.classList.add('cnh-photo-ok');
-  el.innerHTML = 'Foto enviada · <a href="/api/profile/cnh/' +
-    encodeURIComponent(userId) + '/' + encodeURIComponent(lado) +
-    '" target="_blank" rel="noopener">ver</a>';
+  cnhResumoNumero.textContent = cnh.numero;
+  cnhResumoCategoria.textContent = cnh.categoria;
+  cnhResumoValidade.textContent = formatDate(cnh.validade);
+  cnhVerificadaEl.textContent = 'Importada da e-CNH' +
+    (cnh.emissor ? ' assinada por ' + cnh.emissor : '') +
+    (cnh.verificadaEm ? ' em ' + formatDate(cnh.verificadaEm.slice(0, 10)) : '') + '.';
+}
+
+function setImportBusy(busy, message){
+  cnhArquivoInput.disabled = busy;
+  cnhArquivoLabel.classList.toggle('is-busy', busy);
+  cnhArquivoLabel.setAttribute('aria-disabled', busy ? 'true' : 'false');
+  cnhImportStatus.classList.toggle('hidden', !message);
+  cnhImportStatus.textContent = message || '';
 }
 
 function renderLicense(state){
   currentLicenseState = state;
   const cnh = state && state.cnh;
-  const user = getCurrentUser();
 
-  if(cnhCategoriaSelect && !cnhCategoriaSelect.dataset.populated && state && state.categorias){
-    cnhCategoriaSelect.innerHTML = '<option value="">Selecione...</option>' +
-      state.categorias.map(c => '<option value="' + escapeHTML(c) + '">' + escapeHTML(c) + '</option>').join('');
-    cnhCategoriaSelect.dataset.populated = '1';
-  }
-
-  cnhNumeroInput.value = cnh ? cnh.numero : '';
-  cnhCategoriaSelect.value = cnh ? cnh.categoria : '';
-  renderCategoriaPreview(cnhCategoriaSelect.value);
-  cnhValidadeInput.value = cnh ? cnh.validade : '';
-  cnhFrenteInput.value = '';
-  cnhVersoInput.value = '';
+  renderLicenseSummary(cnh);
+  renderCategoriaPreview(cnh ? cnh.categoria : '');
   cnhErrorEl.textContent = '';
+  cnhImportTitle.textContent = cnh ? 'Atualizar com uma nova e-CNH' : 'Importar e-CNH';
 
-  renderPhotoState(cnhFrenteEstado, cnh && cnh.fotos.frente, user && user.id, 'frente');
-  renderPhotoState(cnhVersoEstado, cnh && cnh.fotos.verso, user && user.id, 'verso');
   renderCnhAlert(state);
   renderDriveBadge(state);
   if(cnhRemoverBtn) cnhRemoverBtn.classList.toggle('hidden', !cnh);
 
-  refreshDatePickers();
   // A trava de "só motorista com CNH" vive em js/reservations.js.
   if(typeof refreshDriverGate === 'function') refreshDriverGate();
   updateSolicitanteHint();
@@ -208,73 +210,47 @@ async function loadDriverLicense(){
   }
 }
 
-// createDatePicker vem de js/modals.js, carregado depois deste arquivo -
-// por isso a inicialização roda sob demanda, na primeira abertura do perfil,
-// e nunca no escopo de topo.
-let cnhDatePickerReady = false;
-function ensureCnhDatePicker(){
-  if(cnhDatePickerReady) return;
-  cnhDatePickerReady = true;
-  const cnhAnoAtual = new Date().getFullYear();
-  createDatePicker(cnhValidadeInput, document.getElementById('wrap-cnhValidade'), null, {
-    title:'Validade da CNH',
-    // yearNav troca o "‹ Mês de Ano ›" por dois <select> de mês/ano no
-    // cabeçalho do calendário - sem isso, cadastrar uma CNH recém-renovada
-    // (validade de até 10 anos à frente) exigia clicar dezenas de vezes em
-    // "próximo mês" só pra chegar no ano certo.
-    yearNav:true,
-    minYear:cnhAnoAtual - 10,
-    maxYear:cnhAnoAtual + 15,
-    // allowPast (e, por consequência, minYear no passado): uma CNH já
-    // vencida precisa poder ser cadastrada, senão não há como registrar a
-    // situação real de quem está com o documento atrasado.
-    allowPast:true
-  });
+async function importECnh(file){
+  cnhErrorEl.textContent = '';
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  if(!isPdf){
+    cnhErrorEl.textContent = 'Selecione o arquivo PDF da e-CNH exportado pelo aplicativo Carteira Digital de Trânsito.';
+    return;
+  }
+  if(file.size > MAX_ECNH_BYTES){
+    cnhErrorEl.textContent = 'O arquivo é maior que 2 MB. Envie o PDF original exportado pelo aplicativo.';
+    return;
+  }
+
+  setImportBusy(true, 'Conferindo a assinatura digital e lendo os dados da e-CNH...');
+  try{
+    // O File vai como corpo bruto (application/pdf), sem base64 nem cópia.
+    const state = await apiRequest('/api/profile/cnh/e-cnh', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/pdf' },
+      body:file
+    });
+    setImportBusy(false);
+    renderLicense(state);
+    const cnh = state.cnh;
+    await showSiteAlert(
+      'Dados lidos da sua e-CNH: categoria ' + cnh.categoria + ', válida até ' + formatDate(cnh.validade) +
+      '. O arquivo não foi armazenado.',
+      { title:'CNH importada', type:'success' }
+    );
+  }catch(error){
+    setImportBusy(false);
+    cnhErrorEl.textContent = error.message;
+  }
 }
 
-if(cnhForm){
-  cnhForm.addEventListener('submit', async function(event){
-    event.preventDefault();
-    cnhErrorEl.textContent = '';
-
-    const numero = cnhNumeroInput.value.trim();
-    const categoria = cnhCategoriaSelect.value;
-    const validade = cnhValidadeInput.value;
-
-    if(!numero || !categoria || !validade){
-      cnhErrorEl.textContent = 'Informe número, categoria e validade da CNH.';
-      return;
-    }
-
-    const payload = { numero, categoria, validade };
-
-    try{
-      for(const [campo, input] of [['frente', cnhFrenteInput], ['verso', cnhVersoInput]]){
-        const file = input.files && input.files[0];
-        if(!file) continue;
-        if(file.size > MAX_CNH_PHOTO_BYTES){
-          cnhErrorEl.textContent = 'Cada foto da CNH deve ter no máximo 1 MB.';
-          return;
-        }
-        payload[campo] = await fileToDataUrl(file);
-      }
-    }catch(error){
-      cnhErrorEl.textContent = error.message;
-      return;
-    }
-
-    try{
-      renderLicense(await apiRequest('/api/profile/cnh', { method:'PUT', body:payload }));
-      await showSiteAlert('Dados da CNH salvos.', { title:'CNH atualizada', type:'success' });
-    }catch(error){
-      cnhErrorEl.textContent = error.message;
-    }
-  });
-}
-
-if(cnhCategoriaSelect){
-  cnhCategoriaSelect.addEventListener('change', function(){
-    renderCategoriaPreview(cnhCategoriaSelect.value);
+if(cnhArquivoInput){
+  cnhArquivoInput.addEventListener('change', function(){
+    const file = cnhArquivoInput.files && cnhArquivoInput.files[0];
+    // Limpa a seleção na hora: permite escolher o mesmo arquivo de novo e
+    // não deixa o documento preso no campo depois do envio.
+    cnhArquivoInput.value = '';
+    if(file) importECnh(file);
   });
 }
 
@@ -293,15 +269,12 @@ if(cnhCategoriaGuiaBtn && cnhCategoriaLegendEl){
 if(cnhRemoverBtn){
   cnhRemoverBtn.addEventListener('click', async function(){
     const confirmado = await showSiteConfirm(
-      'Remover os dados e as fotos da sua CNH? Sem CNH cadastrada você deixa de poder reservar veículo como motorista.',
+      'Remover os dados da sua CNH? Sem CNH cadastrada você deixa de poder reservar veículo como motorista.',
       { title:'Remover CNH', confirmText:'Sim, remover', type:'warning' }
     );
     if(!confirmado) return;
     try{
-      renderLicense(await apiRequest('/api/profile/cnh', {
-        method:'PUT',
-        body:{ numero:'', categoria:'', validade:'' }
-      }));
+      renderLicense(await apiRequest('/api/profile/cnh', { method:'DELETE' }));
     }catch(error){
       cnhErrorEl.textContent = error.message;
     }

@@ -1,4 +1,14 @@
 /* Estrutura da aplicação, cartões, reservas, caronas, passageiros e modais */
+
+/* Ícones monocromáticos (traço estilo Lucide) usados como máscara em
+   ::before de avisos - a cor vem de currentColor, então seguem o texto
+   de cada variante nos dois temas. Substituem os antigos emojis. */
+:root{
+  --icon-alert:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+  --icon-octagon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E");
+  --icon-info:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+}
+
 /* ============ App shell / header ============ */
   .app-screen{
     min-height:100vh;
@@ -16,10 +26,8 @@
     justify-content:space-between;
     gap:20px;
     padding:14px 28px;
-    background:rgba(16,31,48,0.75);
-    backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
-    border-bottom:1px solid var(--card-border);
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
   }
 
   .header-left{
@@ -32,7 +40,6 @@
   .logo-img{
     height:56px;
     width:auto;
-    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   }
 
   .header-title{
@@ -42,58 +49,72 @@
   }
 
   .brand{
-    font-family:'Plus Jakarta Sans',sans-serif;
-    font-weight:800;
+    font-family:var(--font-heading);
+    font-weight:700;
     font-size:1.25rem;
-    background:linear-gradient(90deg,#fff,#cfe0ee);
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
+    color:var(--text);
   }
 
   .brand-sub{
     font-size:var(--fs-xs);
-    color:var(--texto-muted);
+    color:var(--text-muted);
     letter-spacing:0.3px;
   }
 
+  /* Em fluxo, entre a marca e os botões da direita (margin auto centraliza no
+     espaço livre). Antes era position:absolute no centro da tela, o que fazia
+     as abas passarem por cima dos botões assim que não cabiam. Quando nem
+     assim cabem, o cabeçalho vira duas linhas (ver css/responsive.css). */
   .tabs{
-    position:absolute;
-    left:50%;
-    top:50%;
-    transform:translate(-50%, -50%);
+    margin-inline:auto;
+    min-width:0;
     display:flex;
-    gap:6px;
-    background:rgba(255,255,255,0.04);
-    padding:5px;
-    border-radius:999px;
-    border:1px solid var(--card-border);
-    max-width:calc(100% - 460px);
+    gap:4px;
+    background:var(--surface-sunken);
+    padding:4px;
+    border-radius:var(--radius-sm);
+    border:1px solid var(--border);
     overflow-x:auto;
   }
 
   .tab-btn{
-    border:none;
+    /* Transparente, não "none": reserva o espaço do 1px que .active usa,
+       para a aba não mudar de tamanho (e empurrar as vizinhas) ao ativar. */
+    border:1px solid transparent;
     background:transparent;
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font-weight:600;
     font-size:var(--fs-sm);
-    padding:9px 16px;
-    border-radius:999px;
+    padding:8px 13px;
+    border-radius:var(--radius-xs);
     cursor:pointer;
-    transition:background .2s ease, color .2s ease, transform .15s ease;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
     white-space:nowrap;
   }
 
   .tab-btn:hover{
-    color:#fff;
-    transform:translateY(-1px);
+    color:var(--text);
+    background:var(--surface-hover);
   }
 
+  .tab-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  /* Fundo sozinho (--surface) quase não se distingue de --surface-sunken
+     (o trilho) em nenhum dos dois temas - a diferença de luminância é
+     mínima. --primary-soft-strong é um TINGIMENTO azul (não só mais claro/
+     escuro), o que o olho capta mesmo com pouca diferença de luminância e
+     já basta pra aba ativa ser reconhecível - o texto usa --text (a mesma
+     cor de um título comum), não --accent: só o fundo precisa "avisar",
+     o texto não precisa de mais um sinal por cima. */
   .tab-btn.active{
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
-    color:#fff;
-    box-shadow:0 3px 8px rgba(58,106,149,0.22);
+    background:var(--primary-soft-strong);
+    border:1px solid transparent;
+    color:var(--text);
+    font-weight:700;
+    box-shadow:var(--shadow-sm);
   }
 
   .header-right{
@@ -106,21 +127,21 @@
     display:flex;
     align-items:center;
     gap:10px;
-    background:rgba(255,255,255,0.05);
-    border:1px solid var(--card-border);
-    padding:6px 14px 6px 6px;
-    border-radius:999px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    padding:4px 14px 4px 4px;
+    border-radius:var(--radius-sm);
     cursor:pointer;
-    color:var(--texto);
+    color:var(--text);
     font-weight:600;
     font-size:var(--fs-sm);
-    transition:background .2s ease, transform .15s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
   }
 
   .profile-btn:hover,
   .profile-btn[aria-expanded="true"]{
-    background:rgba(255,255,255,0.09);
-    transform:translateY(-1px);
+    background:var(--surface-hover);
+    border-color:var(--border-strong);
   }
 
   /* Menu do nome/avatar no cabeçalho ("Minha CNH", "Sair") - mesmo padrão
@@ -136,44 +157,47 @@
     right:0;
     min-width:180px;
     padding:6px;
-    border:1px solid var(--card-border);
-    border-radius:14px;
-    background:#172d48;
-    box-shadow:0 18px 50px rgba(0,0,0,.38);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    background:var(--surface);
+    box-shadow:var(--shadow-md);
   }
 
   .profile-menu-item{
     display:block;
     width:100%;
-    padding:11px 14px;
+    padding:10px 12px;
     border:none;
-    border-radius:9px;
+    border-radius:var(--radius-xs);
     background:none;
-    color:var(--texto);
+    color:var(--text);
     font-size:var(--fs-sm);
     font-weight:600;
     text-align:left;
     cursor:pointer;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .profile-menu-item:hover{
-    background:rgba(255,255,255,.08);
+    background:var(--surface-hover);
   }
 
   .profile-menu-item-danger{
-    color:var(--vermelho);
+    color:var(--danger-text);
   }
 
   .profile-menu-item-danger:hover{
-    background:rgba(239,91,106,.14);
+    background:var(--danger-surface);
   }
 
+  /* Avatares (cabeçalho, perfil, ocupantes): mesmo padrão em todo o app -
+     círculo em tom suave da marca com a inicial na cor de destaque. */
   .avatar{
     width:32px;
     height:32px;
     border-radius:50%;
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
-    color:#fff;
+    background:var(--primary-soft-strong);
+    color:var(--accent);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -209,22 +233,21 @@
   }
 
   .card{
-    background:rgba(16,39,65,.9);
-    backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px);
-    border:1px solid rgba(111,168,216,.18);
+    background:var(--surface);
+    border:1px solid var(--border);
     border-radius:var(--radius-lg);
-    box-shadow:var(--sombra);
+    box-shadow:var(--shadow-sm);
     padding:30px 26px;
     margin-bottom:24px;
-    transition:box-shadow .25s ease;
   }
 
   .card h2{
     margin-top:0;
     margin-bottom:20px;
+    font-family:var(--font-heading);
     font-size:1.2rem;
-    color:#fff;
+    font-weight:700;
+    color:var(--text);
     display:flex;
     align-items:center;
     gap:8px;
@@ -249,7 +272,6 @@
 
   #panel-nova .form-hint{
     margin-bottom:10px;
-    padding:8px 12px;
   }
 
   #reservaForm{
@@ -285,10 +307,18 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
+    background:var(--primary);
+    border:1px solid transparent;
+    border-radius:var(--radius-sm);
+    color:var(--on-primary);
+    font-weight:600;
+    box-shadow:none;
+  }
+
+  button.secondary-btn.my-new-reservation-btn:hover{
+    background:var(--primary-hover);
     border-color:transparent;
-    color:#fff;
-    box-shadow:0 3px 8px rgba(58,106,149,0.22);
+    color:var(--on-primary);
   }
 
   .reservation-view-tabs{
@@ -296,22 +326,33 @@
     gap:4px;
     padding:4px;
     margin-bottom:18px;
-    border:1px solid rgba(111,168,216,.16);
-    border-radius:999px;
-    background:rgba(5,18,31,.28);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface-sunken);
   }
 
   .reservation-view-btn{
     min-height:36px;
     padding:7px 14px;
-    border:0;
-    border-radius:999px;
+    border:1px solid transparent;
+    border-radius:var(--radius-xs);
     background:transparent;
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font:inherit;
     font-size:var(--fs-xs);
     font-weight:600;
     cursor:pointer;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+
+  .reservation-view-btn:hover{
+    color:var(--text);
+    background:var(--surface-hover);
+  }
+
+  .reservation-view-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   .reservation-view-btn span{
@@ -322,15 +363,29 @@
     min-height:21px;
     margin-left:4px;
     padding:0 6px;
-    border-radius:999px;
-    background:rgba(255,255,255,.08);
+    border-radius:var(--radius-pill);
+    background:var(--neutral-surface);
+    color:var(--neutral-text);
     font-size:var(--fs-xs);
+    font-weight:600;
   }
 
+  /* Mesmo raciocínio de .tab-btn.active acima. */
   .reservation-view-btn.active{
-    color:#fff;
-    background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
-    box-shadow:0 6px 14px rgba(11,28,45,.28);
+    color:var(--text);
+    font-weight:700;
+    background:var(--primary-soft-strong);
+    border-color:transparent;
+    box-shadow:var(--shadow-sm);
+  }
+
+  /* O contador precisa de um tom diferente do fundo do próprio botão -
+     que agora é este mesmo --primary-soft-strong (ver .active acima) - senão
+     o número some dentro do botão. --primary sólido com texto branco
+     resolve isso nos dois temas. */
+  .reservation-view-btn.active span{
+    background:var(--primary);
+    color:var(--on-primary);
   }
 
 /* ============ Tabela de variantes: avisos e selos ============
@@ -352,31 +407,51 @@
     line-height:1.45;
   }
 
-  .notice::before{
-    margin-right:3px;
+  /* Ícone do aviso: máscara SVG pintada com currentColor (ver --icon-*
+     no topo do arquivo). Também usado por .form-hint e .rodizio-warning. */
+  .notice::before,
+  .form-hint::before,
+  .rodizio-warning::before{
+    content:"";
+    display:inline-block;
+    width:16px;
+    height:16px;
+    margin-right:6px;
+    vertical-align:-3px;
+    background-color:currentColor;
+    -webkit-mask:var(--icon-info) center/contain no-repeat;
+    mask:var(--icon-info) center/contain no-repeat;
   }
 
   .notice-warning{
     background:var(--warning-surface);
     border-color:var(--warning-border);
+    border-left-color:var(--warning);
     color:var(--warning-text);
     font-weight:600;
   }
-  .notice-warning::before{content:"⚠️";}
+  .notice-warning::before{
+    -webkit-mask-image:var(--icon-alert);
+    mask-image:var(--icon-alert);
+  }
 
   .notice-danger{
     background:var(--danger-surface);
     border-color:var(--danger-border);
+    border-left-color:var(--danger);
     color:var(--danger-text);
     font-weight:600;
   }
-  .notice-danger::before{content:"⛔";}
+  .notice-danger::before{
+    -webkit-mask-image:var(--icon-octagon);
+    mask-image:var(--icon-octagon);
+  }
 
   .tag{
     display:inline-block;
     width:fit-content;
     padding:4px 9px;
-    border-radius:999px;
+    border-radius:var(--radius-pill);
     border:1px solid;
     font-size:var(--fs-xs);
     font-weight:600;
@@ -407,17 +482,31 @@
     color:var(--success-text);
   }
 
-  /* .form-hint é a variante informativa aplicada a dicas de formulário -
-     mantida como nome próprio porque já é usada em 12 lugares. */
+  /* .form-hint é a dica informativa de formulário (usada em vários lugares):
+     só ícone + texto, sem caixa - é informação de apoio, não um alerta, e
+     não deve competir visualmente com os avisos de atenção/erro (.notice).
+     O ícone fica pendurado à esquerda (padding + position:absolute) para as
+     linhas seguintes alinharem com o texto, sem virar flex - que separaria
+     texto e <strong> em itens soltos. */
   .form-hint{
-    background:var(--info-surface);
-    border:1px solid var(--info-border);
-    border-left:4px solid var(--info);
+    position:relative;
+    padding:0 0 0 24px;
+    margin-bottom:16px;
+    background:none;
+    border:0;
+    /* Azul informativo (não o cinza de texto secundário): destaca a dica
+       do texto comum sem virar alerta. Contraste acima de 9,5:1 nos dois temas. */
     color:var(--info-text);
     font-size:var(--fs-sm);
-    padding:10px 13px;
-    border-radius:var(--radius-sm);
-    margin-bottom:18px;
+    line-height:1.5;
+  }
+
+  .form-hint::before{
+    position:absolute;
+    left:0;
+    top:2px;
+    margin-right:0;
+    background-color:var(--info);
   }
 
   /* Card "Reservando como" da Nova Reserva - avatar, nome e o status da CNH
@@ -428,9 +517,9 @@
     align-items:center;
     gap:12px;
     padding:10px 14px;
-    background:rgba(111,168,216,.08);
-    border:1px solid rgba(111,168,216,.18);
-    border-radius:var(--radius-sm);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
     margin-bottom:18px;
   }
 
@@ -446,7 +535,7 @@
   }
 
   .solicitante-info strong{
-    color:var(--texto);
+    color:var(--text);
     font-size:var(--fs-sm);
     font-weight:700;
   }
@@ -455,10 +544,6 @@
     display:flex;
     flex-wrap:wrap;
     gap:6px;
-  }
-
-  .form-hint::before{
-    content:"ℹ️ ";
   }
 
   .notification-center{
@@ -472,17 +557,24 @@
     width:40px;
     height:40px;
     padding:0;
-    border:1px solid var(--card-border);
-    border-radius:50%;
-    background:rgba(255,255,255,.055);
-    color:var(--texto);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface);
+    color:var(--text-muted);
     cursor:pointer;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .notification-bell:hover,
   .notification-bell[aria-expanded="true"]{
-    border-color:var(--azul-claro);
-    background:rgba(126,169,199,.14);
+    border-color:var(--border-strong);
+    background:var(--surface-hover);
+    color:var(--text);
+  }
+
+  .notification-bell:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   .notification-bell svg{
@@ -504,9 +596,9 @@
     min-width:18px;
     height:18px;
     padding:0 4px;
-    border:2px solid #142942;
-    border-radius:999px;
-    background:#e04f5f;
+    border:2px solid var(--surface);
+    border-radius:var(--radius-pill);
+    background:var(--danger-solid);
     color:#fff;
     font-size:var(--fs-xs);
     font-weight:700;
@@ -524,10 +616,10 @@
     width:min(390px,calc(100vw - 24px));
     max-height:min(590px,calc(100dvh - 90px));
     overflow:hidden;
-    border:1px solid var(--card-border);
-    border-radius:18px;
-    background:#172d48;
-    box-shadow:0 18px 50px rgba(0,0,0,.38);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    background:var(--surface);
+    box-shadow:var(--shadow-lg);
   }
 
   .notification-panel-header{
@@ -536,7 +628,7 @@
     justify-content:space-between;
     gap:14px;
     padding:16px;
-    border-bottom:1px solid var(--card-border);
+    border-bottom:1px solid var(--border);
   }
 
   .notification-panel-header > div{
@@ -545,12 +637,12 @@
     gap:2px;
   }
 
-  .notification-panel-header strong{font-size:1rem;}
-  .notification-panel-header span{color:var(--texto-muted);font-size:var(--fs-xs);}
+  .notification-panel-header strong{font-size:1rem;font-weight:700;color:var(--text);}
+  .notification-panel-header span{color:var(--text-muted);font-size:var(--fs-xs);}
   .notification-panel-header button{
     border:0;
     background:transparent;
-    color:var(--azul-claro);
+    color:var(--accent);
     font-size:var(--fs-xs);
     font-weight:600;
     cursor:pointer;
@@ -570,15 +662,17 @@
     width:100%;
     padding:14px 16px;
     border:0;
-    border-bottom:1px solid rgba(126,169,199,.13);
+    border-bottom:1px solid var(--border);
     background:transparent;
-    color:var(--texto);
+    color:var(--text);
     text-align:left;
     cursor:pointer;
+    transition:background-color var(--dur) var(--ease);
   }
 
-  .notification-item:hover{background:rgba(126,169,199,.08);}
-  .notification-item.unread{background:rgba(74,137,188,.13);}
+  .notification-item:hover{background:var(--surface-hover);}
+  .notification-item.unread{background:var(--primary-soft);}
+  .notification-item.unread:hover{background:var(--primary-soft-strong);}
   .notification-item.unread::after{
     content:'';
     position:absolute;
@@ -587,7 +681,7 @@
     width:7px;
     height:7px;
     border-radius:50%;
-    background:#74bdf2;
+    background:var(--accent);
   }
 
   .notification-item-icon{
@@ -595,21 +689,23 @@
     place-items:center;
     width:36px;
     height:36px;
-    border-radius:12px;
-    background:rgba(111,168,216,.15);
-    color:#9fd4fa;
+    border:1px solid var(--info-border);
+    border-radius:var(--radius-sm);
+    background:var(--info-surface);
+    color:var(--info-text);
     font-size:1rem;
-    font-weight:800;
+    font-weight:700;
   }
-  .notification-item-icon.cancel{background:rgba(224,79,95,.14);color:#ff9ba6;}
-  .notification-item-icon.key{background:rgba(240,177,72,.15);color:#ffd481;}
-  .notification-item-icon.report{background:rgba(240,177,72,.15);color:#ffd481;}
+  .notification-item-icon.cancel{background:var(--danger-surface);border-color:var(--danger-border);color:var(--danger-text);}
+  .notification-item-icon.key{background:var(--warning-surface);border-color:var(--warning-border);color:var(--warning-text);}
+  .notification-item-icon.report{background:var(--warning-surface);border-color:var(--warning-border);color:var(--warning-text);}
+  .notification-item-icon.block{background:var(--warning-surface);border-color:var(--warning-border);color:var(--warning-text);}
 
   .notification-item-copy{display:flex;flex-direction:column;gap:4px;padding-right:9px;}
-  .notification-item-copy strong{font-size:var(--fs-sm);line-height:1.3;}
-  .notification-item-copy > span{color:var(--texto-muted);font-size:var(--fs-xs);line-height:1.45;}
-  .notification-item-copy small{color:var(--azul-claro);font-size:var(--fs-xs);}
-  .notification-empty{padding:32px 18px;color:var(--texto-muted);text-align:center;font-size:var(--fs-sm);}
+  .notification-item-copy strong{font-size:var(--fs-sm);font-weight:600;line-height:1.3;}
+  .notification-item-copy > span{color:var(--text-muted);font-size:var(--fs-xs);line-height:1.45;}
+  .notification-item-copy small{color:var(--text-muted);font-size:var(--fs-xs);}
+  .notification-empty{padding:32px 18px;color:var(--text-muted);text-align:center;font-size:var(--fs-sm);}
 
   /* Mesma variante de atenção da tabela acima, com nome próprio por já
      estar em uso em reservations.js / modals.js / admin.js. */
@@ -626,7 +722,8 @@
   }
 
   .rodizio-warning::before{
-    content:"⚠️ ";
+    -webkit-mask-image:var(--icon-alert);
+    mask-image:var(--icon-alert);
   }
 
   form{
@@ -646,28 +743,28 @@
   }
 
   .empty-state{
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font-size:var(--fs-base);
     text-align:center;
     padding:26px 0;
   }
 
   .reservation-item{
-    border:1px solid rgba(111,168,216,.16);
-    border-left:3px solid var(--azul-claro);
+    border:1px solid var(--border);
+    border-left:3px solid var(--primary);
     border-radius:var(--radius-md);
     padding:17px 18px;
-    background:rgba(11,31,52,.55);
+    background:var(--surface);
     display:flex;
     flex-direction:column;
     align-items:stretch;
     gap:17px;
-    transition:transform .15s ease, background .2s ease;
+    transition:border-color var(--dur) var(--ease);
   }
 
   .reservation-item:hover{
-    background:rgba(255,255,255,0.06);
-    transform:translateY(-1px);
+    border-color:var(--border-strong);
+    border-left-color:var(--primary);
   }
 
   .reservation-info{
@@ -703,10 +800,10 @@
     min-width:38px;
     margin-right:8px;
     padding:4px 9px;
-    border:1px solid rgba(126,190,235,.38);
-    border-radius:999px;
-    background:rgba(111,168,216,.16);
-    color:#9fd4fa;
+    border:1px solid var(--neutral-border);
+    border-radius:var(--radius-pill);
+    background:var(--neutral-surface);
+    color:var(--neutral-text);
     font-size:var(--fs-sm);
     font-weight:600;
     line-height:1.1;
@@ -721,7 +818,7 @@
 
   .reservation-details{
     font-size:var(--fs-sm);
-    color:#b7cde0;
+    color:var(--text-muted);
   }
 
   /* Padrão único de "Ida/Volta" para qualquer tela que mostre o período de
@@ -733,14 +830,10 @@
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;
-    border-radius:12px;
-    /* Mesmo fundo do cartão de reserva que envolve tudo isso (.reservation-item,
-       logo abaixo) - os cartões Ida/Volta devem se misturar nele, não ganhar
-       um tom próprio (o vão entre os dois, por causa do gap, usa esse mesmo
-       fundo por baixo). Tema escuro explícito repete o mesmo valor de
-       .reservation-item ali (ver html[data-theme="dark"] em css/themes.css);
-       tema claro faz o mesmo com #f7f8fa. */
-    background:rgba(11,31,52,.55);
+    border-radius:var(--radius-md);
+    /* Transparente: o vão entre os cartões Ida/Volta (gap) mostra o próprio
+       fundo do cartão de reserva que envolve tudo (.reservation-item). */
+    background:transparent;
   }
 
   .reservation-period > .reservation-moment{
@@ -749,17 +842,17 @@
     align-items:center;
     gap:6px;
     padding:10px 12px;
-    border:1px solid rgba(111,168,216,.16);
-    border-radius:10px;
-    background:rgba(11,31,52,.55);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    background:var(--surface-2);
   }
 
   .reservation-moment-label{
     flex:0 0 100%;
     margin-bottom:2px;
-    color:#8fbadb;
+    color:var(--text-muted);
     font-size:var(--fs-xs);
-    font-weight:700;
+    font-weight:600;
     letter-spacing:.04em;
     text-transform:uppercase;
   }
@@ -770,12 +863,12 @@
     align-items:center;
     gap:4px;
     min-width:0;
-    color:#d9e9f6;
+    color:var(--text);
     white-space:nowrap;
   }
 
   .reservation-moment-part strong{
-    color:#f3f8fc;
+    color:var(--text);
     font-size:var(--fs-xs);
     font-weight:600;
   }
@@ -785,7 +878,7 @@
     height:13px;
     flex:0 0 13px;
     fill:none;
-    stroke:#78b8e8;
+    stroke:var(--text-muted);
     stroke-width:2;
     stroke-linecap:round;
     stroke-linejoin:round;
@@ -803,8 +896,9 @@
     align-self:flex-start;
     margin-bottom:2px;
     padding:2px 6px;
-    border-radius:999px;
-    background:rgba(255,255,255,.2);
+    border-radius:var(--radius-pill);
+    /* Tom do próprio texto do evento (que já vem da cor do veículo). */
+    background:color-mix(in srgb, currentColor 14%, transparent);
     color:inherit;
     font-size:var(--fs-xs);
     font-weight:600;
@@ -826,13 +920,13 @@
 
   .reservation-more-details{
     padding-top:9px;
-    border-top:1px solid rgba(111,168,216,.12);
-    color:#cfe2f1;
+    border-top:1px solid var(--border);
+    color:var(--text-muted);
     font-size:var(--fs-xs);
   }
 
   .reservation-more-details summary{
-    color:var(--azul-claro);
+    color:var(--accent);
     font-weight:600;
     cursor:pointer;
   }
@@ -843,46 +937,54 @@
     padding-top:10px;
   }
 
-  .reservation-history-item{
-    border-left-color:#5fbf91;
+  .reservation-history-item,
+  .reservation-history-item:hover{
+    border-left-color:var(--success);
   }
 
   .reservation-name{
     font-size:var(--fs-sm);
-    color:#8fbadb;
+    color:var(--text-muted);
     font-weight:600;
   }
 
+  /* Destrutivo discreto (outline). */
   .delete-btn{
-    background:none;
-    border:1px solid rgba(239,91,106,0.35);
-    color:var(--vermelho);
+    background:transparent;
+    border:1px solid var(--danger-border);
+    color:var(--danger-text);
     cursor:pointer;
     font-size:var(--fs-xs);
+    font-weight:600;
+    min-height:36px;
     padding:7px 12px;
-    border-radius:999px;
+    border-radius:var(--radius-sm);
     flex-shrink:0;
-    transition:background .2s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .delete-btn:hover{
-    background:rgba(239,91,106,0.15);
+    background:var(--danger-surface);
   }
 
+  /* Sair da carona: mesma forma do destrutivo discreto, em tom de atenção
+     (o laranja antigo não é cor da marca). */
   .leave-btn{
-    background:none;
-    border:1px solid rgba(255,145,60,0.45);
-    color:#ff9c3c;
+    background:transparent;
+    border:1px solid var(--warning-border);
+    color:var(--warning-text);
     cursor:pointer;
     font-size:var(--fs-xs);
+    font-weight:600;
+    min-height:36px;
     padding:7px 12px;
-    border-radius:999px;
+    border-radius:var(--radius-sm);
     flex-shrink:0;
-    transition:background .2s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .leave-btn:hover{
-    background:rgba(255,145,60,0.15);
+    background:var(--warning-surface);
   }
 
   .reservation-actions{
@@ -901,47 +1003,50 @@
   }
 
   .reservation-item .operation-status.status-waiting{
-    background:rgba(111,168,216,.14);
-    color:#a9d2f1;
+    background:var(--info-surface);
+    border-color:var(--info-border);
+    color:var(--info-text);
   }
 
   .reservation-item .operation-status.status-in-use{
-    background:rgba(255,145,60,.15);
-    color:#ffb16d;
+    background:var(--warning-surface);
+    border-color:var(--warning-border);
+    color:var(--warning-text);
   }
 
   .reservation-item .operation-status.status-completed{
-    background:rgba(51,212,136,.14);
-    color:#8fe9bf;
+    background:var(--success-surface);
+    border-color:var(--success-border);
+    color:var(--success-text);
   }
 
   .role-badge{
     display:inline-block;
     font-size:var(--fs-xs);
-    /* 600, não 700: em texto claro sobre fundo escuro o mesmo peso
-       aparenta mais grosso por causa da irradiação ótica (halação) -
-       tema claro compensa de volta para 700 em themes.css. */
     font-weight:600;
     padding:2px 9px;
-    border-radius:999px;
+    border:1px solid transparent;
+    border-radius:var(--radius-pill);
     width:fit-content;
   }
 
   .role-badge.creator{
-    background:rgba(111,168,216,0.18);
-    color:#bcd9f0;
+    background:var(--info-surface);
+    border-color:var(--info-border);
+    color:var(--info-text);
   }
 
   .role-badge.passenger{
-    background:rgba(51,212,136,0.16);
-    color:#8fe9bf;
+    background:var(--success-surface);
+    border-color:var(--success-border);
+    color:var(--success-text);
   }
 
   /* ---- Caronas disponíveis (compartilhamento de vagas) ---- */
   .rides-section{
     margin-top:20px;
     padding-top:20px;
-    border-top:1px dashed rgba(111,168,216,0.25);
+    border-top:1px solid var(--border);
     animation:fadeIn .3s ease;
   }
 
@@ -974,7 +1079,7 @@
   }
 
   .rides-header-text span{
-    font-weight:500;
+    font-weight:400;
     color:var(--text-muted);
     font-size:var(--fs-xs);
   }
@@ -996,7 +1101,7 @@
   .reservation-vehicle{
     width:fit-content;
     margin-top:3px;
-    color:#a9c7df;
+    color:var(--text-muted);
     font-size:var(--fs-xs);
     font-weight:600;
     line-height:1.25;
@@ -1048,22 +1153,30 @@
     padding:1px 0 2px;
   }
 
+  /* Positivo em outline: a cor verde fica na borda/texto, o fundo acompanha
+     o cartão - CTA principal da tela continua sendo o azul primário. */
   .join-ride-btn{
-    background:linear-gradient(135deg, var(--verde), #1f9d64);
-    color:#0f2417;
-    border:none;
-    padding:9px 16px;
+    background:var(--surface);
+    color:var(--success-text);
+    border:1px solid var(--success-border);
+    min-height:36px;
+    padding:8px 16px;
     font-size:var(--fs-sm);
-    font-weight:700;
-    border-radius:999px;
+    font-weight:600;
+    border-radius:var(--radius-sm);
     cursor:pointer;
     white-space:nowrap;
-    transition:transform .15s ease, filter .2s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .join-ride-btn:hover{
-    filter:brightness(1.08);
-    transform:translateY(-1px);
+    background:var(--success-surface);
+    border-color:var(--success);
+  }
+
+  .join-ride-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
   }
 
   /* ---- Filtros da aba Caronas Disponíveis ---- */
@@ -1073,18 +1186,18 @@
     gap:16px;
     margin-bottom:22px;
     padding-bottom:20px;
-    border-bottom:1px dashed rgba(111,168,216,0.25);
+    border-bottom:1px solid var(--border);
   }
 
   .ride-watch-panel{
     margin-bottom:22px;
     padding-bottom:20px;
-    border-bottom:1px dashed rgba(111,168,216,0.25);
+    border-bottom:1px solid var(--border);
   }
 
   .ride-watch-panel summary{
     cursor:pointer;
-    color:var(--azul-claro);
+    color:var(--accent);
     font-weight:600;
     font-size:var(--fs-sm);
   }
@@ -1099,7 +1212,7 @@
   .ride-watch-hint{
     margin:0;
     font-size:var(--fs-sm);
-    color:var(--texto-muted);
+    color:var(--text-muted);
   }
 
   .ride-watch-list{
@@ -1114,19 +1227,21 @@
     justify-content:space-between;
     gap:12px;
     padding:10px 14px;
-    border:1px solid rgba(111,168,216,.2);
-    border-radius:var(--radius-sm);
-    background:rgba(111,168,216,.06);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    background:var(--surface-2);
   }
 
   .ride-watch-item strong{
     display:block;
     font-size:var(--fs-sm);
+    font-weight:600;
+    color:var(--text);
   }
 
   .ride-watch-item small{
     display:block;
-    color:var(--texto-muted);
+    color:var(--text-muted);
     margin-top:2px;
   }
 
@@ -1142,35 +1257,35 @@
     display:flex;
     align-items:center;
     gap:6px;
-    background:linear-gradient(135deg, #2a4a6a, #1a3050);
-    border:1px solid rgba(111,168,216,0.25);
-    border-radius:999px;
+    background:var(--neutral-surface);
+    border:1px solid var(--neutral-border);
+    border-radius:var(--radius-pill);
     padding:4px 10px 4px 4px;
     font-size:var(--fs-xs);
-    color:var(--texto);
+    color:var(--text);
   }
 
   .occupant-avatar{
     width:22px;
     height:22px;
     border-radius:50%;
-    background:linear-gradient(135deg, #3a6a95, #2a4a6a);
+    background:var(--primary-soft-strong);
     display:flex;
     align-items:center;
     justify-content:center;
     font-size:var(--fs-xs);
     font-weight:700;
-    color:#fff;
+    color:var(--accent);
     flex-shrink:0;
   }
 
   .occupant-chip.is-driver{
-    background:linear-gradient(135deg, #3a6a95, #1a3050);
-    border-color:rgba(111,168,216,0.45);
+    background:var(--info-surface);
+    border-color:var(--info-border);
   }
 
   .occupant-chip .occupant-role{
-    color:var(--azul-claro);
+    color:var(--accent);
     font-size:var(--fs-xs);
     font-weight:600;
   }
@@ -1184,16 +1299,17 @@
     padding:0;
     border:none;
     border-radius:50%;
-    background:rgba(239,91,106,.18);
-    color:#ff9ba6;
+    background:var(--danger-surface);
+    color:var(--danger-text);
     font-size:14px;
     line-height:1;
     cursor:pointer;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .occupant-remove-btn:hover{
-    background:rgba(239,91,106,.32);
-    color:#ffb3bb;
+    background:color-mix(in srgb, var(--danger) 22%, transparent);
+    color:var(--danger-text);
   }
 
   /* ---- Ocupação editável direto no mapa (ver createInteractiveOccupancyWidget) ---- */
@@ -1223,13 +1339,18 @@
   }
 
   .occupant-chip-editing input[type="text"]{
-    background:rgba(26,48,80,0.55);
-    border:1.5px solid var(--azul-claro);
-    border-radius:999px;
-    color:var(--texto);
+    background:var(--surface);
+    border:1px solid var(--primary);
+    border-radius:var(--radius-pill);
+    color:var(--text);
     padding:6px 14px;
     font-size:var(--fs-xs);
     width:100%;
+    box-shadow:0 0 0 3px var(--focus-ring);
+  }
+
+  .occupant-chip-editing input[type="text"]::placeholder{
+    color:var(--text-subtle);
   }
 
   .occupant-chip-editing input[type="text"]:focus{
@@ -1240,34 +1361,35 @@
     display:flex;
     align-items:center;
     background:transparent;
-    border:1.5px dashed rgba(111,168,216,0.45);
-    border-radius:999px;
-    color:var(--azul-claro);
+    border:1px dashed var(--border-strong);
+    border-radius:var(--radius-pill);
+    color:var(--accent);
     padding:4px 12px;
     font-size:var(--fs-xs);
     font-weight:600;
     cursor:pointer;
-    transition:background .2s ease, transform .15s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .occupant-chip-add:hover{
-    background:rgba(111,168,216,0.1);
-    transform:translateY(-1px);
+    background:var(--primary-soft);
+    border-color:var(--accent);
   }
 
+  /* Lugar clicável do mapa: hover só reforça o traço do banco, sem
+     brilho nem aumento de escala. */
   .seat-clickable{
     cursor:pointer;
-    transition:filter .15s ease, transform .15s ease;
-    /* Sem isso um <g> dentro de <svg> escala a partir da origem do viewBox,
-       não do próprio centro - o lugar "pularia" de posição ao passar o mouse. */
-    transform-box:fill-box;
-    transform-origin:center;
   }
 
-  .seat-clickable:hover,
-  .seat-clickable:focus-visible{
-    filter:brightness(1.3);
-    transform:scale(1.1);
+  .seat-clickable rect{
+    transition:stroke var(--dur) var(--ease), stroke-width var(--dur) var(--ease);
+  }
+
+  .seat-clickable:hover rect,
+  .seat-clickable:focus-visible rect{
+    stroke:var(--success);
+    stroke-width:2;
   }
 
   .seat-clickable:focus-visible{
@@ -1277,7 +1399,7 @@
 
   .field-hint{
     font-size:var(--fs-xs);
-    color:var(--texto-muted);
+    color:var(--text-muted);
     margin:-2px 0 8px;
   }
 
@@ -1299,19 +1421,27 @@
     gap:8px;
     width:100%;
     padding:12px 15px;
-    border:1.5px solid rgba(255,255,255,0.10);
+    border:1px solid var(--border-strong);
     border-radius:var(--radius-sm);
-    background:rgba(255,255,255,0.05);
-    color:var(--texto);
+    background:var(--surface);
+    color:var(--text);
     font-size:0.95rem;
     font-family:inherit;
     text-align:left;
     cursor:pointer;
-    transition:border-color .2s, box-shadow .2s, background .2s;
+    transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur) var(--ease);
+  }
+
+  .styled-select-trigger:hover:not(:disabled){
+    border-color:var(--text-subtle);
+  }
+
+  .styled-select-trigger[aria-expanded="true"]{
+    border-color:var(--primary);
   }
 
   .styled-select-trigger:not(.has-value) .styled-select-trigger-value{
-    color:#7d93a8;
+    color:var(--text-subtle);
   }
 
   .styled-select-trigger-value{
@@ -1324,8 +1454,8 @@
 
   .styled-select-arrow{
     flex-shrink:0;
-    color:var(--texto-muted);
-    transition:transform .15s ease;
+    color:var(--text-muted);
+    transition:transform var(--dur-fast) var(--ease);
   }
 
   .styled-select-trigger[aria-expanded="true"] .styled-select-arrow{
@@ -1334,13 +1464,12 @@
 
   .styled-select-trigger:focus-visible{
     outline:none;
-    border-color:var(--azul-claro);
-    box-shadow:0 0 0 4px rgba(111,168,216,0.18);
-    background:rgba(255,255,255,0.08);
+    border-color:var(--primary);
+    box-shadow:0 0 0 3px var(--focus-ring);
   }
 
   .styled-select-trigger:disabled{
-    opacity:.55;
+    opacity:.5;
     cursor:not-allowed;
   }
 
@@ -1355,10 +1484,10 @@
     margin:0;
     padding:6px;
     list-style:none;
-    background:#1a2f48;
-    border:1px solid rgba(111,168,216,.3);
+    background:var(--surface);
+    border:1px solid var(--border);
     border-radius:var(--radius-sm);
-    box-shadow:0 12px 28px rgba(4,15,27,.4);
+    box-shadow:var(--shadow-md);
   }
 
   .styled-select-list:focus-visible{
@@ -1371,23 +1500,30 @@
     justify-content:space-between;
     gap:10px;
     padding:9px 10px;
-    border-radius:6px;
-    color:var(--texto);
+    border-radius:var(--radius-xs);
+    color:var(--text);
     font-size:0.92rem;
     cursor:pointer;
   }
 
   .styled-select-option:hover,
   .styled-select-option.active{
-    background:rgba(111,168,216,.18);
+    background:var(--surface-hover);
   }
 
   .styled-select-option[aria-selected="true"]{
+    background:var(--primary-soft);
+    color:var(--accent);
     font-weight:600;
   }
 
+  .styled-select-option[aria-selected="true"]:hover,
+  .styled-select-option[aria-selected="true"].active{
+    background:var(--primary-soft-strong);
+  }
+
   .styled-select-option[aria-disabled="true"]{
-    color:var(--texto-muted);
+    color:var(--text-subtle);
     cursor:not-allowed;
     opacity:.55;
   }
@@ -1406,13 +1542,11 @@
   .recommended-badge{
     display:inline-block;
     padding:2px 9px;
-    border-radius:999px;
+    border-radius:var(--radius-pill);
     border:1px solid var(--success-border);
     background:var(--success-surface);
     color:var(--success-text);
     font-size:var(--fs-2xs);
-    /* 600, não 700: texto claro sobre fundo escuro aparenta mais grosso
-       (halação) - tema claro compensa de volta em css/themes.css. */
     font-weight:600;
     text-transform:uppercase;
     letter-spacing:.03em;
@@ -1420,22 +1554,8 @@
 
   .occupants-unidentified{
     font-size:var(--fs-xs);
-    color:var(--texto-muted);
+    color:var(--text-muted);
     margin-bottom:6px;
-  }
-
-  /* ---- Widget de lista de passageiros nomeados ---- */
-  .passenger-list{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    margin-bottom:6px;
-  }
-
-  .passenger-row{
-    display:flex;
-    align-items:center;
-    gap:8px;
   }
 
   .passenger-input-wrap{
@@ -1444,28 +1564,18 @@
     min-width:0;
   }
 
-  .passenger-row input[type="text"]{
-    width:100%;
-    background:rgba(26,48,80,0.55);
-    border:1.5px solid rgba(111,168,216,0.3);
-    border-radius:var(--radius-sm);
-    color:var(--texto);
-    padding:10px 12px;
-    font-size:var(--fs-base);
-  }
-
-  .passenger-row input[type="text"]:focus{
-    outline:none;
-    border-color:var(--azul-claro);
-  }
-
   /* Destaque visual quando o campo está vinculado a um usuário corporativo
      já cadastrado (ver attachPersonAutocomplete em js/rides.js), para deixar
      claro que não se trata de um visitante/nome digitado livremente. */
-  .person-input-matched > input[type="text"]{
-    border-color:var(--verde);
-    box-shadow:0 0 0 3px rgba(47,184,125,0.16);
+  .person-input-matched > input[type="text"],
+  .person-input-matched > input[type="text"]:hover{
+    border-color:var(--success);
     padding-right:34px;
+  }
+
+  .person-input-matched > input[type="text"]:focus{
+    border-color:var(--success);
+    box-shadow:0 0 0 3px var(--success-surface);
   }
 
   .person-input-matched::after{
@@ -1474,52 +1584,34 @@
     top:50%;
     right:12px;
     transform:translateY(-50%);
-    color:var(--verde);
-    font-weight:800;
+    color:var(--success);
+    font-weight:700;
     font-size:.95rem;
     pointer-events:none;
   }
 
-  .passenger-remove-btn{
-    background:linear-gradient(135deg,#ef5b6a,#c23347);
-    color:#fff;
-    border:none;
-    width:32px;
-    height:32px;
-    flex-shrink:0;
-    border-radius:50%;
-    cursor:pointer;
-    font-size:1rem;
-    line-height:1;
-    transition:transform .15s ease, filter .2s ease;
-  }
-
-  .passenger-remove-btn:hover{
-    filter:brightness(1.1);
-    transform:translateY(-1px);
-  }
-
   .passenger-add-btn{
     background:transparent;
-    border:1.5px dashed rgba(111,168,216,0.45);
-    color:var(--azul-claro);
+    border:1px dashed var(--border-strong);
+    color:var(--accent);
     border-radius:var(--radius-sm);
+    min-height:40px;
     padding:10px 14px;
     font-size:var(--fs-base);
     font-weight:600;
     cursor:pointer;
-    transition:background .2s ease, transform .15s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
     width:100%;
   }
 
   .passenger-add-btn:hover{
-    background:rgba(111,168,216,0.1);
-    transform:translateY(-1px);
+    background:var(--primary-soft);
+    border-color:var(--accent);
   }
 
   .passenger-list-hint{
     font-size:var(--fs-xs);
-    color:var(--texto-muted);
+    color:var(--text-muted);
     margin-top:4px;
   }
 
@@ -1536,10 +1628,10 @@
     left:0;
     right:0;
     padding:5px;
-    border:1px solid var(--card-border);
-    border-radius:10px;
-    background:var(--card-bg-solid);
-    box-shadow:0 14px 30px rgba(4,18,35,.28);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface);
+    box-shadow:var(--shadow-md);
   }
 
   .passenger-suggestion{
@@ -1547,16 +1639,16 @@
     width:100%;
     padding:9px 10px;
     border:0;
-    border-radius:7px;
+    border-radius:var(--radius-xs);
     background:transparent;
-    color:var(--texto);
+    color:var(--text);
     text-align:left;
     cursor:pointer;
   }
 
   .passenger-suggestion:hover,
   .passenger-suggestion:focus{
-    background:rgba(75,137,190,.18);
+    background:var(--surface-hover);
     outline:none;
   }
 
@@ -1567,7 +1659,7 @@
 
   .pickup-availability-card > p{
     margin:2px 0 12px;
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font-size:var(--fs-base);
   }
 
@@ -1577,10 +1669,10 @@
     width:54px;
     height:54px;
     margin:0 auto 14px;
-    border:1px solid rgba(111,168,216,.35);
-    border-radius:16px;
-    background:rgba(111,168,216,.13);
-    color:var(--azul-claro);
+    border:1px solid var(--info-border);
+    border-radius:var(--radius-lg);
+    background:var(--info-surface);
+    color:var(--info-text);
   }
 
   .pickup-availability-icon svg{
@@ -1595,7 +1687,7 @@
 
   .pickup-availability-date{
     margin-bottom:12px;
-    color:var(--texto);
+    color:var(--text);
     font-size:1.15rem;
     font-weight:700;
   }
@@ -1614,20 +1706,13 @@
     text-align:center;
   }
 
-  .site-dialog-card.site-dialog-info{
-    background:rgba(111,168,216,.07);
-  }
-
-  .site-dialog-card.site-dialog-warning{
-    background:rgba(235,178,72,.07);
-  }
-
-  .site-dialog-card.site-dialog-danger{
-    background:rgba(239,91,106,.08);
-  }
-
+  /* O cartão do diálogo fica sempre na superfície neutra do modal - a
+     variante (info/atenção/erro/sucesso) é comunicada só pelo ícone. */
+  .site-dialog-card.site-dialog-info,
+  .site-dialog-card.site-dialog-warning,
+  .site-dialog-card.site-dialog-danger,
   .site-dialog-card.site-dialog-success{
-    background:rgba(51,212,136,.07);
+    background:var(--surface);
   }
 
   .site-dialog-icon{
@@ -1636,34 +1721,34 @@
     width:54px;
     height:54px;
     margin:0 auto 14px;
-    border:1px solid rgba(111,168,216,.35);
-    border-radius:16px;
-    background:rgba(111,168,216,.13);
-    color:var(--azul-claro);
+    border:1px solid var(--info-border);
+    border-radius:var(--radius-lg);
+    background:var(--info-surface);
+    color:var(--info-text);
   }
 
   .site-dialog-icon.info{
-    border-color:rgba(111,168,216,.35);
-    background:rgba(111,168,216,.13);
-    color:var(--azul-claro);
+    border-color:var(--info-border);
+    background:var(--info-surface);
+    color:var(--info-text);
   }
 
   .site-dialog-icon.warning{
-    border-color:rgba(235,178,72,.42);
-    background:rgba(235,178,72,.13);
-    color:#f2c263;
+    border-color:var(--warning-border);
+    background:var(--warning-surface);
+    color:var(--warning-text);
   }
 
   .site-dialog-icon.danger{
-    border-color:rgba(239,91,106,.4);
-    background:rgba(239,91,106,.13);
-    color:#ff8895;
+    border-color:var(--danger-border);
+    background:var(--danger-surface);
+    color:var(--danger-text);
   }
 
   .site-dialog-icon.success{
-    border-color:rgba(51,212,136,.38);
-    background:rgba(51,212,136,.12);
-    color:var(--verde);
+    border-color:var(--success-border);
+    background:var(--success-surface);
+    color:var(--success-text);
   }
 
   .site-dialog-icon svg{
@@ -1694,7 +1779,7 @@
     height:52px;
     margin:0;
     padding:0 12px;
-    border-radius:12px;
+    border-radius:var(--radius-sm);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1708,9 +1793,14 @@
   }
 
   .site-dialog-confirm.danger{
-    background:linear-gradient(135deg,#b93849,#8e2837);
+    background:var(--danger-solid);
+    border-color:transparent;
     color:#fff;
-    box-shadow:0 8px 20px rgba(160,43,58,.24);
+    box-shadow:none;
+  }
+
+  .site-dialog-confirm.danger:hover{
+    background:var(--danger-solid-hover);
   }
 
   .join-confirm-card h3{
@@ -1751,20 +1841,25 @@
     white-space:nowrap;
   }
 
+  /* Secundário (cancelar). */
   .join-confirm-cancel{
-    background:rgba(169,189,209,0.12);
-    color:var(--texto);
-    border:1px solid rgba(210,228,245,0.2);
+    background:var(--surface);
+    color:var(--text);
+    border:1px solid var(--border-strong);
     font-size:var(--fs-base);
     font-weight:600;
     border-radius:var(--radius-sm);
     cursor:pointer;
-    transition:filter .2s ease, transform .15s ease;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .join-confirm-cancel:hover{
-    filter:brightness(1.2);
-    transform:translateY(-1px);
+    background:var(--surface-hover);
+  }
+
+  .join-confirm-cancel:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   /* ---- Modal de Regras Básicas da Viagem ---- */
@@ -1798,7 +1893,7 @@
     width:38px;
     height:38px;
     border:1px solid transparent;
-    border-radius:12px;
+    border-radius:var(--radius-md);
   }
 
   .trip-rule-icon svg{
@@ -1836,22 +1931,22 @@
   }
 
   .trip-rule-muted .trip-rule-icon{
-    border-color:var(--card-border);
-    background:rgba(169,189,209,0.12);
-    color:var(--texto-muted);
+    border-color:var(--neutral-border);
+    background:var(--neutral-surface);
+    color:var(--neutral-text);
   }
 
   .trip-rule h4{
     margin:0 0 2px;
     font-size:var(--fs-sm);
-    color:var(--texto);
-    font-weight:700;
+    color:var(--text);
+    font-weight:600;
   }
 
   .trip-rule p{
     margin:0;
     font-size:var(--fs-xs);
-    color:var(--texto-muted);
+    color:var(--text-muted);
     line-height:1.45;
   }
 
@@ -1861,19 +1956,14 @@
     gap:10px;
     padding-top:14px;
     margin-top:2px;
-    border-top:1px solid var(--card-border);
+    border-top:1px solid var(--border);
     font-size:var(--fs-sm);
-    color:var(--texto);
+    color:var(--text);
     cursor:pointer;
   }
 
   .trip-rules-agree input[type="checkbox"]{
-    width:18px;
-    height:18px;
-    margin-top:2px;
-    flex:0 0 auto;
-    accent-color:var(--primary);
-    cursor:pointer;
+    margin-top:1px;
   }
 
   .trip-rules-actions{
@@ -1888,36 +1978,42 @@
   }
 
   .trip-rules-actions .submit-btn:disabled:hover{
-    filter:none;
-    transform:none;
+    background:var(--primary);
     box-shadow:none;
   }
 
+  /* Primário. */
   .reserve-day-btn{
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
-    color:#fff;
-    border:none;
-    padding:10px 18px;
+    background:var(--primary);
+    color:var(--on-primary);
+    border:1px solid transparent;
+    min-height:40px;
+    padding:9px 18px;
     font-size:var(--fs-sm);
-    font-weight:700;
-    border-radius:999px;
+    font-weight:600;
+    border-radius:var(--radius-sm);
+    box-shadow:none;
     cursor:pointer;
-    transition:transform .15s ease, filter .2s ease;
+    transition:background-color var(--dur) var(--ease);
     display:flex;
     align-items:center;
     gap:6px;
   }
 
   .reserve-day-btn:hover{
-    filter:brightness(1.12);
-    transform:translateY(-1px);
+    background:var(--primary-hover);
   }
 
-  .reserve-day-btn:disabled{
+  .reserve-day-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  .reserve-day-btn:disabled,
+  .reserve-day-btn:disabled:hover{
+    background:var(--primary);
     opacity:.5;
     cursor:not-allowed;
-    filter:none;
-    transform:none;
   }
 
   /* ---- Modal de reserva rápida pelo calendário ---- */
@@ -1930,13 +2026,14 @@
   .quick-reserve-card h3{
     margin:0 0 4px;
     font-size:1.1rem;
-    color:#fff;
+    font-weight:700;
+    color:var(--text);
   }
 
   .quick-reserve-summary{
-    background:rgba(111,168,216,0.12);
-    border:1px solid rgba(111,168,216,0.28);
-    color:#d4e6f5;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
     font-size:var(--fs-sm);
     padding:10px 14px;
     border-radius:var(--radius-sm);
@@ -1952,8 +2049,7 @@
   .modal-overlay{
     position:fixed;
     inset:0;
-    background:rgba(8,16,26,0.6);
-    backdrop-filter:blur(4px);
+    background:var(--overlay);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1972,10 +2068,10 @@
        própria, o que excede fica contido dentro do card, de forma normal. */
     max-height:calc(100dvh - 40px);
     overflow-y:auto;
-    background:var(--card-bg-solid);
-    border:1px solid var(--card-border);
+    background:var(--surface);
+    border:1px solid var(--border);
     border-radius:var(--radius-lg);
-    box-shadow:var(--sombra);
+    box-shadow:var(--shadow-lg);
     padding:34px 26px 26px;
     text-align:center;
     animation:slideUp .25s ease;
@@ -1993,22 +2089,30 @@
     padding:0;
     background:none;
     border:none;
-    color:var(--texto-muted);
+    border-radius:var(--radius-sm);
+    color:var(--text-muted);
     font-size:1.3rem;
     cursor:pointer;
     line-height:1;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   .modal-close:hover{
-    color:#fff;
+    color:var(--text);
+    background:var(--surface-hover);
+  }
+
+  .modal-close:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   .profile-avatar-lg{
     width:64px;
     height:64px;
     border-radius:50%;
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
-    color:#fff;
+    background:var(--primary-soft-strong);
+    color:var(--accent);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -2019,19 +2123,21 @@
 
   .modal-card h3{
     margin:0 0 4px;
+    font-family:var(--font-heading);
     font-size:1.1rem;
-    color:#fff;
+    font-weight:700;
+    color:var(--text);
   }
 
   .modal-card p{
     margin:0 0 20px;
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font-size:var(--fs-sm);
   }
 
   footer{
     text-align:center;
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font-size:var(--fs-sm);
     padding-bottom:calc(30px + env(safe-area-inset-bottom, 0px));
   }
@@ -2071,20 +2177,244 @@
   .profile-cnh-head h4{
     margin:0;
     font-size:var(--fs-md);
+    font-weight:700;
     color:var(--text);
   }
 
-  .cnh-photo-state{
+  /* Esconde visualmente mas mantém acessível a leitor de tela e teclado -
+     usado no <input type="file"> da e-CNH, que é acionado pelo <label>
+     estilizado (.cnh-file-picker). */
+  .visually-hidden{
+    position:absolute !important;
+    width:1px;
+    height:1px;
+    margin:-1px;
+    padding:0;
+    border:0;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    white-space:nowrap;
+  }
+
+  /* ---- CNH importada da e-CNH (somente leitura) ---- */
+  .cnh-summary{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin:0;
+  }
+
+  .cnh-summary > div{
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface-2);
+    min-width:0;
+  }
+
+  .cnh-summary dt{
+    color:var(--text-muted);
+    font-size:var(--fs-2xs);
+    font-weight:600;
+  }
+
+  .cnh-summary dd{
+    margin:2px 0 0;
+    color:var(--text);
+    font-size:var(--fs-base);
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    overflow-wrap:anywhere;
+  }
+
+  .cnh-verified{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin:-4px 0 0;
+    color:var(--success-text);
+    font-size:var(--fs-xs);
+  }
+
+  .cnh-verified::before{
+    content:"";
+    flex:0 0 15px;
+    width:15px;
+    height:15px;
+    background-color:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+
+  /* ---- Importação da e-CNH ---- */
+  .cnh-import{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    background:var(--surface);
+  }
+
+  .cnh-import-title,
+  .cnh-privacy h5{
+    margin:0;
+    color:var(--text);
+    font-size:var(--fs-sm);
+    font-weight:700;
+  }
+
+  .cnh-import-steps{
+    margin:0;
+    padding-left:20px;
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+    line-height:1.5;
+  }
+
+  .cnh-import-steps li + li{
+    margin-top:4px;
+  }
+
+  .cnh-import-steps strong{
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .cnh-file-picker{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border:1px dashed var(--border-strong);
+    border-radius:var(--radius-sm);
+    background:var(--surface-2);
+    color:var(--text);
+    cursor:pointer;
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+
+  .cnh-file-picker:hover{
+    border-color:var(--primary);
+    background:var(--primary-soft);
+  }
+
+  /* O input real fica escondido; o anel de foco vai para o rótulo. */
+  .cnh-import:has(#cnhArquivo:focus-visible) .cnh-file-picker{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  .cnh-file-picker.is-busy{
+    opacity:.6;
+    cursor:progress;
+    pointer-events:none;
+  }
+
+  .cnh-file-picker svg{
+    flex:0 0 26px;
+    width:26px;
+    height:26px;
+    fill:none;
+    stroke:var(--accent);
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .cnh-file-picker span{
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+    min-width:0;
+  }
+
+  .cnh-file-picker strong{
+    color:var(--accent);
+    font-size:var(--fs-sm);
+    font-weight:600;
+  }
+
+  .cnh-file-picker small{
+    color:var(--text-muted);
+    font-size:var(--fs-2xs);
+  }
+
+  .cnh-import-status{
+    display:flex;
+    align-items:center;
+    gap:8px;
     color:var(--text-muted);
     font-size:var(--fs-xs);
   }
 
-  .cnh-photo-state.cnh-photo-ok{
+  .cnh-import-status::before{
+    content:"";
+    flex:0 0 14px;
+    width:14px;
+    height:14px;
+    border:2px solid var(--border-strong);
+    border-top-color:var(--primary);
+    border-radius:50%;
+    animation:cnhSpin .8s linear infinite;
+  }
+
+  @keyframes cnhSpin{
+    to{transform:rotate(360deg);}
+  }
+
+  /* ---- Aviso de privacidade (LGPD) ---- */
+  .cnh-privacy{
+    padding:12px 14px;
+    border:1px solid var(--success-border);
+    border-left:3px solid var(--success);
+    border-radius:var(--radius-sm);
+    background:var(--success-surface);
+  }
+
+  .cnh-privacy h5{
+    display:flex;
+    align-items:center;
+    gap:7px;
     color:var(--success-text);
   }
 
-  .cnh-photo-state a{
-    color:var(--accent);
+  .cnh-privacy h5::before{
+    content:"";
+    flex:0 0 16px;
+    width:16px;
+    height:16px;
+    background-color:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+
+  .cnh-privacy ul{
+    margin:8px 0 0;
+    padding-left:18px;
+    color:var(--text);
+    font-size:var(--fs-xs);
+    line-height:1.5;
+  }
+
+  .cnh-privacy li + li{
+    margin-top:3px;
+  }
+
+  .cnh-privacy strong{
+    font-weight:600;
+  }
+
+  .cnh-actions{
+    justify-content:flex-end;
+  }
+
+  @media (max-width:560px){
+    .cnh-summary{
+      grid-template-columns:1fr;
+    }
   }
 
   /* ---- Guia visual de categorias (ver CNH_CATEGORIA_INFO em
@@ -2107,8 +2437,8 @@
     width:26px;
     height:26px;
     flex:0 0 auto;
-    border-radius:8px;
-    background:rgba(255,255,255,.05);
+    border-radius:var(--radius-xs);
+    background:var(--neutral-surface);
     color:var(--text-muted);
   }
 
@@ -2130,7 +2460,7 @@
     padding:8px 10px;
     border:1px solid var(--border);
     border-radius:var(--radius-sm);
-    background:rgba(255,255,255,.03);
+    background:var(--surface-2);
     font-size:var(--fs-xs);
     color:var(--text-muted);
   }
@@ -2145,8 +2475,8 @@
   .cnh-categoria-card{
     padding:10px;
     border:1px solid var(--border);
-    border-radius:var(--radius-sm);
-    background:rgba(255,255,255,.03);
+    border-radius:var(--radius-md);
+    background:var(--surface-2);
   }
 
   .cnh-categoria-card-head{
@@ -2182,8 +2512,8 @@
     margin:10px 0;
     padding:10px 14px;
     border:1px solid var(--border);
-    border-radius:var(--radius-sm);
-    background:rgba(255,255,255,.03);
+    border-radius:var(--radius-md);
+    background:var(--surface-2);
   }
 
   .seat-map-head{
@@ -2195,6 +2525,7 @@
 
   .seat-map-head strong{
     font-size:var(--fs-xs);
+    font-weight:600;
     color:var(--text);
   }
 
@@ -2203,29 +2534,30 @@
     color:var(--text-muted);
   }
 
-  /* Contorno do veículo (ver renderVehicleSVG em js/seat-map.js): sobreposição
-     translúcida branca, funciona nos dois temas sem precisar de override -
-     mesmo truque que .seat usava antes de virar SVG. */
+  /* Contorno do veículo (ver renderVehicleSVG em js/seat-map.js): carroceria
+     na superfície do cartão com traço neutro forte - tudo em tokens, então
+     funciona nos dois temas sem override. */
   .car-body{
     fill:var(--surface);
-    stroke:var(--accent);
+    stroke:var(--border-strong);
     stroke-width:2;
   }
 
   .car-aisle{
-    fill:rgba(255,255,255,.025);
+    fill:var(--surface-sunken);
   }
 
-  /* Pneu com um fundo sólido (não mais translúcido) - lembra a borracha do
-     pneu de verdade em vez de sumir contra o fundo do card. */
+  /* Pneu com fundo sólido (--text-subtle é um cinza médio equivalente nos
+     dois temas) - lembra a borracha do pneu em vez de sumir contra o cartão.
+     É elemento gráfico, não texto, então o contraste de texto não se aplica. */
   .car-wheel{
-    fill:rgba(48,52,60,.92);
-    stroke:var(--accent);
+    fill:var(--text-subtle);
+    stroke:var(--text-subtle);
     stroke-width:1.5;
   }
 
   .seat rect{
-    fill:rgba(255,255,255,.05);
+    fill:var(--surface-2);
     stroke:var(--border);
     stroke-width:1;
   }
@@ -2261,9 +2593,8 @@
    O quadro traz o mapa de lugares e, logo abaixo, quem está no veículo.
    As duas etiquetas (ocupantes e vagas) NÃO ficam aqui: elas vão na linha
    .reservation-card-chips, logo depois do quadro de datas/horários, junto
-   do selo de Motorista/Passageiro. O fundo segue o mesmo padrão de
-   ".reservation-period" (grupo dentro do card): tom próprio no escuro,
-   sem essa diferença no claro - ver override em themes.css. */
+   do selo de Motorista/Passageiro. O fundo é o de bloco aninhado
+   (--surface-2), igual aos cartões Ida/Volta de ".reservation-period". */
   /* width:100% (não fit-content) em vez de encolher pro conteúdo: dentro de
      um pai flex-column (.ride-info, .reservation-info etc.) um item
      fit-content não estica e fica preso à esquerda, então o quadro inteiro -
@@ -2279,8 +2610,9 @@
     width:100%;
     margin:10px 0;
     padding:12px 14px;
-    border-radius:var(--radius-sm);
-    background:rgba(6,22,38,.34);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    background:var(--surface-2);
   }
 
   .occupancy-tag{
@@ -2288,10 +2620,10 @@
     align-items:center;
     gap:6px;
     padding:4px 10px;
-    border:1px solid var(--border);
-    border-radius:999px;
-    background:rgba(255,255,255,.04);
-    color:var(--text-muted);
+    border:1px solid var(--neutral-border);
+    border-radius:var(--radius-pill);
+    background:var(--neutral-surface);
+    color:var(--neutral-text);
     font-size:var(--fs-xs);
     font-weight:600;
     white-space:nowrap;
@@ -2359,21 +2691,14 @@
     align-items:center;
     gap:10px;
     font-size:var(--fs-sm);
-    color:var(--texto);
+    color:var(--text);
     cursor:pointer;
   }
 
-  .checklist-toggle-label input[type="checkbox"]{
-    width:18px;
-    height:18px;
-    flex:0 0 auto;
-    accent-color:var(--primary);
-    cursor:pointer;
-  }
 
   .checklist-block{
     background:var(--surface);
-    border:1px solid var(--card-border);
+    border:1px solid var(--border);
     border-radius:var(--radius-md);
     padding:14px;
     margin-bottom:14px;
@@ -2382,7 +2707,7 @@
   .checklist-block-title{
     font-weight:700;
     font-size:var(--fs-sm);
-    color:var(--texto);
+    color:var(--text);
     margin-bottom:6px;
   }
 
@@ -2392,11 +2717,17 @@
      Grade fixa de 2 colunas (em vez de flex-wrap, que deixava a 4ª aba
      sozinha numa linha) - Frente/Traseira sempre em cima, as duas laterais
      embaixo, na mesma ordem de CHECKLIST_DIAGRAM_VIEWS. ---- */
+  /* Segmentado neutro (mesmo padrão das abas do cabeçalho): contêiner
+     afundado, aba ativa na superfície com sombra curta. */
   .checklist-diagram-tabs{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:6px;
+    gap:4px;
     margin:10px 0 12px;
+    padding:4px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface-sunken);
   }
 
   .checklist-diagram-tab{
@@ -2405,28 +2736,37 @@
     justify-content:center;
     gap:6px;
     padding:8px 6px;
-    border:1px solid var(--card-border);
-    border-radius:var(--radius-sm);
-    background:var(--bg-2);
+    border:1px solid transparent;
+    border-radius:var(--radius-xs);
+    background:transparent;
     color:var(--text-muted);
     font-size:var(--fs-2xs);
-    font-weight:700;
+    font-weight:600;
     letter-spacing:0.02em;
     text-transform:uppercase;
     cursor:pointer;
-    transition:background .15s ease, color .15s ease, border-color .15s ease;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
 
   .checklist-diagram-tab:hover{
     color:var(--text);
+    background:var(--surface-hover);
+  }
+
+  .checklist-diagram-tab:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   .checklist-diagram-tab.is-active{
-    background:var(--primary);
-    border-color:var(--primary);
-    color:#fff;
+    background:var(--surface);
+    border-color:var(--border);
+    color:var(--text);
+    box-shadow:var(--shadow-sm);
   }
 
+  /* Contador de avarias marcadas na vista: é um alerta, por isso fica em
+     tom de erro nas duas situações (aba ativa ou não). */
   .checklist-diagram-tab-count{
     display:inline-flex;
     align-items:center;
@@ -2434,15 +2774,13 @@
     min-width:16px;
     height:16px;
     padding:0 4px;
-    border-radius:8px;
-    background:var(--danger);
-    color:#fff;
+    border:1px solid var(--danger-border);
+    border-radius:var(--radius-pill);
+    background:var(--danger-surface);
+    color:var(--danger-text);
     font-size:10px;
+    font-weight:600;
     line-height:1;
-  }
-
-  .checklist-diagram-tab.is-active .checklist-diagram-tab-count{
-    background:rgba(255,255,255,.35);
   }
 
   .checklist-diagram-views{
@@ -2511,28 +2849,34 @@
     border-radius:50%;
     border:2px solid var(--surface-solid);
     background:var(--primary);
-    color:#fff;
+    color:var(--on-primary);
     font-size:13px;
     font-weight:700;
     line-height:1;
     cursor:pointer;
-    box-shadow:0 1px 4px rgba(0,0,0,.4);
-    transition:background .15s ease, transform .15s ease;
-    transform-origin:center;
+    /* Marcador flutuando sobre a ilustração: precisa se destacar dela. */
+    box-shadow:var(--shadow-md);
+    transition:background-color var(--dur) var(--ease);
   }
 
-  .checklist-point:hover,
+  .checklist-point:hover{
+    background:var(--primary-strong);
+  }
+
   .checklist-point:focus-visible{
     background:var(--primary-strong);
-    transform:scale(1.15);
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   .checklist-point.is-marked{
-    background:var(--danger);
+    background:var(--danger-solid);
+    color:#fff;
   }
 
-  .checklist-point.is-marked:hover{
-    filter:brightness(1.15);
+  .checklist-point.is-marked:hover,
+  .checklist-point.is-marked:focus-visible{
+    background:var(--danger-solid-hover);
   }
 
   .checklist-diagram-selected{
@@ -2550,7 +2894,7 @@
     gap:4px 14px;
     margin-top:10px;
     padding-top:10px;
-    border-top:1px solid var(--card-border);
+    border-top:1px solid var(--border);
   }
 
   .checklist-diagram-legend-item{
@@ -2567,9 +2911,9 @@
     height:16px;
     padding:0 3px;
     margin-right:4px;
-    border-radius:5px;
-    background:var(--primary);
-    color:#fff;
+    border-radius:var(--radius-xs);
+    background:var(--primary-soft-strong);
+    color:var(--accent);
     font-size:10px;
     font-weight:700;
   }
@@ -2602,15 +2946,17 @@
     justify-content:center;
     width:20px;
     height:20px;
-    border-radius:6px;
+    border:1px solid transparent;
+    border-radius:var(--radius-xs);
     font-weight:700;
     font-size:var(--fs-2xs);
-    color:#fff;
   }
 
-  .checklist-badge-c{ background:var(--success); }
-  .checklist-badge-a{ background:var(--warning); }
-  .checklist-badge-x{ background:var(--danger); }
+  /* Mesmo tom (surface/border/text) dos botões C/A/X ativos logo abaixo,
+     para a legenda bater com o que o usuário vê ao marcar. */
+  .checklist-badge-c{ background:var(--success-surface); border-color:var(--success-border); color:var(--success-text); }
+  .checklist-badge-a{ background:var(--warning-surface); border-color:var(--warning-border); color:var(--warning-text); }
+  .checklist-badge-x{ background:var(--danger-surface); border-color:var(--danger-border); color:var(--danger-text); }
 
   /* ---- Lista de componentes ---- */
   .checklist-components{
@@ -2625,7 +2971,7 @@
     justify-content:space-between;
     gap:10px;
     padding:6px 0;
-    border-bottom:1px solid var(--card-border);
+    border-bottom:1px solid var(--border);
   }
 
   .checklist-component-row:last-child{
@@ -2634,7 +2980,7 @@
 
   .checklist-component-label{
     font-size:var(--fs-xs);
-    color:var(--texto);
+    color:var(--text);
   }
 
   .checklist-component-options{
@@ -2646,36 +2992,47 @@
   .checklist-component-btn{
     width:28px;
     height:28px;
-    border-radius:8px;
-    border:1px solid var(--card-border);
-    background:transparent;
+    border-radius:var(--radius-xs);
+    border:1px solid var(--border-strong);
+    background:var(--surface);
     color:var(--text-muted);
-    font-weight:700;
+    font-weight:600;
     font-size:var(--fs-xs);
     cursor:pointer;
-    transition:background .15s ease, color .15s ease, border-color .15s ease;
+    transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
   }
 
   .checklist-component-btn:hover{
-    border-color:var(--primary);
+    background:var(--surface-hover);
+    color:var(--text);
   }
 
+  .checklist-component-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  /* Estado escolhido: tom de estado + borda na cor sólida para ficar
+     inequívoco qual das três opções está marcada. */
   .checklist-component-btn[data-status="C"].is-active{
-    background:var(--success);
+    background:var(--success-surface);
     border-color:var(--success);
-    color:#fff;
+    color:var(--success-text);
+    font-weight:700;
   }
 
   .checklist-component-btn[data-status="A"].is-active{
-    background:var(--warning);
+    background:var(--warning-surface);
     border-color:var(--warning);
-    color:#fff;
+    color:var(--warning-text);
+    font-weight:700;
   }
 
   .checklist-component-btn[data-status="X"].is-active{
-    background:var(--danger);
+    background:var(--danger-surface);
     border-color:var(--danger);
-    color:#fff;
+    color:var(--danger-text);
+    font-weight:700;
   }
 
   @media (max-width:480px){
@@ -2684,4 +3041,148 @@
       align-items:flex-start;
       gap:6px;
     }
+  }
+
+/* ============ Grupos de usuários (Gestão › Grupos e cadastro do veículo) ============ */
+  .group-section-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+  }
+
+  .group-section-head h3{
+    margin:0 0 4px;
+  }
+
+  .group-section-head .field-hint{
+    margin:0;
+    max-width:720px;
+  }
+
+  .group-section-head .submit-btn{
+    flex:0 0 auto;
+    margin-top:0;
+  }
+
+  .group-members-preview{
+    display:block;
+    margin-top:2px;
+    color:var(--text-subtle);
+  }
+
+  /* fieldset sem a borda/recuo padrão do navegador - vira um .field comum. */
+  .group-picker-field{
+    margin:0;
+    padding:0;
+    border:0;
+    min-width:0;
+  }
+
+  .group-picker-field legend{
+    margin-bottom:6px;
+    padding:0;
+    font-size:var(--fs-xs);
+    font-weight:600;
+    color:var(--text);
+  }
+
+  .group-picker{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  .group-picker .permission-option small,
+  .group-member-option small{
+    color:var(--text-muted);
+    font-size:var(--fs-2xs);
+    font-weight:400;
+  }
+
+  .group-picker-empty{
+    margin:0;
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+  }
+
+  .vehicle-access-tag{
+    margin-top:6px;
+  }
+
+  .modal-card.group-modal-card{
+    max-width:560px;
+    text-align:left;
+  }
+
+  .group-modal-card h3{
+    margin-bottom:4px;
+  }
+
+  .group-modal-card form{
+    gap:12px;
+  }
+
+  .group-members-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+  }
+
+  .group-members-head small{
+    color:var(--text-muted);
+    font-size:var(--fs-2xs);
+  }
+
+  .group-member-list{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    max-height:260px;
+    margin-top:6px;
+    padding:4px;
+    overflow-y:auto;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface-2);
+  }
+
+  .group-member-option{
+    display:flex;
+    /* Sem isto a lista (flex em coluna com altura máxima) encolhe as linhas
+       até caberem, sobrepondo-as, em vez de rolar. */
+    flex-shrink:0;
+    align-items:center;
+    gap:10px;
+    padding:6px 8px;
+    border-radius:var(--radius-xs);
+  }
+
+  .group-member-option:hover{
+    background:var(--surface-hover);
+  }
+
+  .group-member-option span{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+
+  @media (max-width:560px){
+    .group-section-head{
+      flex-direction:column;
+    }
+  }
+
+  /* Dentro da lista rolável, a opção é uma linha plana (a caixa com borda de
+     .permission-option fica só nos seletores soltos). */
+  .group-member-list .permission-option{
+    min-height:0;
+    border:0;
+    background:transparent;
+  }
+
+  .group-member-list .permission-option:hover{
+    background:var(--surface-hover);
   }

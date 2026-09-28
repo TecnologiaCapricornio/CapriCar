@@ -162,30 +162,6 @@ function closeEmailPreview(){
   emailPreviewFrame.srcdoc = '';
 }
 
-// Cria um botão "Visualizar" para cada tipo declarado em REMINDER_FIELDS.
-// Gerar a partir do mapa (em vez de repetir markup no index.html) faz um
-// tipo novo ganhar o botão sozinho.
-function setupEmailPreviewButtons(){
-  if(typeof REMINDER_FIELDS === 'undefined') return;
-  Object.keys(REMINDER_FIELDS).forEach(tipo => {
-    const campos = REMINDER_FIELDS[tipo];
-    if(!campos || !campos.body || campos.body.dataset.previewReady) return;
-
-    const acoes = document.createElement('div');
-    acoes.className = 'email-preview-actions';
-
-    const botao = document.createElement('button');
-    botao.type = 'button';
-    botao.className = 'secondary-btn email-preview-btn';
-    botao.textContent = 'Visualizar e-mail';
-    botao.addEventListener('click', () => openEmailPreview(tipo));
-
-    acoes.appendChild(botao);
-    campos.body.insertAdjacentElement('afterend', acoes);
-    campos.body.dataset.previewReady = '1';
-  });
-}
-
 if(emailPreviewCloseBtn){
   emailPreviewCloseBtn.addEventListener('click', closeEmailPreview);
 }

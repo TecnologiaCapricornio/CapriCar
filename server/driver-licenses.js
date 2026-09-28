@@ -1,10 +1,5 @@
 const { query } = require('./db');
-const { decodeImageDataUrl, assert, validDate } = require('./validation');
-const {
-  saveLicensePhotoFile,
-  readLicensePhotoFile,
-  deleteLicensePhotoFile
-} = require('./photo-storage');
+const { assert, validDate, ValidationError } = require('./validation');
 
 // Janela padrão de aviso de vencimento, em dias. O mesmo número vale para o
 // alerta no portal, para o e-mail e para o selo do painel - manter um só valor
@@ -12,7 +7,6 @@ const {
 const DEFAULT_WARNING_DAYS = 60;
 
 const CATEGORIAS = ['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE'];
-const LADOS = ['frente', 'verso'];
 
 /* =========================================================
    Regras de vencimento (funções puras, testáveis sem banco)
@@ -89,34 +83,34 @@ function licenseStatusMessage(status){
 
 /* =========================================================
    Persistência
+
+   A CNH só entra no sistema pela e-CNH (ver ./ecnh): não existe mais
+   gravação a partir de dados digitados, nem armazenamento de imagem
+   do documento. Guardamos apenas número, categoria e validade, mais
+   de onde vieram (órgão que assinou e quando foi verificada).
    ========================================================= */
 
-function licenseRowToObject(row, photos){
+function licenseRowToObject(row){
   if(!row) return null;
   return {
     id:row.id,
     numero:row.numero || '',
     categoria:row.categoria || '',
     validade:toISODate(row.validade),
-    fotos:LADOS.reduce((acc, lado) => {
-      acc[lado] = (photos || []).some(photo => photo.lado === lado);
-      return acc;
-    }, {})
+    origem:row.origem || 'e-cnh',
+    emissor:row.emissor || '',
+    verificadaEm:row.verificada_em ? new Date(row.verificada_em).toISOString() : ''
   };
 }
 
+const LICENSE_COLUMNS = 'id, user_id, numero, categoria, validade, origem, emissor, verificada_em';
+
 async function getLicenseForUser(userId){
   const result = await query(
-    `SELECT id, numero, categoria, validade FROM driver_licenses WHERE user_id = $1`,
+    `SELECT ${LICENSE_COLUMNS} FROM driver_licenses WHERE user_id = $1`,
     [userId]
   );
-  const row = result.rows[0];
-  if(!row) return null;
-  const photos = await query(
-    'SELECT lado FROM driver_license_photos WHERE license_id = $1',
-    [row.id]
-  );
-  return licenseRowToObject(row, photos.rows);
+  return licenseRowToObject(result.rows[0]);
 }
 
 // Mapa userId -> CNH, sem N+1. Usado na listagem de usuários do admin.
@@ -124,133 +118,53 @@ async function getLicensesForUsers(userIds){
   const ids = [...new Set((userIds || []).map(String))];
   if(!ids.length) return new Map();
   const result = await query(
-    `SELECT l.id, l.user_id, l.numero, l.categoria, l.validade,
-            COALESCE(ARRAY_AGG(p.lado) FILTER (WHERE p.lado IS NOT NULL), '{}') AS lados
-       FROM driver_licenses l
-       LEFT JOIN driver_license_photos p ON p.license_id = l.id
-      WHERE l.user_id = ANY($1::uuid[])
-      GROUP BY l.id`,
+    `SELECT ${LICENSE_COLUMNS} FROM driver_licenses WHERE user_id = ANY($1::uuid[])`,
     [ids]
   );
-  return new Map(
-    result.rows.map(row => [
-      String(row.user_id),
-      licenseRowToObject(row, (row.lados || []).map(lado => ({ lado })))
-    ])
-  );
+  return new Map(result.rows.map(row => [String(row.user_id), licenseRowToObject(row)]));
 }
 
-function validateLicenseInput(payload){
-  const numero = String(payload.numero == null ? '' : payload.numero).trim();
-  const categoria = String(payload.categoria == null ? '' : payload.categoria).trim().toUpperCase();
-  const validade = String(payload.validade == null ? '' : payload.validade).trim();
-
-  // Cadastro vazio significa "remover a CNH" e é permitido.
-  if(!numero && !categoria && !validade) return null;
-
-  assert(/^\d{9,11}$/.test(numero), 'O número da CNH deve ter de 9 a 11 dígitos.');
-  assert(CATEGORIAS.includes(categoria), 'Selecione uma categoria de CNH válida.');
-  assert(validDate(validade), 'Informe uma data de validade válida para a CNH.');
-
-  return { numero, categoria, validade };
+// Última barreira antes do banco: mesmo vindo da e-CNH já validada, o
+// formato é conferido de novo aqui, para nenhum outro chamador conseguir
+// gravar dado fora do padrão.
+function assertVerifiedLicense(dados){
+  assert(dados && /^\d{11}$/.test(String(dados.numero || '')), 'Número de registro da CNH inválido.');
+  assert(CATEGORIAS.includes(dados.categoria), 'Categoria de CNH inválida.');
+  assert(validDate(dados.validade), 'Data de validade da CNH inválida.');
+  assert(dados.emissor, 'Órgão emissor da e-CNH não informado.');
 }
 
-// Grava a CNH e, quando vierem fotos novas, substitui as do lado enviado.
-// `fotos` é { frente?:dataUrl, verso?:dataUrl } - lado ausente mantém a atual.
-async function saveLicenseForUser(userId, payload, fotos){
-  const dados = validateLicenseInput(payload);
-
-  if(!dados){
-    const existing = await query('SELECT id FROM driver_licenses WHERE user_id = $1', [userId]);
-    if(existing.rows[0]) await removeLicense(existing.rows[0].id);
-    return null;
-  }
-
-  const upserted = await query(
-    `INSERT INTO driver_licenses (user_id, numero, categoria, validade)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (user_id) DO UPDATE
-       SET numero = EXCLUDED.numero,
-           categoria = EXCLUDED.categoria,
-           validade = EXCLUDED.validade,
-           updated_at = NOW()
-     RETURNING id, numero, categoria, validade`,
-    [userId, dados.numero, dados.categoria, dados.validade]
-  );
-  const license = upserted.rows[0];
-
-  for(const lado of LADOS){
-    const dataUrl = fotos && fotos[lado];
-    if(!dataUrl) continue;
-    const { subtype, buffer } = decodeImageDataUrl(dataUrl);
-    const storageKey = saveLicensePhotoFile(buffer, subtype);
-
-    const anterior = await query(
-      'SELECT storage_key FROM driver_license_photos WHERE license_id = $1 AND lado = $2',
-      [license.id, lado]
+// Grava (ou substitui) a CNH verificada do usuário.
+async function saveVerifiedLicense(userId, dados){
+  assertVerifiedLicense(dados);
+  try{
+    const result = await query(
+      `INSERT INTO driver_licenses (user_id, numero, categoria, validade, origem, emissor, verificada_em)
+       VALUES ($1, $2, $3, $4, 'e-cnh', $5, NOW())
+       ON CONFLICT (user_id) DO UPDATE
+         SET numero = EXCLUDED.numero,
+             categoria = EXCLUDED.categoria,
+             validade = EXCLUDED.validade,
+             origem = EXCLUDED.origem,
+             emissor = EXCLUDED.emissor,
+             verificada_em = EXCLUDED.verificada_em,
+             updated_at = NOW()
+       RETURNING ${LICENSE_COLUMNS}`,
+      [userId, dados.numero, dados.categoria, dados.validade, String(dados.emissor).slice(0, 120)]
     );
-
-    await query(
-      `INSERT INTO driver_license_photos
-         (license_id, lado, storage_key, content_type, file_size_bytes)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (license_id, lado) DO UPDATE
-         SET storage_key = EXCLUDED.storage_key,
-             content_type = EXCLUDED.content_type,
-             file_size_bytes = EXCLUDED.file_size_bytes,
-             data_url = NULL,
-             created_at = NOW()`,
-      [license.id, lado, storageKey, `image/${subtype}`, buffer.length]
-    );
-
-    // Só apaga o arquivo antigo depois que o novo já está referenciado.
-    if(anterior.rows[0] && anterior.rows[0].storage_key){
-      deleteLicensePhotoFile(anterior.rows[0].storage_key);
+    return licenseRowToObject(result.rows[0]);
+  }catch(error){
+    // driver_licenses_numero_unique (migração 033): a mesma CNH não pode
+    // liberar dois usuários como motorista.
+    if(error.code === '23505' && /numero/.test(String(error.constraint || ''))){
+      throw new ValidationError('Esta CNH já está vinculada a outro usuário do CapriCar. Se isso estiver errado, avise um gestor.', 409);
     }
-  }
-
-  const photos = await query(
-    'SELECT lado FROM driver_license_photos WHERE license_id = $1',
-    [license.id]
-  );
-  return licenseRowToObject(license, photos.rows);
-}
-
-async function removeLicense(licenseId){
-  const photos = await query(
-    'SELECT storage_key FROM driver_license_photos WHERE license_id = $1',
-    [licenseId]
-  );
-  await query('DELETE FROM driver_licenses WHERE id = $1', [licenseId]);
-  for(const photo of photos.rows){
-    if(photo.storage_key) deleteLicensePhotoFile(photo.storage_key);
+    throw error;
   }
 }
 
-// Devolve os bytes de um lado da CNH, ou null. A autorização (dono ou gestor
-// de usuários) é responsabilidade da rota - ver server/routes/users.js.
-async function readLicensePhoto(userId, lado){
-  if(!LADOS.includes(lado)) return null;
-  const result = await query(
-    `SELECT p.storage_key, p.data_url, p.content_type
-       FROM driver_license_photos p
-       JOIN driver_licenses l ON l.id = p.license_id
-      WHERE l.user_id = $1 AND p.lado = $2`,
-    [userId, lado]
-  );
-  const photo = result.rows[0];
-  if(!photo) return null;
-
-  const fromDisk = readLicensePhotoFile(photo.storage_key);
-  if(fromDisk){
-    return { bytes:fromDisk, contentType:photo.content_type || 'application/octet-stream' };
-  }
-  const match = String(photo.data_url || '').match(/^data:([^;,]+);base64,(.+)$/s);
-  if(!match) return null;
-  return {
-    bytes:Buffer.from(match[2], 'base64'),
-    contentType:photo.content_type || match[1] || 'application/octet-stream'
-  };
+async function removeLicenseForUser(userId){
+  await query('DELETE FROM driver_licenses WHERE user_id = $1', [userId]);
 }
 
 function todayISO(){
@@ -274,7 +188,6 @@ function licensePayload(license, todayOverride){
 module.exports = {
   DEFAULT_WARNING_DAYS,
   CATEGORIAS,
-  LADOS,
   todayISO,
   toISODate,
   licensePayload,
@@ -283,8 +196,6 @@ module.exports = {
   canDrive,
   getLicenseForUser,
   getLicensesForUsers,
-  validateLicenseInput,
-  saveLicenseForUser,
-  removeLicense,
-  readLicensePhoto
+  saveVerifiedLicense,
+  removeLicenseForUser
 };

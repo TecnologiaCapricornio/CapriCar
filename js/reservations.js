@@ -336,7 +336,7 @@ function getCarReservedDates(partida, carro, excludeId){
 // depois um dos horários ainda livres.
 function populateCarroOptions(preserveSelection){
   const partida = partidaSelect.value;
-  const carros = getVehicles().filter(v => v.ativo !== false && v.local === partida);
+  const carros = getVehiclesForCurrentDriver().filter(v => v.ativo !== false && v.local === partida);
   const currentCarro = carroSelect.value;
   const keepCurrent = preserveSelection && carros.some(v => String(v.codigo) === String(currentCarro));
 

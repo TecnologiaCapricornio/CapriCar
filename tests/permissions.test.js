@@ -178,3 +178,28 @@ test('novas permissões liberam somente suas áreas correspondentes', () => {
   assert.equal(app.canAccessAdminSection('usuarios'), true);
   assert.equal(app.canAccessAdminSection('reservas'), false);
 });
+
+test('Checklist é aba própria: quem só tem essa permissão não vê a Gestão', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({ nome: 'Operador', role: 'user', permissions: { checklist: true } });
+  assert.equal(app.canManageChecklist(), true);
+  assert.equal(app.canAccessManagement(), false);
+  assert.equal(app.canAccessAdminSection('checklist'), false);
+});
+
+test('seção Grupos tem permissão própria, separada de Usuários', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({ nome: 'RH', role: 'user', permissions: { groups: true } });
+  assert.equal(app.canAccessAdminSection('grupos'), true);
+  app.setCurrentUser({ nome: 'Usuários', role: 'user', permissions: { users: true } });
+  assert.equal(app.canAccessAdminSection('grupos'), false);
+  app.setCurrentUser({ nome: 'Frota', role: 'user', permissions: { fleet: true } });
+  assert.equal(app.canAccessAdminSection('grupos'), false);
+});
+
+test('quem só tem a permissão Grupos vê a aba Gestão', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({ nome: 'RH', role: 'user', permissions: { groups: true } });
+  assert.equal(app.canManageGroups(), true);
+  assert.equal(app.canAccessManagement(), true);
+});

@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const { canSeeVehicle, indexVehicles, vehicleForReservation } = require('./vehicle-access');
 const { query, withTransaction } = require('./db');
 const { decodeImageDataUrl, VEHICLE_TYPES, VEHICLE_CAPACITY_LIMITS, validateChecklistEdit } = require('./validation');
 
@@ -607,15 +608,30 @@ function isReservationParticipant(row, dto, user){
   );
 }
 
+// Reserva de outra pessoa, na versão pública (calendário, caronas): some para
+// quem não pode ver o veículo (restrito a um grupo do qual não é membro).
+// Puro - exportado para teste.
+function publicReservationVisible(dto, user, vehiclesIndex){
+  const vehicle = vehicleForReservation(dto, vehiclesIndex);
+  return !vehicle || canSeeVehicle(vehicle, user);
+}
+
+async function loadVehiclesIndex(executor){
+  const run = executor && typeof executor.query === 'function' ? executor.query.bind(executor) : query;
+  const result = await run("SELECT value FROM application_state WHERE collection_name = 'vehicles'");
+  return indexVehicles(result.rows[0] && Array.isArray(result.rows[0].value) ? result.rows[0].value : []);
+}
+
 async function listReservationsForUser(user, executor){
   const data = await loadReservationData(executor);
   const manager = canViewAllReservations(user);
+  const vehiclesIndex = manager ? null : await loadVehiclesIndex(executor);
   const output = [];
   for(const row of data.rows){
     const dto = fullDto(row, data);
     const participant = isReservationParticipant(row, dto, user);
     if(manager || participant) output.push(dto);
-    else if(row.status === 'confirmed') output.push(publicDto(dto));
+    else if(row.status === 'confirmed' && publicReservationVisible(dto, user, vehiclesIndex)) output.push(publicDto(dto));
   }
   return output;
 }
@@ -795,6 +811,7 @@ async function migrateLegacyReservations(){
 module.exports = {
   canViewAllReservations,
   listReservationsForUser,
+  publicReservationVisible,
   listAllReservations,
   persistReservation,
   cancelReservation,

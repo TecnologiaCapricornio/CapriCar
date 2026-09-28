@@ -43,8 +43,15 @@ Depois de entrar, o topo da tela mostra as abas disponíveis:
 - **Caronas Disponíveis** — entrar como passageiro em uma reserva de outra
   pessoa;
 - **Calendário** — visão semanal de todas as reservas por local/veículo;
-- **Admin** ou **Gestão** — só aparece para quem tem alguma permissão de
-  gestão (seção 10).
+- **Checklist** — só aparece para quem tem a permissão "Checklist": revisar,
+  aprovar, corrigir e arquivar os checklists de retirada/devolução de todas as
+  reservas, e registrar retirada/devolução em nome de outra pessoa;
+- **Gestão** — só aparece para quem tem alguma permissão de gestão
+  (seção 10).
+
+Veículos de uso restrito a um grupo (seção 10.7) só aparecem para os membros
+desse grupo — para as demais pessoas eles não existem nas listas, no
+calendário nem em Caronas.
 
 No canto superior, o sino mostra notificações (seção 9) e o seu avatar abre
 o menu de perfil, com acesso a "Meu perfil" (CNH — seção 8) e a opção de
@@ -163,8 +170,31 @@ pela gestão) pode ser registrada.
 
 ## 8. Meu perfil e CNH
 
-No menu do seu avatar, abra "Meu perfil" para cadastrar ou atualizar sua
-CNH: número, categoria, validade e fotos da frente e do verso.
+No menu do seu avatar, abra "Minha CNH". A CNH não é digitada: ela é
+importada da **e-CNH**, o PDF oficial da Carteira Digital de Trânsito.
+
+1. No aplicativo **Carteira Digital de Trânsito** (celular), abra a sua CNH e
+   exporte o documento em PDF.
+2. Em "Minha CNH", clique em **Selecionar PDF da e-CNH** e escolha o arquivo.
+3. O CapriCar confere a assinatura digital do DETRAN, lê número de registro,
+   categoria e validade e preenche tudo sozinho em poucos segundos.
+
+Para renovar (por exemplo, depois de uma nova CNH), basta importar a nova
+e-CNH da mesma forma.
+
+**Privacidade (LGPD).** O arquivo não é armazenado: ele é lido em memória no
+servidor do CapriCar só durante o envio e descartado em seguida, sem passar por
+nenhum serviço externo. Ficam guardados apenas número de registro, categoria e
+validade. Foto, CPF, RG, filiação, data de nascimento e assinatura não são
+guardados; o nome impresso é usado só para confirmar que a CNH é sua. Você pode
+remover os dados da CNH a qualquer momento pelo botão "Remover CNH".
+
+A importação é recusada quando:
+- o arquivo não é o PDF original do aplicativo, ou foi editado depois de
+  exportado (a assinatura digital deixa de conferir);
+- o nome impresso na CNH não corresponde ao nome do seu cadastro — se o nome
+  do cadastro estiver errado, peça a um gestor de usuários para corrigi-lo;
+- a mesma CNH já está vinculada a outro usuário.
 
 - **CNH vencida** impede fazer reservas como motorista até ser atualizada.
 - **CNH vencendo** apenas avisa, sem bloquear.
@@ -186,9 +216,10 @@ periódicos (reserva se aproximando, CNH vencendo, manutenção vencendo).
 
 ## 10. Painel de Gestão
 
-Aparece como aba "Admin" (para administradores) ou "Gestão" (para quem tem
-alguma permissão específica, mesmo sem ser administrador). Cada aba abaixo
-só é visível para quem tem a permissão correspondente.
+Aparece como aba "Gestão" para administradores e para quem tem alguma
+permissão específica de gestão. Cada aba abaixo só é visível para quem tem a
+permissão correspondente. (O Checklist tem aba própria no topo da tela — ver
+seção 2.)
 
 ### 10.1 Reservas
 
@@ -218,11 +249,24 @@ ou ônibus), centro de custo, se é próprio ou alugado, e o odômetro atual
 para corrigir uma divergência real). Também permite ativar/desativar ou
 excluir definitivamente um veículo (com justificativa).
 
+**Quem pode enxergar e reservar:** sem nenhum grupo marcado, o veículo é de
+todos. Marcando um ou mais grupos (seção 10.7), só os membros desses grupos
+enxergam e reservam o veículo; quem tem permissão de gestão continua vendo o
+veículo (calendário, bloqueios, manutenção, relatórios, checklist), mas só
+reserva como motorista se também for membro. Reservas feitas antes de uma
+restrição continuam valendo.
+
 ### 10.4 Bloqueios
 
 Impede reservas em um veículo durante um período — por manutenção, revisão,
 documentação ou indisponibilidade. Basta escolher o veículo, o motivo, o
 período e uma observação.
+
+Ao salvar um bloqueio novo (ou mudar o período de um existente), o sistema
+avisa pelo sino quem tem reserva naquele veículo dentro do período — a reserva
+não é cancelada automaticamente, cabe à gestão combinar o que fazer. Se o
+veículo for restrito a um grupo, todos os membros do grupo também são
+avisados de que ele ficará indisponível.
 
 ### 10.5 Manutenção
 
@@ -231,21 +275,37 @@ Lembretes preventivos por veículo: tipo de manutenção, e quando ela vence
 aviso, tanto na tela quanto por e-mail). A lista destaca o que já venceu ou
 está perto de vencer.
 
-### 10.6 Auditoria
+### 10.6 Usuários
 
-Histórico completo de ações realizadas no sistema (quem fez o quê e
-quando): criação/edição/cancelamento de reserva, entrada/saída de carona,
-retirada/devolução, alterações de cadastro, exclusões, mudanças de regras e
-exportações. Pode ser filtrado por usuário, ação e período, e exportado em
-Excel ou PDF.
+Cadastro de contas: criar, editar, conceder/revogar as permissões acima uma
+a uma, importar usuários do Microsoft Entra ID em massa, buscar/filtrar por
+permissão, aplicar ações em lote (desativar, excluir ou ajustar permissões
+de vários usuários de uma vez) e consultar a CNH de qualquer usuário. A
+conta principal de administrador não pode ser desativada nem excluída, e
+uma conta de administrador só pode ser editada por outro administrador.
 
-### 10.7 Relatórios
+### 10.7 Grupos
 
-Tela de análise e exportação, separada da lista operacional de "Reservas".
-Filtre por local, veículo, usuário e período, veja o resumo (total de
-reservas, concluídas, quilômetros rodados, usuários envolvidos) e exporte
-em Excel ou PDF — o PDF traz uma visão geral das reservas e uma segunda
-tabela com o detalhe de retirada/devolução de cada uma.
+Visível para quem tem a permissão "Grupos" (independente de "Usuários" — quem
+já tinha "Usuários" antes desta permissão existir ganhou "Grupos"
+automaticamente, para não perder o acesso). Um grupo é uma lista de
+pessoas — por exemplo, "Assistência técnica" com os quatro técnicos que usam o
+carro exclusivo da matriz. Crie o grupo com **+ Novo grupo**, dê um nome,
+opcionalmente uma descrição, e marque os membros (a busca aceita nome, usuário
+ou centro de custo).
+
+Depois, em **Veículos** (seção 10.3), edite o veículo e marque o grupo em
+"Quem pode enxergar e reservar". A partir daí:
+
+- só os membros do grupo veem o veículo e podem reservá-lo como motoristas
+  (inclusive quando a gestão cria a reserva em nome de alguém: o motorista
+  precisa ser membro);
+- caronas nesse veículo só aparecem para os membros;
+- a gestão continua cuidando do veículo normalmente (bloqueios, manutenção,
+  relatórios), e os avisos de bloqueio chegam aos membros do grupo.
+
+Um grupo que ainda controla o acesso de algum veículo não pode ser excluído —
+remova-o do cadastro do veículo antes.
 
 ### 10.8 Regras
 
@@ -266,20 +326,32 @@ variáveis do arquivo `.env` do servidor:
   como uma caixa do Microsoft 365 usando o mesmo login configurado acima
   (sem senha nenhuma — útil quando a conta tem autenticação em duas etapas
   e a senha normal não funciona para SMTP). Com botão de teste;
-- **Lembretes por e-mail**: liga/desliga e edita o texto de cada modelo de
-  e-mail automático, com pré-visualização e um botão para disparar o envio
-  manualmente sem esperar a rotina periódica;
+- **Lembretes por e-mail**: lista dos nove e-mails automáticos, agrupados em
+  Reservas, Caronas e Documentos e frota, cada um com um interruptor para
+  ligar/desligar e a indicação de quando é enviado. "Editar modelo" abre o
+  assunto e o corpo daquele e-mail, com botões para inserir as variáveis que
+  ele aceita (ex.: `{{nome}}`, `{{destino}}`), pré-visualizar o resultado e
+  restaurar o texto padrão. As alterações só valem depois de "Salvar
+  lembretes". "Executar varredura agora" dispara o envio sem esperar a rotina
+  periódica;
 - **Calendário (Outlook)**: liga/desliga a criação automática de um evento
   no Outlook para cada reserva, com botão de teste.
 
-### 10.10 Usuários
+### 10.10 Relatórios
 
-Cadastro de contas: criar, editar, conceder/revogar as permissões acima uma
-a uma, importar usuários do Microsoft Entra ID em massa, buscar/filtrar por
-permissão, aplicar ações em lote (desativar, excluir ou ajustar permissões
-de vários usuários de uma vez) e consultar a CNH de qualquer usuário. A
-conta principal de administrador não pode ser desativada nem excluída, e
-uma conta de administrador só pode ser editada por outro administrador.
+Tela de análise e exportação, separada da lista operacional de "Reservas".
+Filtre por local, veículo, usuário e período, veja o resumo (total de
+reservas, concluídas, quilômetros rodados, usuários envolvidos) e exporte
+em Excel ou PDF — o PDF traz uma visão geral das reservas e uma segunda
+tabela com o detalhe de retirada/devolução de cada uma.
+
+### 10.11 Auditoria
+
+Histórico completo de ações realizadas no sistema (quem fez o quê e
+quando): criação/edição/cancelamento de reserva, entrada/saída de carona,
+retirada/devolução, alterações de cadastro, exclusões, mudanças de regras e
+exportações. Pode ser filtrado por usuário, ação e período, e exportado em
+Excel ou PDF.
 
 ## 11. Dúvidas comuns
 
@@ -288,10 +360,14 @@ Confira a mensagem de erro perto do campo destacado — normalmente é
 veículo/local/data faltando, um conflito de horário com outra reserva, um
 bloqueio no período ou uma CNH incompatível com o veículo escolhido.
 
-**Não consigo ver a aba Admin/Gestão.**
+**Um veículo que existe não aparece para mim.**
+Ele provavelmente é de uso restrito a um grupo do qual você não faz parte
+(seção 10.7). Fale com a gestão da frota se precisar usá-lo.
+
+**Não consigo ver a aba Gestão.**
 Ela só aparece para quem é administrador ou tem pelo menos uma permissão de
 gestão concedida. Peça ao administrador para verificar suas permissões
-(seção 10.10).
+(seção 10.6).
 
 **Registrei uma quilometragem errada por engano.**
 Se for menor que o esperado, o próprio sistema já pergunta se você confirma
@@ -300,8 +376,13 @@ odômetro do veículo depois, quem tem a permissão de veículos pode editar o
 campo "odômetro atual" no cadastro dele (seção 10.3).
 
 **Minha CNH está vencendo/venceu.**
-Atualize em "Meu perfil" (seção 8). Enquanto estiver vencida, não é possível
-criar reservas como motorista.
+Depois de renovar no DETRAN, importe a nova e-CNH em "Minha CNH" (seção 8).
+Enquanto estiver vencida, não é possível criar reservas como motorista.
+
+**A importação da e-CNH diz que não conseguiu ler os dados.**
+Exporte o PDF de novo pelo aplicativo Carteira Digital de Trânsito e envie o
+arquivo sem abrir/salvar em outro programa (isso pode alterar o PDF e invalidar
+a assinatura). Se continuar, avise o administrador do sistema.
 
 **Não recebo e-mail de notificação.**
 O envio de e-mail depende de o administrador ter configurado o SMTP na aba
