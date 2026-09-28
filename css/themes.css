@@ -1,147 +1,75 @@
-/* Temas neutros do CapriCar. Este arquivo é carregado por último.
+/* Temas do CapriCar. Este arquivo é carregado por último.
 
-   Só os tokens SEMÂNTICOS são redefinidos aqui - os aliases legados
-   (--azul-royal, --vermelho etc.) apontam para eles em variables.css
-   e acompanham a troca de tema sozinhos. Ver o cabeçalho daquele
-   arquivo para a explicação das duas camadas. */
+   Só os tokens são redefinidos aqui - nenhum componente ganha override
+   por tema. O tema claro é o :root de css/variables.css; o escuro
+   troca apenas as cores (escalas de raio, tipografia e movimento são
+   as mesmas). Se um componente parecer errado em um dos temas, o
+   conserto é trocar a cor solta dele por um token, não acrescentar
+   uma regra html[data-theme] aqui. */
 :root[data-theme="dark"]{
   color-scheme:dark;
 
-  --bg-1:#191b1f;
-  --bg-2:#24272c;
-  --bg-3:#30343a;
-  --surface:rgba(35,38,43,.9);
-  --surface-solid:#26292e;
-  --border:rgba(231,235,239,.13);
+  --bg-1:#111317;
+  --bg-2:#181b20;
+  --bg-3:#20242a;
+  --surface:#181b20;
+  --surface-solid:#181b20;
+  --surface-2:#1e2228;
+  --surface-hover:#252a31;
+  --surface-sunken:#14171b;
+  --border:#2b3038;
+  --border-strong:#3b424c;
 
-  --text:#f2f3f5;
-  --text-muted:#adb3bb;
+  --text:#e7e9ec;
+  --text-muted:#a2a9b3;
+  --text-subtle:#868e99;
   --on-primary:#ffffff;
 
-  /* Azul Capricórnio (#00133D / #001A52, navy real da logo) clareado o
-     suficiente para o botão se destacar do fundo escuro mantendo texto
-     branco legível por cima - mesmo matiz da marca, só mais claro/saturado
-     para funcionar em fundo escuro. O acento de texto/ícone segue o
-     mesmo matiz. */
-  --primary:#2f5ec4;
-  --primary-strong:#1b3d86;
-  --accent:#6c92e4;
+  /* Azul Principal clareado só o suficiente para destacar do fundo
+     escuro mantendo texto branco legível (6.0:1). O acento de texto
+     usa o Azul Claro oficial da marca (#6CACE4). */
+  --primary:#2a5bd7;
+  --primary-hover:#3868e0;
+  --primary-strong:#1e46b0;
+  --primary-soft:rgba(108,172,228,.10);
+  --primary-soft-strong:rgba(108,172,228,.18);
+  --accent:#6cace4;
+  --focus-ring:rgba(108,172,228,.45);
 
-  --info:#7ea9c7;
-  --info-text:#cfe6fa;
-  --info-surface:rgba(126,169,199,.15);
-  --info-border:rgba(126,169,199,.42);
+  --info:#6cace4;
+  --info-text:#b3d3f1;
+  --info-surface:rgba(108,172,228,.10);
+  --info-border:rgba(108,172,228,.30);
 
-  --success:#2fb87d;
-  --success-text:#8ee9bd;
-  --success-surface:rgba(47,184,125,.14);
-  --success-border:rgba(47,184,125,.40);
+  --success:#4aa77a;
+  --success-text:#93d2b1;
+  --success-surface:rgba(74,167,122,.11);
+  --success-border:rgba(74,167,122,.32);
 
-  --warning:#ebb248;
-  --warning-text:#f2c263;
-  --warning-surface:rgba(235,178,72,.15);
-  --warning-border:rgba(235,178,72,.42);
+  --warning:#d4a24a;
+  --warning-text:#e8c889;
+  --warning-surface:rgba(212,162,74,.11);
+  --warning-border:rgba(212,162,74,.32);
 
-  --danger:#e2606d;
-  --danger-text:#ffb3ba;
-  --danger-surface:rgba(226,96,109,.14);
-  --danger-border:rgba(226,96,109,.42);
+  --danger:#e06a6a;
+  --danger-text:#f2abab;
+  --danger-surface:rgba(224,106,106,.11);
+  --danger-border:rgba(224,106,106,.34);
+  --danger-solid:#c23b3b;
+  --danger-solid-hover:#d14848;
 
-  --sombra:0 16px 36px rgba(0,0,0,.26);
+  --neutral-surface:#22262c;
+  --neutral-border:#343a42;
+  --neutral-text:#c3c8cf;
+
+  --overlay:rgba(0,0,0,.6);
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,.30);
+  --shadow-md:0 4px 12px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.25);
+  --shadow-lg:0 16px 40px rgba(0,0,0,.50),0 2px 6px rgba(0,0,0,.30);
 }
 
-:root[data-theme="light"]{
-  color-scheme:light;
-
-  --bg-1:#f3f4f6;
-  --bg-2:#e8ebef;
-  --bg-3:#dce1e6;
-  --surface:rgba(255,255,255,.94);
-  --surface-solid:#ffffff;
-  --border:rgba(29,40,52,.14);
-
-  --text:#20262d;
-  /* #68717c batia 4.50:1 sobre --bg-1 (#f3f4f6) - exatamente no limite da AA
-     (4.5:1), sem nenhuma margem. Escurecido para folgar a margem sem mudar
-     a percepção do tom (5.37:1 sobre --bg-1, 5.91:1 sobre branco). */
-  --text-muted:#5c6570;
-  --on-primary:#ffffff;
-
-  /* Mesmo valor do tema escuro (não o navy exato da logo, que testado nos
-     botões ficou escuro demais e destoando do tema escuro - ver os
-     relatos de "botão diferente entre os temas" no Entrar e no + Nova
-     reserva). --primary/--primary-strong precisam ser idênticos nos dois
-     temas para os botões não mudarem de tom ao trocar de tema; o navy
-     exato da marca continua disponível em --brand/--brand-deep. */
-  --primary:#2f5ec4;
-  --primary-strong:#1b3d86;
-  --accent:#1a45a0;
-
-  /* No tema claro a cor sólida e a de texto coincidem: ambas precisam
-     ser escuras o bastante para o fundo claro. */
-  --info:#1c4770;
-  --info-text:#1c4770;
-  --info-surface:rgba(37,116,197,.09);
-  --info-border:rgba(37,116,197,.30);
-
-  --success:#087546;
-  --success-text:#065c37;
-  --success-surface:rgba(8,117,70,.10);
-  --success-border:rgba(8,117,70,.30);
-
-  --warning:#8a5a00;
-  --warning-text:#704200;
-  --warning-surface:rgba(190,140,20,.13);
-  --warning-border:rgba(190,140,20,.38);
-
-  --danger:#c83f50;
-  --danger-text:#a32639;
-  --danger-surface:rgba(200,63,80,.10);
-  --danger-border:rgba(200,63,80,.32);
-
-  --sombra:0 14px 35px rgba(32,43,55,.12);
-}
-
-html[data-theme="dark"],
-html[data-theme="dark"] body{
-  background-color:#17191d;
-}
-
-html[data-theme="dark"] body{
-  background-image:
-    radial-gradient(circle at 12% 8%,rgba(92,103,114,.12),transparent 34%),
-    radial-gradient(circle at 88% 92%,rgba(55,67,76,.15),transparent 38%),
-    linear-gradient(145deg,#17191d,#202328 52%,#181a1e);
-}
-
-html[data-theme="dark"] .app-header{
-  background:rgba(28,30,34,.9);
-}
-
-html[data-theme="dark"] .card{
-  background:rgba(36,39,44,.94);
-  border-color:rgba(230,235,239,.12);
-}
-
-html[data-theme="dark"] .admin-subcard,
-html[data-theme="dark"] .reservation-item,
-html[data-theme="dark"] .modal-card,
-html[data-theme="dark"] .reservation-period,
-html[data-theme="dark"] .reservation-period > .reservation-moment{
-  background-color:#282b30;
-}
-
-html[data-theme="dark"] .weekly-calendar,
-html[data-theme="dark"] .week-time-axis,
-html[data-theme="dark"] .week-day-column,
-html[data-theme="dark"] .week-day-column:nth-child(odd){
-  background-color:#202328;
-}
-
-html[data-theme="dark"] .week-calendar-header{
-  background:#292c31;
-}
-
+/* ============ Botão de alternar tema ============ */
 .theme-toggle{
   display:grid;
   place-items:center;
@@ -149,28 +77,23 @@ html[data-theme="dark"] .week-calendar-header{
   height:40px;
   flex:0 0 40px;
   padding:0;
-  border:1px solid var(--card-border);
-  border-radius:50%;
-  background:rgba(255,255,255,.055);
-  color:var(--texto);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+  color:var(--text-muted);
   cursor:pointer;
-  transition:background .2s,transform .15s,border-color .2s;
+  transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease),color var(--dur) var(--ease);
 }
 
 .theme-toggle:hover{
-  transform:translateY(-1px);
-  border-color:var(--azul-claro);
-  background:rgba(126,169,199,.14);
-}
-
-.theme-toggle:focus-visible{
-  outline:3px solid rgba(78,134,173,.25);
-  outline-offset:2px;
+  border-color:var(--border-strong);
+  background:var(--surface-hover);
+  color:var(--text);
 }
 
 .theme-icon{
-  width:19px;
-  height:19px;
+  width:18px;
+  height:18px;
   fill:none;
   stroke:currentColor;
   stroke-width:1.8;
@@ -192,655 +115,6 @@ html[data-theme="dark"] .week-calendar-header{
 
 .header-right{
   gap:8px;
-}
-
-/* Tema claro */
-html[data-theme="light"],
-html[data-theme="light"] body{
-  background-color:#f3f4f6;
-}
-
-html[data-theme="light"] body{
-  background-image:
-    radial-gradient(circle at 8% 4%,rgba(78,134,173,.09),transparent 30%),
-    radial-gradient(circle at 92% 92%,rgba(100,112,124,.08),transparent 34%),
-    linear-gradient(145deg,#f7f8f9,#eef0f3 55%,#f5f6f7);
-}
-
-html[data-theme="light"] .app-header{
-  background:rgba(255,255,255,.92);
-  border-bottom-color:rgba(31,45,58,.12);
-  box-shadow:0 4px 18px rgba(35,45,55,.07);
-}
-
-html[data-theme="light"] .brand{
-  background:none;
-  color:#27333e;
-}
-
-html[data-theme="light"] .tabs,
-html[data-theme="light"] .profile-btn,
-html[data-theme="light"] .theme-toggle,
-html[data-theme="light"] .notification-bell,
-html[data-theme="light"] .mobile-nav-toggle{
-  background:rgba(36,48,60,.035);
-  border-color:rgba(31,45,58,.14);
-}
-
-html[data-theme="light"] .notification-panel,
-html[data-theme="light"] .profile-menu-panel{
-  background:#fff;
-  border-color:rgba(31,45,58,.16);
-  box-shadow:0 18px 48px rgba(31,45,58,.18);
-}
-
-html[data-theme="light"] .profile-menu-item{color:#253443;}
-html[data-theme="light"] .profile-menu-item:hover{background:#f3f7fa;}
-html[data-theme="light"] .profile-menu-item-danger:hover{background:#fdecee;}
-
-html[data-theme="light"] .notification-item{color:#253443;border-bottom-color:rgba(31,45,58,.1);}
-html[data-theme="light"] .notification-item:hover{background:#f3f7fa;}
-html[data-theme="light"] .notification-item.unread{background:#eaf4fb;}
-html[data-theme="light"] .notification-item-copy > span,
-html[data-theme="light"] .notification-panel-header span,
-html[data-theme="light"] .notification-empty{color:#596a78;}
-html[data-theme="light"] .notification-badge{border-color:#fff;}
-
-html[data-theme="light"] .report-summary > div{
-  background:linear-gradient(145deg,#eef5fa,#e5f0f7);
-  border-color:#b8d1e2;
-  box-shadow:0 4px 12px rgba(42,78,105,.07);
-}
-
-html[data-theme="light"] .report-summary strong{
-  color:#173f5d;
-}
-
-html[data-theme="light"] .report-summary span{
-  color:#526575;
-}
-
-html[data-theme="light"] .table-wrap{
-  border:1px solid #c9d6df;
-  border-radius:12px;
-  background:#fff;
-  overflow:auto;
-}
-
-html[data-theme="light"] .report-table th{
-  color:#20394d;
-  background:#dfeaf2;
-  border-bottom-color:#adc4d4;
-}
-
-html[data-theme="light"] .report-table td{
-  color:#3c4e5d;
-  border-bottom-color:#dce4ea;
-}
-
-html[data-theme="light"] .report-table tbody tr:nth-child(even){
-  background:#f7f9fb;
-}
-
-html[data-theme="light"] .report-table tbody tr:hover{
-  background:#edf5fa;
-}
-
-html[data-theme="light"] .card,
-html[data-theme="light"] .login-card,
-html[data-theme="light"] .modal-card{
-  background:rgba(255,255,255,.96);
-  border-color:rgba(31,45,58,.13);
-}
-
-html[data-theme="light"] .card h2,
-html[data-theme="light"] .card h3,
-html[data-theme="light"] .modal-card h3,
-html[data-theme="light"] .admin-subcard h3,
-html[data-theme="light"] .day-details-title,
-html[data-theme="light"] .calendar-month-label,
-html[data-theme="light"] .range-calendar-topline strong,
-html[data-theme="light"] .range-calendar-header strong{
-  color:#20262d;
-}
-
-html[data-theme="light"] .login-card h1,
-html[data-theme="light"] .login-card .field label,
-html[data-theme="light"] .field label{
-  color:#39434d;
-}
-
-html[data-theme="light"] .site-dialog-card.site-dialog-info{
-  background:#f5fafd;
-}
-
-html[data-theme="light"] .site-dialog-card.site-dialog-warning{
-  background:#fffaf0;
-}
-
-html[data-theme="light"] .site-dialog-card.site-dialog-danger{
-  background:#fff6f7;
-}
-
-html[data-theme="light"] .site-dialog-card.site-dialog-success{
-  background:#f5fcf9;
-}
-
-html[data-theme="light"] .site-dialog-icon.warning{
-  border-color:#e3bf76;
-  background:#fff7e5;
-  color:#9a6410;
-}
-
-html[data-theme="light"] .site-dialog-icon.danger{
-  border-color:#e5a5ad;
-  background:#fff0f2;
-  color:#ad3443;
-}
-
-html[data-theme="light"] .site-dialog-icon.info{
-  border-color:#a9c9df;
-  background:#eef7fd;
-  color:#27658e;
-}
-
-html[data-theme="light"] .site-dialog-icon.success{
-  border-color:#9fd5b9;
-  background:#eefaf4;
-  color:#197548;
-}
-
-html[data-theme="light"] .site-dialog-card > p{
-  color:#586672;
-}
-
-html[data-theme="light"] .modal-close:hover{
-  color:#20262d;
-}
-
-html[data-theme="light"] select,
-html[data-theme="light"] textarea,
-html[data-theme="light"] input[type="text"],
-html[data-theme="light"] input[type="email"],
-html[data-theme="light"] input[type="date"],
-html[data-theme="light"] input[type="password"],
-html[data-theme="light"] input[type="number"],
-html[data-theme="light"] input[type="file"],
-html[data-theme="light"] .styled-select-trigger{
-  border-color:rgba(31,45,58,.16);
-  background:#f8f9fa;
-  color:#28323c;
-}
-
-html[data-theme="light"] .styled-select-trigger:not(.has-value) .styled-select-trigger-value{
-  color:#8a929b;
-}
-
-html[data-theme="light"] .styled-select-list{
-  background:#fff;
-  border-color:rgba(31,45,58,.15);
-  box-shadow:0 12px 28px rgba(20,30,40,.14);
-}
-
-html[data-theme="light"] .styled-select-option{
-  color:#34404a;
-}
-
-html[data-theme="light"] .styled-select-option:hover,
-html[data-theme="light"] .styled-select-option.active{
-  background:#eef2f6;
-}
-
-html[data-theme="light"] .styled-select-option[aria-disabled="true"]:hover{
-  background:transparent;
-}
-
-html[data-theme="light"] select option{
-  background:#fff;
-  color:#20262d;
-}
-
-html[data-theme="light"] .passenger-row input[type="text"]{
-  background:#f8f9fa;
-  border-color:#cbd2d9;
-  color:#20262d;
-}
-
-html[data-theme="light"] input::placeholder,
-html[data-theme="light"] textarea::placeholder{
-  color:#8a929b;
-}
-
-html[data-theme="light"] .reservation-item,
-html[data-theme="light"] .admin-subcard,
-html[data-theme="light"] .management-item,
-html[data-theme="light"] .occupancy,
-html[data-theme="light"] .reservation-period,
-html[data-theme="light"] .reservation-period > .reservation-moment,
-html[data-theme="light"] .solicitante-card{
-  background:#f7f8fa;
-  border-color:rgba(31,45,58,.12);
-}
-
-html[data-theme="light"] .management-item.is-inactive{
-  background:#fff1f2;
-  border-color:#e6a7ae;
-  box-shadow:inset 3px 0 0 #c95765;
-}
-
-html[data-theme="light"] .management-item.is-inactive small{
-  color:#a63f4b;
-}
-
-html[data-theme="light"] .user-permissions span{
-  background:#dfebf3;
-  border:1px solid #b3cad9;
-  color:#234e6b;
-}
-
-html[data-theme="light"] .management-item.is-inactive .user-permissions span{
-  background:#f9dfe2;
-  border-color:#e3adb4;
-  color:#8f3540;
-}
-
-html[data-theme="light"] .user-status-inactive{
-  color:#a72f3d;
-  font-weight:800;
-}
-
-html[data-theme="light"] .reservation-id-badge{
-  background:#dcebf5;
-  border-color:#a9c7dc;
-  color:#214f6e;
-}
-
-html[data-theme="light"] .occupant-chip,
-html[data-theme="light"] .occupant-chip.is-driver{
-  background:#edf2f5;
-  border-color:#c8d4dc;
-  color:#2d3943;
-}
-
-html[data-theme="light"] .reservation-moment-part,
-html[data-theme="light"] .reservation-moment-part strong,
-html[data-theme="light"] .reservation-details,
-html[data-theme="light"] .reservation-more-details,
-html[data-theme="light"] .reservation-name,
-html[data-theme="light"] .reservation-business{
-  color:#35414c;
-}
-
-html[data-theme="light"] .reservation-vehicle{
-  color:#526a7c;
-}
-
-html[data-theme="light"] .tab-btn:not(.active):hover{
-  background:#e7eef3;
-  color:#173f5c;
-}
-
-html[data-theme="light"] .car-tab-btn{
-  background:#f7f9fa;
-  border-color:#c5d0d8;
-  color:#4d5964;
-}
-
-html[data-theme="light"] .car-tab-btn:not(.active):hover{
-  background:#e3edf4;
-  border-color:#2a648c;
-  color:#173f5c;
-}
-
-html[data-theme="light"] .car-tab-btn.active{
-  background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
-  border-color:transparent;
-  color:#fff;
-}
-
-html[data-theme="light"] .admin-section-btn,
-html[data-theme="light"] .secondary-btn,
-html[data-theme="light"] .edit-btn,
-html[data-theme="light"] .operation-btn,
-html[data-theme="light"] .calendar-today-btn,
-html[data-theme="light"] .calendar-nav-btn{
-  background:#e7eef3;
-  border-color:rgba(23,63,92,.32);
-  color:#214c69;
-  /* Texto escuro sobre fundo claro não sofre a halação do texto claro
-     sobre fundo escuro, então aqui pode voltar ao peso de referência. */
-  font-weight:700;
-}
-
-html[data-theme="light"] .role-badge,
-html[data-theme="light"] .occupancy-tag,
-html[data-theme="light"] .reservation-more-details summary,
-html[data-theme="light"] .reservation-view-btn,
-html[data-theme="light"] .tag,
-html[data-theme="light"] .notification-panel-header button,
-html[data-theme="light"] .reservation-id-badge,
-html[data-theme="light"] .reservation-route,
-html[data-theme="light"] .calendar-event-id,
-html[data-theme="light"] .reservation-vehicle,
-html[data-theme="light"] .ride-watch-panel summary,
-html[data-theme="light"] .styled-select-option[aria-selected="true"],
-html[data-theme="light"] .recommended-badge,
-html[data-theme="light"] .join-confirm-cancel,
-html[data-theme="light"] .cnh-categoria-code,
-html[data-theme="light"] .user-permissions span,
-html[data-theme="light"] .user-select-all-label,
-html[data-theme="light"] #operationPhotos::file-selector-button,
-html[data-theme="light"] #operationPhotos::-webkit-file-upload-button,
-html[data-theme="light"] .operation-status,
-html[data-theme="light"] .operation-report-badge,
-html[data-theme="light"] .operation-details summary,
-html[data-theme="light"] .indicator-label,
-html[data-theme="light"] .email-preview-meta-label,
-html[data-theme="light"] .week-header-corner,
-html[data-theme="light"] .week-time-label.full-hour,
-html[data-theme="light"] .week-reservation-event span,
-html[data-theme="light"] .calendar-event-vehicle,
-html[data-theme="light"] .day-details-title,
-html[data-theme="light"] .car-tab-city,
-html[data-theme="light"] .date-popup-weekday,
-html[data-theme="light"] .date-popup-day.selected,
-html[data-theme="light"] .date-popup-clear-btn,
-html[data-theme="light"] .mobile-month-event,
-html[data-theme="light"] .mobile-month-more,
-html[data-theme="light"] .mobile-selection-sheet span,
-html[data-theme="light"] .range-clear-btn{
-  font-weight:700;
-}
-
-/* Mesmo raciocínio, para os pontos que eram 800 no escuro (agora 700 - ver
-   componentes correspondentes em css/components.css, css/admin.css e
-   css/calendar.css): claro volta ao valor de referência original. */
-html[data-theme="light"] .notification-badge,
-html[data-theme="light"] .pickup-availability-date,
-html[data-theme="light"] .reservation-moment-label,
-html[data-theme="light"] .operation-photo-download,
-html[data-theme="light"] .week-day-header span,
-html[data-theme="light"] .calendar-event-route,
-html[data-theme="light"] .mobile-month-weekdays span,
-html[data-theme="light"] .mobile-day-top span,
-html[data-theme="light"] .mobile-selection-cancel,
-html[data-theme="light"] .mobile-selection-confirm,
-html[data-theme="light"] .range-calendar-weekday,
-html[data-theme="light"] .range-calendar-day.range-start span{
-  font-weight:800;
-}
-
-html[data-theme="light"] button.submit-btn,
-html[data-theme="light"] .tab-btn.active,
-html[data-theme="light"] .admin-section-btn.active,
-html[data-theme="light"] .reservation-view-btn.active,
-html[data-theme="light"] .reserve-day-btn,
-html[data-theme="light"] .range-calendar-day.selected{
-  background:linear-gradient(135deg,var(--azul-royal-2),var(--azul-royal));
-  color:#fff;
-  text-shadow:0 1px 1px rgba(0,0,0,.2);
-  box-shadow:0 3px 8px rgba(23,63,92,.18);
-}
-
-html[data-theme="light"] .join-ride-btn{
-  background:linear-gradient(135deg,#0b8450,#05633a);
-  color:#fff;
-  box-shadow:0 7px 17px rgba(5,99,58,.24);
-}
-
-html[data-theme="light"] .operation-btn{
-  background:#e1f3e9;
-  border-color:#75b997;
-  color:#075f39;
-}
-
-html[data-theme="light"] .reservation-actions .edit-btn{
-  background:#e7eef3;
-  border-color:#6f92aa;
-  color:#173f5c;
-}
-
-html[data-theme="light"] .mobile-selection-cancel,
-html[data-theme="light"] .range-clear-btn,
-html[data-theme="light"] .join-confirm-cancel,
-html[data-theme="light"] .passenger-add-btn{
-  background:#f1f5f7;
-  border-color:#7294ab;
-  color:#214f6e;
-}
-
-html[data-theme="light"] .range-calendar-nav,
-html[data-theme="light"] .date-popup-nav-btn{
-  color:#214f6e;
-}
-
-html[data-theme="light"] .range-calendar-day.unavailable{
-  color:#b42335;
-}
-
-html[data-theme="light"] .confirmation,
-html[data-theme="light"] .reservation-item .operation-status.status-completed,
-html[data-theme="light"] .operation-status,
-html[data-theme="light"] .role-badge.passenger{
-  background:#def2e7;
-  border-color:#72b994;
-  color:#075f39;
-}
-
-html[data-theme="light"] .reservation-item .operation-status.status-waiting,
-html[data-theme="light"] .role-badge.creator{
-  background:#dceaf4;
-  color:#204e6d;
-}
-
-html[data-theme="light"] .operation-details{
-  color:#3e5262;
-}
-
-html[data-theme="light"] .operation-details summary{
-  color:#205f89;
-}
-
-html[data-theme="light"] .operation-record{
-  border:1px solid #c9d9e5;
-  background:#e9f1f7;
-  color:#3b4e5d;
-}
-
-html[data-theme="light"] .operation-record strong{
-  color:#1f3545;
-}
-
-html[data-theme="light"] .operation-record span{
-  color:#405767;
-}
-
-html[data-theme="light"] .operation-photo-card{
-  border-color:#b7cad8;
-  background:#fff;
-}
-
-html[data-theme="light"] .quick-reserve-summary{
-  background:rgba(78,134,173,.08);
-  border-color:rgba(78,134,173,.2);
-  color:#40596b;
-}
-
-html[data-theme="light"] .modal-overlay{
-  background:rgba(39,45,52,.34);
-}
-
-html[data-theme="light"] .date-popup.range-style-date-popup,
-html[data-theme="light"] .date-popup.week-picker-popover,
-html[data-theme="light"] .mobile-selection-sheet{
-  background:#fff;
-  border-color:rgba(31,45,58,.15);
-  box-shadow:0 18px 42px rgba(32,43,55,.16);
-}
-
-html[data-theme="light"] .week-picker-panel + .week-picker-panel{
-  border-left-color:rgba(31,45,58,.14);
-}
-
-html[data-theme="light"] .week-picker-row.current{
-  background:rgba(42,100,140,.14);
-}
-
-html[data-theme="light"] .week-picker-row .range-calendar-day.other-month{
-  color:#9aa2aa;
-}
-
-html[data-theme="light"] .week-picker-month-btn{
-  color:#35414c;
-}
-
-html[data-theme="light"] .week-picker-month-btn:hover{
-  background:rgba(42,100,140,.1);
-}
-
-html[data-theme="light"] .calendar-month-label{
-  color:#1f2d3a;
-}
-
-html[data-theme="light"] .calendar-month-label:hover,
-html[data-theme="light"] .calendar-month-label[aria-expanded="true"]{
-  background:rgba(42,100,140,.1);
-}
-
-html[data-theme="light"] .weekly-calendar{
-  background:#fff;
-  border-color:rgba(31,45,58,.14);
-  scrollbar-color:rgba(78,134,173,.45) #f4f5f6;
-}
-
-html[data-theme="light"] .week-calendar-header{
-  background:#f7f8fa;
-  border-bottom-color:rgba(31,45,58,.14);
-  box-shadow:0 4px 12px rgba(32,43,55,.08);
-}
-
-html[data-theme="light"] .week-day-header{
-  color:#34404a;
-  border-left-color:rgba(31,45,58,.11);
-}
-
-html[data-theme="light"] .week-day-header span,
-html[data-theme="light"] .week-time-label,
-html[data-theme="light"] .week-header-corner{
-  color:#71808c;
-}
-
-html[data-theme="light"] .week-time-axis{
-  background:#f3f5f6;
-}
-
-html[data-theme="light"] .week-day-column,
-html[data-theme="light"] .week-day-column:nth-child(odd){
-  background:#fff;
-  border-left-color:rgba(31,45,58,.1);
-}
-
-html[data-theme="light"] .week-day-column:nth-child(odd){
-  background:#fbfcfc;
-}
-
-html[data-theme="light"] .week-time-slot{
-  border-top-color:rgba(31,45,58,.08);
-}
-
-html[data-theme="light"] .week-time-slot:nth-child(odd){
-  border-top-color:rgba(31,45,58,.14);
-}
-
-html[data-theme="light"] .range-calendar-day,
-html[data-theme="light"] .range-calendar-nav{
-  color:#35414c;
-}
-
-html[data-theme="light"] .range-calendar-day.disabled,
-html[data-theme="light"] .range-calendar-day.other-month{
-  color:#9aa2aa;
-}
-
-html[data-theme="light"] footer{
-  color:#68717c;
-}
-
-/* Correções de contraste no tema claro - estes componentes já ganham fundo
-   claro em algum lugar (container/card), mas o texto interno nunca tinha
-   sido ajustado e continuava com a cor pensada para fundo escuro. */
-html[data-theme="light"] .user-select-all-label{
-  color:#214f6e;
-}
-
-html[data-theme="light"] .permission-option{
-  color:#214f6e;
-}
-
-html[data-theme="light"] .operation-photo-download{
-  color:#1d5f85;
-}
-
-html[data-theme="light"] .operation-photo-download:hover{
-  color:#173f5c;
-}
-
-html[data-theme="light"] .ride-watch-item{
-  background:#f7f8fa;
-  border-color:rgba(31,45,58,.12);
-}
-
-html[data-theme="light"] .occupant-remove-btn{
-  background:#fdeced;
-  color:#c83f50;
-}
-
-html[data-theme="light"] .occupant-remove-btn:hover{
-  background:#fbd8da;
-  color:#ad3443;
-}
-
-html[data-theme="light"] .destructive-modal-icon{
-  border-color:#e5a5ad;
-  background:#fff0f2;
-  color:#ad3443;
-}
-
-html[data-theme="light"] .required-marker{
-  color:#c83f50;
-}
-
-html[data-theme="light"] .notification-item-icon{
-  color:#24658f;
-}
-
-html[data-theme="light"] .notification-item-icon.cancel{
-  color:#c83f50;
-}
-
-html[data-theme="light"] .notification-item-icon.key,
-html[data-theme="light"] .notification-item-icon.report{
-  color:#9a6410;
-}
-
-html[data-theme="light"] .reservation-moment-label{
-  color:#526a7c;
-}
-
-html[data-theme="light"] .mobile-month-day{
-  color:#28323c;
-}
-
-html[data-theme="light"] .mobile-month-weekdays span{
-  color:#71808c;
-}
-
-html[data-theme="light"] .mobile-month-more{
-  color:#526a7c;
-}
-
-html[data-theme="light"] .mobile-selection-sheet span{
-  color:#526575;
 }
 
 @media (max-width:480px){

@@ -2,10 +2,9 @@
 *{box-sizing:border-box;}
 
 /* Quem ativou "reduzir movimento" no sistema não deve ver as animações de
-   abrir/fechar modal, hover com translateY, etc. - encurta tudo para
-   praticamente instantâneo em vez de desligar (evita saltos bruscos de
-   estado inicial/final em elementos que dependem da transição pra
-   posicionar). */
+   abrir/fechar modal etc. - encurta tudo para praticamente instantâneo em
+   vez de desligar (evita saltos bruscos de estado inicial/final em
+   elementos que dependem da transição pra posicionar). */
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{
     animation-duration:0.01ms !important;
@@ -17,46 +16,44 @@
 
   html{
     min-height:100%;
-    background:#07182a;
+    background:var(--bg-1);
   }
 
   body{
     margin:0;
-    font-family:'Inter', 'Segoe UI', Arial, sans-serif;
-    /* Texto claro sobre fundo escuro (o padrão daqui) tende a parecer mais
-       grosso/borrado que o mesmo peso em texto escuro sobre claro - efeito
-       óptico real (halação), não coisa de tela ruim. Isso ajuda a
-       renderização em si; o restante da correção é reduzir o peso onde
-       está pesado demais por padrão (ver comentários "halação" no resto
-       do CSS). */
+    font-family:var(--font-sans);
+    font-size:var(--fs-base);
+    line-height:1.5;
     -webkit-font-smoothing:antialiased;
     -moz-osx-font-smoothing:grayscale;
     text-rendering:optimizeLegibility;
-    background-color:#07182a;
-    background-image:
-      linear-gradient(rgba(4,18,32,.48), rgba(4,18,32,.62)),
-      url('../assets/bg.jpg');
-    background-repeat:no-repeat;
-    background-position:center top;
-    background-attachment:fixed;
-    background-size: cover;
+    background:var(--bg-1);
     min-height:100vh;
     min-height:100dvh;
-    color:var(--texto);
+    color:var(--text);
   }
 
-  h1,h2,h3{
-    font-family:'Plus Jakarta Sans','Inter',sans-serif;
+  h1,h2,h3,h4{
+    font-family:var(--font-heading);
+    font-weight:700;
+    letter-spacing:-0.005em;
+    color:var(--text);
   }
 
-  ::selection{background:rgba(111,168,216,0.35);}
+  ::selection{background:var(--primary-soft-strong);}
 
   .hidden{display:none !important;}
 
   /* ============ Scrollbar ============ */
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:rgba(111,168,216,0.35);border-radius:10px;}
+  ::-webkit-scrollbar-thumb{
+    background:var(--border-strong);
+    border:2px solid transparent;
+    border-radius:var(--radius-pill);
+    background-clip:padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover{background-color:var(--text-subtle);}
 
   /* ============ Login Screen ============ */
   .login-screen{
@@ -66,62 +63,54 @@
     align-items:center;
     justify-content:center;
     padding:24px;
-    animation:fadeIn .5s ease;
+    background:var(--bg-1);
+    animation:fadeIn .3s var(--ease);
   }
 
   .login-card{
     width:100%;
-    max-width:380px;
-    background:var(--card-bg);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-    border:1px solid var(--card-border);
-    border-radius:24px;
-    box-shadow:var(--sombra);
-    padding:20px 44px;
+    max-width:400px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-top:3px solid var(--brand);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md);
+    padding:32px 36px 28px;
     text-align:center;
-    animation:slideUp .5s ease;
   }
 
   .login-logo{
-    height:75px;
+    height:64px;
     width:auto;
-    margin-bottom:14px;
-    filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+    margin-bottom:16px;
   }
 
   .login-card h1{
     margin:0 0 4px;
-    font-size:1.4rem;
-    font-weight:800;
-    color:#ffffff;
+    font-size:var(--fs-xl);
+    font-weight:700;
+    color:var(--text);
   }
 
   .login-card .login-sub{
-    color:var(--texto-muted);
-    font-size:0.78rem;
-    margin-bottom:20px;
+    color:var(--text-muted);
+    font-size:var(--fs-xs);
+    margin-bottom:24px;
   }
 
   .login-card form{
     display:flex;
     flex-direction:column;
-    gap:10px;
+    gap:12px;
     text-align:left;
-  }
-
-  .login-card .field label{
-    color:#ffffff;
-    font-weight:600;
-    font-size:0.85rem;
   }
 
   .login-divider{
     display:flex;
     align-items:center;
     gap:10px;
-    margin:14px 0 10px;
-    color:var(--texto-muted);
+    margin:16px 0 12px;
+    color:var(--text-muted);
     font-size:var(--fs-xs);
   }
 
@@ -130,7 +119,7 @@
     content:'';
     flex:1;
     height:1px;
-    background:var(--card-border);
+    background:var(--border);
   }
 
   .sso-btn{
@@ -156,28 +145,27 @@
   }
 
   .field label{
-    font-size:0.82rem;
+    font-size:var(--fs-xs);
     font-weight:600;
-    color:#c5d6e6;
-    letter-spacing:0.2px;
+    color:var(--text);
   }
 
   /* Mesma "caixa" visual de um input, só que sem interação - usado nas
      telas de "Visualizar" (dados que não podem ser editados por ali). */
   .field-value{
-    padding:11px 15px;
+    padding:10px 14px;
     border-radius:var(--radius-sm);
-    background:rgba(255,255,255,0.04);
-    border:1.5px solid rgba(255,255,255,0.10);
-    font-size:0.95rem;
-    color:var(--texto);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    font-size:var(--fs-sm);
+    color:var(--text);
     min-height:1.3em;
   }
 
   .required-marker{
-    margin-left:4px;
-    color:#ff7887;
-    font-weight:900;
+    margin-left:3px;
+    color:var(--danger);
+    font-weight:600;
   }
 
   .row{
@@ -191,15 +179,21 @@
   }
 
   select, textarea, input[type="text"], input[type="email"], input[type="date"], input[type="password"], input[type="number"], input[type="file"]{
-    padding:12px 15px;
-    border:1.5px solid rgba(255,255,255,0.10);
+    padding:10px 14px;
+    border:1px solid var(--border-strong);
     border-radius:var(--radius-sm);
-    font-size:0.95rem;
+    font-size:var(--fs-sm);
     font-family:inherit;
-    color:var(--texto);
-    background:rgba(255,255,255,0.05);
-    transition:border-color .2s, box-shadow .2s, background .2s;
+    color:var(--text);
+    background:var(--surface);
+    transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
     width:100%;
+  }
+
+  select:hover, textarea:hover,
+  input[type="text"]:hover, input[type="email"]:hover, input[type="date"]:hover,
+  input[type="password"]:hover, input[type="number"]:hover, input[type="file"]:hover{
+    border-color:var(--text-subtle);
   }
 
   textarea{
@@ -208,26 +202,24 @@
   }
 
   input[type="file"]{
-    font-size:0.82rem;
+    font-size:var(--fs-xs);
   }
 
   select option{
-    background:#1a2f48;
-    color:var(--texto);
+    background:var(--surface);
+    color:var(--text);
   }
 
-  select:focus, input:focus{
+  select:focus, input:focus, textarea:focus{
     outline:none;
-    border-color:var(--azul-claro);
-    box-shadow:0 0 0 4px rgba(111,168,216,0.18);
-    background:rgba(255,255,255,0.08);
+    border-color:var(--primary);
+    box-shadow:0 0 0 3px var(--focus-ring);
   }
 
-  textarea:focus{
-    outline:none;
-    border-color:var(--azul-claro);
-    box-shadow:0 0 0 4px rgba(111,168,216,0.18);
-    background:rgba(255,255,255,0.08);
+  input:disabled, select:disabled, textarea:disabled{
+    background:var(--surface-sunken);
+    color:var(--text-muted);
+    cursor:not-allowed;
   }
 
   /* Anel de foco global para navegação por teclado - cobre botões, abas,
@@ -236,13 +228,87 @@
      vez de :focus evita o anel aparecer em cliques de mouse. */
   button:focus-visible,
   a:focus-visible,
-  [tabindex]:focus-visible{
+  [tabindex]:focus-visible,
+  summary:focus-visible{
     outline:2px solid var(--accent);
     outline-offset:2px;
   }
 
-  select::placeholder, input::placeholder{
-    color:#7d93a8;
+  input::placeholder, textarea::placeholder{
+    color:var(--text-subtle);
+  }
+
+  input[type="radio"]{
+    accent-color:var(--primary);
+  }
+
+  /* Toda caixa de seleção do sistema é desenhada como interruptor. É o
+     próprio <input type="checkbox"> (appearance:none + ::before como
+     botão), então continua com o mesmo comportamento, teclado, foco,
+     leitor de tela e formulário - e vale também para as caixas criadas
+     por JavaScript, sem marcação extra. */
+  input[type="checkbox"]{
+    -webkit-appearance:none;
+    appearance:none;
+    position:relative;
+    flex:0 0 36px;
+    width:36px;
+    height:20px;
+    margin:0;
+    border:0;
+    border-radius:var(--radius-pill);
+    background:var(--border-strong);
+    vertical-align:middle;
+    cursor:pointer;
+    transition:background-color var(--dur) var(--ease);
+  }
+
+  input[type="checkbox"]::before{
+    content:"";
+    position:absolute;
+    top:2px;
+    left:2px;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 1px 2px rgba(16,24,40,.25);
+    transition:transform var(--dur) var(--ease);
+  }
+
+  input[type="checkbox"]:hover{
+    background:var(--text-subtle);
+  }
+
+  input[type="checkbox"]:checked{
+    background:var(--primary);
+  }
+
+  input[type="checkbox"]:checked:hover{
+    background:var(--primary-hover);
+  }
+
+  input[type="checkbox"]:checked::before{
+    transform:translateX(16px);
+  }
+
+  /* "Selecionar todos" com só parte da lista marcada: botão no meio. */
+  input[type="checkbox"]:indeterminate{
+    background:var(--primary-soft-strong);
+  }
+
+  input[type="checkbox"]:indeterminate::before{
+    transform:translateX(8px);
+  }
+
+  input[type="checkbox"]:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  input[type="checkbox"]:disabled{
+    opacity:.5;
+    cursor:not-allowed;
   }
 
   input[type="date"][readonly]{
@@ -255,8 +321,11 @@
 
   input[type="date"]:not([readonly])::-webkit-calendar-picker-indicator{
     display:inline-block;
-    filter:invert(0.8);
     cursor:pointer;
+  }
+
+  :root[data-theme="dark"] input[type="date"]:not([readonly])::-webkit-calendar-picker-indicator{
+    filter:invert(0.8);
   }
 
   .date-input-wrapper{
@@ -268,104 +337,113 @@
     padding-right:42px;
   }
 
+  /* Ícone de calendário (traço, mesmo estilo dos demais ícones SVG). */
   .date-input-wrapper::after{
-    content:'▦';
+    content:'';
     position:absolute;
     top:50%;
-    right:15px;
+    right:14px;
+    width:17px;
+    height:17px;
     transform:translateY(-50%);
-    color:var(--azul-claro);
-    font-size:1.05rem;
-    font-weight:700;
-    line-height:1;
+    background-color:var(--text-muted);
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center/contain no-repeat;
     pointer-events:none;
   }
 
   .error-msg{
-    font-size:0.78rem;
-    color:var(--vermelho);
+    font-size:var(--fs-2xs);
+    color:var(--danger-text);
     min-height:14px;
   }
 
   .field.invalid select, .field.invalid input, .field.invalid .styled-select-trigger{
-    border-color:var(--vermelho);
-    box-shadow:0 0 0 3px rgba(239,91,106,0.15);
+    border-color:var(--danger);
+    box-shadow:0 0 0 3px var(--danger-surface);
   }
 
   button{
     font-family:inherit;
   }
 
+  /* ============ Botões base ============
+     Primário sólido na cor da marca; sem gradiente, brilho ou
+     deslocamento no hover - só a troca de tom. */
   button.submit-btn{
     margin-top:6px;
-    background:linear-gradient(135deg, var(--azul-royal-2), var(--azul-royal));
-    color:#fff;
-    border:none;
-    padding:14px 20px;
-    font-size:1rem;
-    font-weight:700;
+    background:var(--primary);
+    color:var(--on-primary);
+    border:1px solid transparent;
+    padding:11px 18px;
+    min-height:42px;
+    font-size:var(--fs-sm);
+    font-weight:600;
     border-radius:var(--radius-sm);
     cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
     gap:8px;
-    transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
-    box-shadow:0 4px 10px rgba(58,106,149,0.22);
+    transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
 
   button.submit-btn:hover{
-    filter:brightness(1.12);
-    transform:translateY(-1px) scale(1.01);
-    box-shadow:0 6px 14px rgba(58,106,149,0.3);
+    background:var(--primary-hover);
   }
 
-  button.submit-btn:active{
-    transform:scale(0.98);
+  button.submit-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
+  button.submit-btn:disabled:hover{
+    background:var(--primary);
   }
 
   button.danger-btn{
-    background:linear-gradient(135deg,#ef5b6a,#c23347);
+    background:var(--danger-solid);
     color:#fff;
-    border:none;
-    padding:12px 18px;
-    font-size:0.92rem;
-    font-weight:700;
+    border:1px solid transparent;
+    padding:10px 16px;
+    min-height:40px;
+    font-size:var(--fs-sm);
+    font-weight:600;
     border-radius:var(--radius-sm);
     cursor:pointer;
-    transition:transform .15s ease, filter .2s ease;
+    transition:background-color var(--dur) var(--ease);
   }
 
   button.danger-btn:hover{
-    filter:brightness(1.1);
-    transform:translateY(-1px);
+    background:var(--danger-solid-hover);
   }
 
   .confirmation{
     display:none;
-    background:rgba(51,212,136,0.12);
-    border:1.5px solid var(--verde);
-    color:#9be9c4;
-    padding:14px 16px;
+    background:var(--success-surface);
+    border:1px solid var(--success-border);
+    border-left:3px solid var(--success);
+    color:var(--success-text);
+    padding:12px 14px;
     border-radius:var(--radius-sm);
     margin-top:6px;
-    font-size:0.9rem;
+    font-size:var(--fs-sm);
     align-items:flex-start;
     gap:10px;
   }
 
   .confirmation.show{
     display:flex;
-    animation:fadeIn .35s ease;
+    animation:fadeIn .2s var(--ease);
   }
 
   @keyframes fadeIn{
-    from{opacity:0; transform:translateY(-6px);}
+    from{opacity:0; transform:translateY(-4px);}
     to{opacity:1; transform:translateY(0);}
   }
 
   @keyframes slideUp{
-    from{opacity:0; transform:translateY(16px);}
+    from{opacity:0; transform:translateY(8px);}
     to{opacity:1; transform:translateY(0);}
   }
 

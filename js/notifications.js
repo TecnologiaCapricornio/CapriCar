@@ -21,11 +21,25 @@ function notificationTimeLabel(value){
     .format(new Date(timestamp));
 }
 
+const NOTIFICATION_ICON_PATHS = {
+  key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  ride:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  report:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  cancel:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  block:'<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>'
+};
+const NOTIFICATION_ICON_SVG = Object.fromEntries(Object.entries(NOTIFICATION_ICON_PATHS).map(([name, paths]) => [
+  name,
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>'
+]));
+
 function notificationIcon(type){
   if(type === 'pickup_overdue') return 'key';
   if(type === 'reservation_upcoming') return 'clock';
   if(type === 'passenger_added') return 'ride';
   if(type === 'operation_report') return 'report';
+  if(type === 'vehicle_blocked') return 'block';
   return 'cancel';
 }
 
@@ -54,10 +68,9 @@ function renderNotifications(){
     const icon = document.createElement('span');
     icon.className = 'notification-item-icon ' + notificationIcon(item.type);
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = item.type === 'pickup_overdue' ? '🔑' :
-      (item.type === 'reservation_upcoming' ? '◷' :
-        (item.type === 'passenger_added' ? '👥' :
-          (item.type === 'operation_report' ? '⚠' : '×')));
+    // Marcação estática (sem dado do usuário) - ícones de traço no mesmo
+    // estilo dos demais SVGs da interface, em vez de emoji.
+    icon.innerHTML = NOTIFICATION_ICON_SVG[notificationIcon(item.type)];
     const copy = document.createElement('span');
     copy.className = 'notification-item-copy';
     const title = document.createElement('strong');

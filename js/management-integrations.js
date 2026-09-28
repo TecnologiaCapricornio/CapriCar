@@ -87,6 +87,10 @@ const REMINDER_FIELDS = {
 
 let integrationsLoaded = false;
 
+// Modelos de fábrica de cada lembrete (GET /api/settings/email-reminders ->
+// padroes), usados pelo botão "Restaurar padrão".
+let reminderDefaults = {};
+
 async function loadEntraSsoForm(){
   const status = await apiRequest('/api/settings/entra-sso');
   entraTenantIdInput.value = status.tenantId || '';
@@ -141,6 +145,7 @@ async function loadSmtpForm(){
 
 async function loadEmailRemindersForm(){
   const settings = await apiRequest('/api/settings/email-reminders');
+  reminderDefaults = settings.padroes || {};
   Object.keys(REMINDER_FIELDS).forEach(type => {
     const fields = REMINDER_FIELDS[type];
     const item = settings[type] || {};
@@ -149,7 +154,113 @@ async function loadEmailRemindersForm(){
     fields.body.value = item.body || '';
   });
   emailRemindersError.textContent = '';
+  updateEmailRemindersSummary();
 }
+
+/* ---------------- Lista de lembretes ----------------
+   Cada lembrete é uma linha (interruptor + nome + quando é enviado); o
+   modelo (assunto/corpo) só abre ao clicar em "Editar modelo", um por vez.
+   Os campos continuam com os mesmos ids de antes (REMINDER_FIELDS acima),
+   então carregar e salvar não mudaram. */
+
+const REMINDER_PREFIX_BY_TYPE = Object.fromEntries(Object.keys(REMINDER_FIELDS).map(type =>
+  [type, REMINDER_FIELDS[type].enabled.id.replace(/Enabled$/, '')]
+));
+
+function reminderItem(type){
+  return emailRemindersForm.querySelector('.reminder-item[data-reminder="' + type + '"]');
+}
+
+function updateEmailRemindersSummary(){
+  const summary = document.getElementById('emailRemindersSummary');
+  if(!summary) return;
+  const types = Object.keys(REMINDER_FIELDS);
+  const active = types.filter(type => REMINDER_FIELDS[type].enabled.checked).length;
+  summary.textContent = active + ' de ' + types.length + (active === 1 ? ' ativo' : ' ativos');
+}
+
+function setReminderEditorOpen(type, open){
+  const item = reminderItem(type);
+  if(!item) return;
+  const editor = item.querySelector('.reminder-editor');
+  const button = item.querySelector('.reminder-edit-btn');
+  editor.classList.toggle('hidden', !open);
+  item.classList.toggle('is-editing', open);
+  button.setAttribute('aria-expanded', open ? 'true' : 'false');
+  button.textContent = open ? 'Fechar' : 'Editar modelo';
+}
+
+function openReminderEditor(type){
+  Object.keys(REMINDER_FIELDS).forEach(other => setReminderEditorOpen(other, other === type));
+}
+
+// Botões de variável: cada lembrete mostra só as que ele aceita
+// (data-tokens no HTML, conferidas contra server/reminders.js). Inserem no
+// campo que teve foco por último naquele editor - assunto ou corpo.
+function setupReminderTokens(){
+  emailRemindersForm.querySelectorAll('.reminder-tokens').forEach(container => {
+    if(container.dataset.ready) return;
+    container.dataset.ready = '1';
+    const tokens = String(container.dataset.tokens || '').split(/\s+/).filter(Boolean);
+    container.innerHTML = '<span class="reminder-tokens-label">Inserir:</span>' + tokens.map(token =>
+      '<button type="button" class="reminder-token" data-token="' + escapeHTML(token) + '">{{' + escapeHTML(token) + '}}</button>'
+    ).join('');
+  });
+}
+
+const lastReminderField = new Map();
+
+function insertReminderToken(type, token){
+  const fields = REMINDER_FIELDS[type];
+  const target = lastReminderField.get(type) || fields.body;
+  const text = '{{' + token + '}}';
+  const start = target.selectionStart == null ? target.value.length : target.selectionStart;
+  const end = target.selectionEnd == null ? start : target.selectionEnd;
+  target.value = target.value.slice(0, start) + text + target.value.slice(end);
+  target.focus();
+  target.setSelectionRange(start + text.length, start + text.length);
+}
+
+async function restoreReminderDefault(type){
+  const standard = reminderDefaults[type];
+  if(!standard) return;
+  const confirmed = await showSiteConfirm(
+    'Substituir o assunto e o corpo deste lembrete pelo modelo padrão? A alteração só vale depois de salvar.',
+    { title:'Restaurar modelo padrão', confirmText:'Restaurar', type:'warning' }
+  );
+  if(!confirmed) return;
+  REMINDER_FIELDS[type].subject.value = standard.subject || '';
+  REMINDER_FIELDS[type].body.value = standard.body || '';
+}
+
+setupReminderTokens();
+
+emailRemindersForm.addEventListener('click', function(event){
+  const item = event.target.closest('.reminder-item');
+  if(!item) return;
+  const type = item.getAttribute('data-reminder');
+  if(event.target.closest('.reminder-edit-btn')){
+    setReminderEditorOpen(type, !item.classList.contains('is-editing'));
+    if(item.classList.contains('is-editing')) openReminderEditor(type);
+  } else if(event.target.closest('.reminder-token')){
+    insertReminderToken(type, event.target.closest('.reminder-token').getAttribute('data-token'));
+  } else if(event.target.closest('.reminder-restore-btn')){
+    restoreReminderDefault(type);
+  } else if(event.target.closest('.reminder-preview-btn') && typeof openEmailPreview === 'function'){
+    openEmailPreview(type);
+  }
+});
+
+emailRemindersForm.addEventListener('focusin', function(event){
+  const item = event.target.closest('.reminder-item');
+  if(item && event.target.matches('input[type="text"], textarea')){
+    lastReminderField.set(item.getAttribute('data-reminder'), event.target);
+  }
+});
+
+emailRemindersForm.addEventListener('change', function(event){
+  if(event.target.matches('.switch input')) updateEmailRemindersSummary();
+});
 
 async function loadCalendarSyncForm(){
   const settings = await apiRequest('/api/settings/calendar-sync');
@@ -163,7 +274,6 @@ async function renderIntegrationsManagement(){
   // Botões "Visualizar e-mail" (ver js/management-email-preview.js). São
   // criados a partir de REMINDER_FIELDS e a função é idempotente, então
   // pode ser chamada a cada abertura da aba.
-  if(typeof setupEmailPreviewButtons === 'function') setupEmailPreviewButtons();
   try{
     await Promise.all([loadEntraSsoForm(), loadSmtpForm(), loadEmailRemindersForm(), loadCalendarSyncForm()]);
     integrationsLoaded = true;
@@ -301,7 +411,12 @@ emailRemindersForm.addEventListener('submit', async function(e){
     const subject = fields.subject.value.trim();
     const text = fields.body.value.trim();
     if(enabled && (!subject || !text)){
-      emailRemindersError.textContent = 'Preencha assunto e corpo antes de habilitar um lembrete.';
+      // Abre o modelo com problema - com a lista recolhida, a mensagem
+      // sozinha não diria qual dos nove é.
+      openReminderEditor(type);
+      (subject ? fields.body : fields.subject).focus();
+      const name = reminderItem(type).querySelector('.reminder-info strong').textContent;
+      emailRemindersError.textContent = 'Preencha assunto e corpo de "' + name + '" antes de ativá-lo.';
       return;
     }
     body[type] = { enabled, subject, body:text };

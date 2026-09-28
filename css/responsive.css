@@ -38,7 +38,7 @@
   padding:10px 14px;
   border-radius:var(--radius-sm);
   font-size:var(--fs-sm);
-  font-weight:700;
+  font-weight:600;
   line-height:1.2;
   white-space:nowrap;
 }
@@ -65,7 +65,7 @@
 
 #mobileReservationStepLabel,
 #adminReservationStepLabel{
-  color:var(--texto-muted);
+  color:var(--text-muted);
   font-size:var(--fs-2xs);
   white-space:nowrap;
 }
@@ -82,6 +82,40 @@
 
 .mobile-nav-toggle{
   display:none;
+}
+
+/* Notebook de até 1439px: o subtítulo da marca sai para as seis abas caberem
+   numa linha só entre a marca e os botões da direita. */
+@media (min-width:721px) and (max-width:1439px){
+  .brand-sub{
+    display:none;
+  }
+}
+
+/* Telas intermediárias (notebook pequeno, tablet deitado): nem sem o
+   subtítulo as abas cabem entre a marca e os botões da direita. Aqui elas
+   descem para uma segunda linha do cabeçalho, alinhadas à esquerda. */
+@media (min-width:721px) and (max-width:1259px){
+  .app-header{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    row-gap:12px;
+    padding-bottom:12px;
+  }
+
+  .header-right{
+    grid-column:2;
+    grid-row:1;
+    justify-content:flex-end;
+  }
+
+  .tabs{
+    grid-column:1 / -1;
+    grid-row:2;
+    justify-self:start;
+    margin-inline:0;
+    max-width:100%;
+  }
 }
 
 @media (max-width:720px){
@@ -137,14 +171,14 @@
     gap:4px;
     padding:5px;
     overflow:visible;
-    border-radius:15px;
+    border-radius:var(--radius-sm);
   }
 
   .tab-btn{
     min-width:0;
     min-height:42px;
     padding:7px 2px;
-    border-radius:11px;
+    border-radius:var(--radius-xs);
     font-size:var(--fs-2xs);
     line-height:1.2;
     white-space:nowrap;
@@ -178,8 +212,8 @@
     flex-wrap:nowrap;
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
-    gap:7px;
-    padding-bottom:10px;
+    gap:4px;
+    padding:4px;
     scrollbar-width:thin;
   }
 
@@ -236,13 +270,23 @@
     width:100%;
     min-height:40px;
     padding:6px 12px;
-    border:1px solid rgba(111,168,216,.2);
-    border-radius:14px;
-    background:rgba(23,43,67,.86);
-    color:var(--texto);
-    box-shadow:0 8px 22px rgba(5,15,27,.18);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface);
+    color:var(--text);
+    box-shadow:var(--shadow-sm);
     cursor:pointer;
     text-align:left;
+    transition:background-color var(--dur) var(--ease),border-color var(--dur) var(--ease);
+  }
+
+  .mobile-nav-toggle:hover{
+    background:var(--surface-hover);
+  }
+
+  .mobile-nav-toggle:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
   }
 
   .mobile-nav-toggle-copy{
@@ -257,13 +301,14 @@
 
   .mobile-nav-toggle strong{
     font-size:.76rem;
+    font-weight:600;
   }
 
   .mobile-nav-chevron{
-    color:var(--azul-claro);
+    color:var(--text-muted);
     font-size:1.25rem;
     line-height:1;
-    transition:transform .18s ease;
+    transition:transform var(--dur) var(--ease);
   }
 
   .mobile-nav-toggle[aria-expanded="true"] .mobile-nav-chevron{
@@ -328,7 +373,7 @@
 
   .card{
     padding:18px 13px;
-    border-radius:18px;
+    border-radius:var(--radius-lg);
   }
 
   #panel-nova .card{
@@ -450,7 +495,7 @@
 
   .modal-card{
     padding:30px 16px 20px;
-    border-radius:18px;
+    border-radius:var(--radius-lg);
   }
 
   .range-calendar-topline{
@@ -486,14 +531,14 @@
     padding:10px 12px;
     border-radius:var(--radius-sm);
     font-size:var(--fs-sm);
-    font-weight:700;
+    font-weight:600;
     line-height:1.2;
     white-space:nowrap;
   }
 
   #mobileReservationStepLabel,
   #adminReservationStepLabel{
-    color:var(--texto-muted);
+    color:var(--text-muted);
     font-size:var(--fs-2xs);
     white-space:nowrap;
   }

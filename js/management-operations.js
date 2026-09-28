@@ -461,7 +461,7 @@ function renderOperationDetails(reserva) {
     return '<div class="operation-record">' +
       '<strong>' + label + '</strong>' +
       '<span>Km ' + Number(data.quilometragem || 0).toLocaleString('pt-BR') + ' · Combustível: ' + escapeHTML(data.combustivel || '—') + '</span>' +
-      (data.quilometragemDivergente ? '<span>⚠️ Quilometragem informada abaixo do esperado - verificar odômetro in loco</span>' : '') +
+      (data.quilometragemDivergente ? '<span class="operation-record-alert">Quilometragem informada abaixo do esperado - verificar odômetro in loco</span>' : '') +
       (cleanlinessLabel ? '<span>Condição de limpeza: ' + escapeHTML(cleanlinessLabel) + '</span>' : '') +
       (data.avarias ? '<span>Avarias/observações: ' + escapeHTML(data.avarias) + '</span>' : '') +
       '<span>Registrado por ' + escapeHTML(data.registradoPor || '—') + ' em ' + escapeHTML(formatDateTime(data.registradoEm)) + '</span>' +
@@ -471,7 +471,7 @@ function renderOperationDetails(reserva) {
       '</div>';
   };
   const summaryText = reservationHasOperationReport(reserva)
-    ? '⚠️ Ver avarias, fotos ou limpeza registradas'
+    ? 'Ver avarias, fotos ou limpeza registradas'
     : 'Ver retirada e devolução';
   return '<details class="operation-details"><summary>' + summaryText + '</summary>' +
     renderPhase('Retirada', operacao.retirada) +
@@ -794,7 +794,7 @@ operationForm.addEventListener('submit', async function (e) {
     // Os indicadores da frota aparecem na mesma aba "Reservas" - sem isto,
     // km/concluídas ficavam desatualizados na tela até trocar de aba e voltar.
     if (typeof canViewReports === 'function' && canViewReports() && typeof renderIndicators === 'function') renderIndicators();
-    // Idem para a aba "Checklist" - sem isto, quem acabou de registrar a
+    // Idem para a aba "Checklist" (aba principal) - sem isto, quem acabou de registrar a
     // retirada/devolução (a própria pessoa ou quem tem a permissão
     // "Checklist" registrando por outra) só via a reserva sair de
     // "Registrar retirada/devolução" e entrar em "Pendentes" depois de um F5.

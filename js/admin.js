@@ -1,6 +1,6 @@
 /* Painel administrativo e edição de reservas */
 /* =========================================================
-   Painel de Administração (aba "Admin", visível somente para isAdmin())
+   Painel de Gestão (aba "Gestão", visível para quem tem alguma permissão de gestão)
    ========================================================= */
 const adminFiltroLocal = document.getElementById('adminFiltroLocal');
 const adminFiltroCarro = document.getElementById('adminFiltroCarro');
@@ -615,7 +615,7 @@ function renderAdminReservationItem(res){
   const completed = isReservationCompleted(res);
   const operacao = res.operacao || {};
   const extraStatusBadgeHTML = reservationHasOperationReport(res)
-    ? '<span class="operation-report-badge" title="Avarias ou fotos registradas">⚠️ Avaria/foto</span>'
+    ? '<span class="operation-report-badge" title="Avarias ou fotos registradas">Avaria/foto</span>'
     : '';
   const actionsHTML =
     (!completed && !operacao.retirada ? '<button type="button" class="edit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
