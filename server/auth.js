@@ -1,3 +1,4 @@
+const { normalizeProfile, isPortariaUser } = require('./profiles');
 const { query, withTransaction } = require('./db');
 const { appConfig } = require('./config');
 const { createSessionToken, hashSessionToken } = require('./security');
@@ -90,6 +91,8 @@ function publicUser(row){
     role:row.role,
     active:row.active,
     authProvider:row.auth_provider || 'local',
+    // Perfil de acesso (migração 036). A conta admin aparece como Gestão.
+    perfil:row.role === 'admin' ? 'gestao' : normalizeProfile(row.profile),
     permissions:permissionsFromRow(row),
     grupos:Array.isArray(row.group_ids) ? row.group_ids.map(String) : []
   };
@@ -133,8 +136,19 @@ function requirePermission(permission){
   };
 }
 
+// Perfil Portaria (migração 036): só consulta. Bloqueia qualquer escrita
+// (POST/PUT/PATCH/DELETE) na rota - usado onde a Portaria não tem nada a
+// fazer além de ler: CNH própria e avisos de carona.
+function denyPortariaWrites(message){
+  return function(req, res, next){
+    if(req.method === 'GET' || req.method === 'HEAD' || !isPortariaUser(req.user)) return next();
+    return res.status(403).json({ error:message });
+  };
+}
+
 module.exports = {
   USER_GROUP_IDS_SQL,
+  denyPortariaWrites,
   SESSION_COOKIE,
   parseCookies,
   cookieOptions,

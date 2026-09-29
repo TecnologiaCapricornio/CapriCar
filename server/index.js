@@ -3,7 +3,7 @@ const path = require('node:path');
 const express = require('express');
 const { query, closePool } = require('./db');
 const { appConfig } = require('./config');
-const { requireAuth } = require('./auth');
+const { requireAuth, denyPortariaWrites } = require('./auth');
 const authRoutes = require('./routes/auth');
 const ssoRoutes = require('./routes/sso');
 const userRoutes = require('./routes/users');
@@ -72,10 +72,10 @@ app.use('/api/state', requireAuth, stateRoutes);
 app.use('/api/notifications', requireAuth, notificationRoutes);
 app.use('/api/reservations', requireAuth, reservationRoutes);
 app.use('/api/settings', requireAuth, settingsRoutes);
-app.use('/api/ride-watches', requireAuth, rideWatchRoutes);
+app.use('/api/ride-watches', requireAuth, denyPortariaWrites('O perfil Portaria não usa caronas.'), rideWatchRoutes);
 // Autosserviço do próprio usuário (CNH). Só requireAuth - diferente de
 // /api/users, que exige a permissão de gestão de usuários.
-app.use('/api/profile', requireAuth, profileRoutes);
+app.use('/api/profile', requireAuth, denyPortariaWrites('O perfil Portaria não cadastra CNH.'), profileRoutes);
 
 app.use('/assets', express.static(path.join(rootDir, 'assets'), { fallthrough:false }));
 app.use('/css', express.static(path.join(rootDir, 'css'), { fallthrough:false }));

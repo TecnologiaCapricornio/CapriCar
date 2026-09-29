@@ -5,26 +5,30 @@ const { publicUser, requirePermission } = require('../auth');
 const { isValidEmail } = require('../validation');
 const { importSsoUsers, resolveSsoConfig } = require('../sso');
 const { listManagedUsers } = require('../user-listing');
+const { PROFILE_LABELS, isValidProfile, normalizeProfile, permissionsForProfile } = require('../profiles');
 
 const router = express.Router();
 router.use(requirePermission('users'));
 
-function normalizePermissions(value){
-  const permissions = value || {};
-  return {
-    reservations:permissions.reservations === true,
-    branches:permissions.branches === true,
-    fleet:permissions.fleet === true,
-    maintenance:permissions.maintenance === true,
-    blocks:permissions.blocks === true,
-    reports:permissions.reports === true,
-    audit:permissions.audit === true,
-    rules:permissions.rules === true,
-    users:permissions.users === true,
-    groups:permissions.groups === true,
-    integrations:permissions.integrations === true,
-    checklist:permissions.checklist === true
-  };
+// Perfil enviado pelo cliente (campo `perfil`): null quando não veio, e
+// erro 400 quando veio com um valor que não é um dos três perfis. As
+// permissões nunca vêm do cliente - saem sempre do perfil
+// (ver js/profiles.js).
+function requestedProfile(body){
+  if(!body || body.perfil === undefined || body.perfil === null || body.perfil === '') return null;
+  if(!isValidProfile(body.perfil)){
+    throw Object.assign(new Error('Perfil inválido. Use Usuário, Gestão ou Portaria.'), { status:400 });
+  }
+  return normalizeProfile(body.perfil);
+}
+
+// Colunas can_manage_* na ordem usada pelos UPDATEs/INSERTs abaixo.
+function permissionColumns(profile){
+  const p = permissionsForProfile(profile);
+  return [
+    p.reservations, p.branches, p.fleet, p.maintenance, p.blocks, p.reports,
+    p.audit, p.rules, p.users, p.groups, p.integrations, p.checklist
+  ];
 }
 
 async function audit(client, actorId, action, entityId, details){
@@ -37,11 +41,6 @@ async function audit(client, actorId, action, entityId, details){
 
 const MAX_BULK_IDS = 2000;
 
-const PERMISSION_LABELS = {
-  reservations:'Reservas', branches:'Locais', fleet:'Veículos', maintenance:'Manutenção',
-  blocks:'Bloqueios', reports:'Relatórios', audit:'Auditoria', rules:'Regras', users:'Usuários',
-  groups:'Grupos', integrations:'Integrações', checklist:'Checklist'
-};
 
 async function deactivateUserCore(client, actorId, targetId){
   const locked = await client.query(
@@ -112,6 +111,7 @@ async function deleteUserCore(client, actorId, targetId, justification){
             can_manage_groups = FALSE,
             can_manage_integrations = FALSE,
             can_manage_checklist = FALSE,
+            profile = 'usuario',
             deleted_at = NOW(),
             deleted_by = $4,
             deletion_reason = $5,
@@ -128,14 +128,14 @@ async function deleteUserCore(client, actorId, targetId, justification){
   return { ok:true };
 }
 
-async function replacePermissionsCore(client, actorId, targetId, permissions){
+async function replaceProfileCore(client, actorId, targetId, profile){
   const locked = await client.query(
     'SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE',
     [targetId]
   );
   const current = locked.rows[0];
   if(!current) return { ok:false, reason:'Usuário não encontrado.' };
-  if(current.role === 'admin') return { ok:false, reason:'Permissões de administrador não podem ser alteradas em lote.' };
+  if(current.role === 'admin') return { ok:false, reason:'O perfil do administrador não pode ser alterado em lote.' };
   await client.query(
     `UPDATE users
         SET can_manage_reservations = $2,
@@ -149,17 +149,13 @@ async function replacePermissionsCore(client, actorId, targetId, permissions){
             can_manage_users = $10,
             can_manage_groups = $11,
             can_manage_integrations = $12,
-            can_manage_checklist = $13
+            can_manage_checklist = $13,
+            profile = $14
       WHERE id = $1`,
-    [
-      targetId,
-      permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
-      permissions.blocks, permissions.reports, permissions.audit, permissions.rules, permissions.users,
-      permissions.groups, permissions.integrations, permissions.checklist
-    ]
+    [targetId, ...permissionColumns(profile), profile]
   );
   await audit(client, actorId, 'updated', targetId, {
-    description:`${current.display_name} (@${current.username}) teve permissões substituídas em lote`
+    description:`${current.display_name} (@${current.username}) passou para o perfil ${PROFILE_LABELS[profile]} (em lote)`
   });
   return { ok:true };
 }
@@ -255,19 +251,20 @@ router.post('/bulk/delete', async (req, res) => {
   res.status(200).json(summary);
 });
 
-router.post('/bulk/permissions', async (req, res) => {
+router.post('/bulk/profile', async (req, res) => {
   const userIds = Array.isArray(req.body && req.body.userIds) ? req.body.userIds.map(String) : [];
   if(!userIds.length) return res.status(400).json({ error:'Selecione ao menos um usuário.' });
   if(userIds.length > MAX_BULK_IDS){
     return res.status(400).json({ error:`Selecione no máximo ${MAX_BULK_IDS} usuários por vez.` });
   }
-  const permissions = normalizePermissions(req.body && req.body.permissions);
+  const profile = requestedProfile(req.body);
+  if(!profile) return res.status(400).json({ error:'Selecione o perfil.' });
 
   const summary = { processed:0, skipped:0, errors:[] };
   for(const id of userIds){
     try{
       await withTransaction(async client => {
-        const result = await replacePermissionsCore(client, req.user.id, id, permissions);
+        const result = await replaceProfileCore(client, req.user.id, id, profile);
         if(result.ok) summary.processed++;
         else { summary.skipped++; summary.errors.push({ id, reason:result.reason }); }
       });
@@ -276,14 +273,12 @@ router.post('/bulk/permissions', async (req, res) => {
       summary.errors.push({ id, reason:error.message });
     }
   }
-  const grantedLabels = Object.keys(PERMISSION_LABELS).filter(key => permissions[key]).map(key => PERMISSION_LABELS[key]);
   await query(
     `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, details)
-     VALUES ($1, 'bulk-permissions', 'user', 'bulk', $2::jsonb)`,
+     VALUES ($1, 'bulk-profile', 'user', 'bulk', $2::jsonb)`,
     [req.user.id, JSON.stringify({
-      description:`Permissões substituídas em lote para ${summary.processed} usuário(s)` +
-        (grantedLabels.length ? `: ${grantedLabels.join(', ')}` : ' (nenhuma permissão adicional)'),
-      permissions,
+      description:`Perfil ${PROFILE_LABELS[profile]} aplicado em lote a ${summary.processed} usuário(s)`,
+      perfil:profile,
       ...summary
     })]
   );
@@ -296,7 +291,7 @@ router.post('/', async (req, res) => {
   const email = String(req.body && req.body.email || '').trim();
   const password = String(req.body && req.body.password || '');
   const costCenter = String(req.body && req.body.centroCusto || '').trim().slice(0, 60);
-  const permissions = normalizePermissions(req.body && req.body.permissions);
+  const profile = requestedProfile(req.body) || 'usuario';
   if(!/^[a-z0-9._-]{3,40}$/.test(username)){
     return res.status(400).json({ error:'Usuário inválido.' });
   }
@@ -316,18 +311,16 @@ router.post('/', async (req, res) => {
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports,
          can_view_audit, can_manage_rules, can_manage_users, can_manage_groups, can_manage_integrations, can_manage_checklist,
-         cost_center
-       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''))
+         cost_center, profile
+       ) VALUES ($1, $2, $3, $4, 'user', TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''), $18)
        RETURNING *`,
       [
         username, displayName, email || null, passwordHash,
-        permissions.reservations, permissions.branches, permissions.fleet, permissions.maintenance,
-        permissions.blocks, permissions.reports,
-        permissions.audit, permissions.rules, permissions.users, permissions.groups, permissions.integrations, permissions.checklist,
-        costCenter
+        ...permissionColumns(profile),
+        costCenter, profile
       ]
     );
-    await audit(client, req.user.id, 'created', inserted.rows[0].id, { username });
+    await audit(client, req.user.id, 'created', inserted.rows[0].id, { username, perfil:profile });
     return inserted.rows[0];
   });
   res.status(201).json({ user:publicUser(account) });
@@ -345,12 +338,7 @@ router.patch('/:id', async (req, res) => {
     : '';
   const password = String(req.body && req.body.password || '');
   const active = req.body && typeof req.body.active === 'boolean' ? req.body.active : undefined;
-  const permissionsWereSent = !!(
-    req.body &&
-    req.body.permissions &&
-    typeof req.body.permissions === 'object'
-  );
-  const requestedPermissions = normalizePermissions(req.body && req.body.permissions);
+  const requestedProfileValue = requestedProfile(req.body);
   if(!displayName) return res.status(400).json({ error:'Informe o nome.' });
   if(usernameWasSent && !/^[a-z0-9._-]{3,40}$/.test(requestedUsername)){
     return res.status(400).json({ error:'Usuário de acesso inválido.' });
@@ -402,20 +390,10 @@ router.patch('/:id', async (req, res) => {
     // Campo opcional: só sobrescreve quando veio no corpo, para um PATCH
     // parcial (ex.: só permissões) não apagar o centro de custo.
     const costCenter = costCenterWasSent ? (requestedCostCenter || null) : current.cost_center;
-    const permissions = permissionsWereSent ? requestedPermissions : {
-      reservations:current.can_manage_reservations,
-      branches:current.can_manage_branches,
-      fleet:current.can_manage_fleet,
-      maintenance:current.can_manage_maintenance,
-      blocks:current.can_manage_blocks,
-      reports:current.can_view_reports,
-      audit:current.can_view_audit,
-      rules:current.can_manage_rules,
-      users:current.can_manage_users,
-      groups:current.can_manage_groups,
-      integrations:current.can_manage_integrations,
-      checklist:current.can_manage_checklist
-    };
+    // Perfil: só muda quando veio no corpo (PATCH parcial - ex.: ativar/
+    // desativar - mantém o atual). A conta admin é sempre Gestão.
+    const profile = isAdminAccount ? 'gestao' : (requestedProfileValue || normalizeProfile(current.profile));
+    const permissions = permissionsForProfile(isAdminAccount ? 'gestao' : profile);
     const updated = await client.query(
       `UPDATE users
           SET display_name = $2,
@@ -435,6 +413,7 @@ router.patch('/:id', async (req, res) => {
               can_manage_integrations = CASE WHEN role = 'admin' THEN TRUE ELSE $15 END,
               can_manage_checklist = CASE WHEN role = 'admin' THEN TRUE ELSE $17 END,
               can_manage_groups = CASE WHEN role = 'admin' THEN TRUE ELSE $19 END,
+              profile = $20,
               cost_center = $16
         WHERE id = $1
         RETURNING *`,
@@ -453,13 +432,15 @@ router.patch('/:id', async (req, res) => {
         costCenter,
         isAdminAccount || permissions.checklist,
         username,
-        isAdminAccount || permissions.groups
+        isAdminAccount || permissions.groups,
+        profile
       ]
     );
     await audit(client, req.user.id, 'updated', current.id, {
       passwordChanged:!!password,
       usernameChanged:username !== current.username,
-      permissionsChanged:!isAdminAccount
+      profileChanged:!isAdminAccount && profile !== normalizeProfile(current.profile),
+      perfil:profile
     });
     return updated.rows[0];
   });
@@ -539,6 +520,7 @@ router.delete('/:id', async (req, res) => {
               can_manage_groups = FALSE,
               can_manage_integrations = FALSE,
               can_manage_checklist = FALSE,
+              profile = 'usuario',
               deleted_at = NOW(),
               deleted_by = $4,
               deletion_reason = $5,

@@ -8,7 +8,7 @@ const { getLicensesForUsers, licenseStatus } = require('./driver-licenses');
 // devolver exatamente o mesmo formato - uma coluna faltando aqui vira `false`
 // no cliente e é revogada no próximo salvamento.
 const USER_SELECT = `
-  SELECT id, username, display_name, email, role, active, auth_provider,
+  SELECT id, username, display_name, email, role, active, auth_provider, profile,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports, can_view_audit,
          can_manage_rules, can_manage_users, can_manage_groups, can_manage_integrations, can_manage_checklist,

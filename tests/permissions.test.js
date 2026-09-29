@@ -36,8 +36,11 @@ function loadPermissions() {
     USER_KEY: 'capricar_user',
     USERS_KEY: 'capricar_usuarios'
   });
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'auth.js'), 'utf8');
-  vm.runInContext(source, context, { filename: 'auth.js' });
+  // js/profiles.js vem antes de auth.js no index.html (perfis de acesso).
+  for (const file of ['profiles.js', 'auth.js']) {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'js', file), 'utf8');
+    vm.runInContext(source, context, { filename: file });
+  }
   return context;
 }
 
@@ -202,4 +205,31 @@ test('quem só tem a permissão Grupos vê a aba Gestão', () => {
   app.setCurrentUser({ nome: 'RH', role: 'user', permissions: { groups: true } });
   assert.equal(app.canManageGroups(), true);
   assert.equal(app.canAccessManagement(), true);
+});
+
+test('perfil Portaria: Gestão só com Reservas (consulta) e aba Checklist', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({
+    nome: 'Portaria',
+    role: 'user',
+    perfil: 'portaria',
+    permissions: { checklist: true }
+  });
+  assert.equal(app.isPortaria(), true);
+  assert.equal(app.canAccessManagement(), true);
+  assert.equal(app.canManageChecklist(), true);
+  assert.equal(app.canAccessAdminSection('reservas'), true);
+  assert.equal(app.canViewReservationsList(), true);
+  assert.equal(app.canManageReservations(), false);
+  ['locais', 'veiculos', 'bloqueios', 'manutencao', 'auditoria', 'relatorios', 'regras', 'usuarios', 'grupos', 'integracoes'].forEach(section => {
+    assert.equal(app.canAccessAdminSection(section), false, section);
+  });
+});
+
+test('perfil Usuário não vê a Gestão nem a lista de reservas', () => {
+  const app = loadPermissions();
+  app.setCurrentUser({ nome: 'Comum', role: 'user', perfil: 'usuario', permissions: {} });
+  assert.equal(app.isPortaria(), false);
+  assert.equal(app.canAccessManagement(), false);
+  assert.equal(app.canViewReservationsList(), false);
 });

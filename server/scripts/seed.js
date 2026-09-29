@@ -11,6 +11,7 @@ const DEFAULT_USERS = [
     displayName:'Administrador',
     passwordEnv:'ADMIN_INITIAL_PASSWORD',
     role:'admin',
+    profile:'gestao',
     permissions:[true, true, true, true, true, true, true, true, true, true]
   }
 ];
@@ -58,15 +59,16 @@ async function seedUsers(client){
          username, display_name, password_hash, role, active,
          can_manage_reservations, can_manage_branches, can_manage_fleet, can_manage_maintenance,
          can_manage_blocks, can_view_reports, can_view_audit,
-         can_manage_rules, can_manage_users, can_manage_integrations
-       ) VALUES ($1, $2, $3, $4, TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         can_manage_rules, can_manage_users, can_manage_integrations, profile
+       ) VALUES ($1, $2, $3, $4, TRUE, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        ON CONFLICT (LOWER(username)) DO NOTHING`,
       [
         user.username,
         user.displayName,
         passwordHash,
         user.role,
-        ...user.permissions
+        ...user.permissions,
+        user.profile
       ]
     );
   }

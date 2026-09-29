@@ -17,6 +17,7 @@ const {
 } = require('../reservations-store');
 const { readPhotoFile } = require('../photo-storage');
 const { requirePermission } = require('../auth');
+const { isPortariaUser } = require('../profiles');
 const {
   notifyReservationCancellation,
   notifyReservationPassengerAdditions,
@@ -252,6 +253,9 @@ router.post('/sync', async (req, res) => {
       const previous = currentById.get(id) || null;
       if(type === 'delete'){
         if(!previous) continue;
+        if(isPortariaUser(req.user)){
+          throw Object.assign(new Error('O perfil Portaria não pode cancelar reservas.'), { status:403 });
+        }
         if(!manager && !ownsReservation(previous, req.user)){
           throw Object.assign(new Error('Você não pode cancelar a reserva de outro usuário.'), { status:403 });
         }
@@ -264,6 +268,18 @@ router.post('/sync', async (req, res) => {
       }
       if(type !== 'upsert' || !change.reservation || typeof change.reservation !== 'object'){
         throw Object.assign(new Error('Alteração de reserva inválida.'), { status:400 });
+      }
+      // Perfil Portaria: não cria reserva, não entra de carona e não altera
+      // reserva de ninguém - a única escrita permitida é registrar a
+      // retirada/devolução (permissão Checklist), pelo mesmo caminho
+      // restrito de sempre (mergeOperationOnlyChange).
+      if(isPortariaUser(req.user)){
+        if(!previous){
+          throw Object.assign(new Error('O perfil Portaria não pode fazer reservas.'), { status:403 });
+        }
+        if(JSON.stringify(change.reservation.operacao || null) === JSON.stringify(previous.operacao || null)){
+          throw Object.assign(new Error('O perfil Portaria só pode consultar reservas.'), { status:403 });
+        }
       }
       const reservation = sanitizeIncoming(previous, change.reservation, req.user, manager, canOperateOthers);
       nextById.set(String(reservation.id), reservation);

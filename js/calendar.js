@@ -51,6 +51,16 @@ const calTodayBtn = document.getElementById('calTodayBtn');
 const calConfirmation = document.getElementById('calConfirmation');
 const calConfirmationText = document.getElementById('calConfirmation-text');
 
+
+// Perfil Portaria (ver js/profiles.js): o calendário é só para consulta -
+// sem selecionar horário, sem "Criar reserva neste dia" e sem entrar de
+// carona. O servidor também recusa (server/routes/reservations.js).
+const CALENDAR_READ_ONLY_HINT = 'Calendário somente para consulta: seu perfil (Portaria) não faz reservas.';
+
+function calendarReadOnly(){
+  return typeof canMakeReservations === 'function' && !canMakeReservations(getCurrentUser());
+}
+
 function startOfCalendarWeek(iso){
   const parts = String(iso).split('-').map(Number);
   const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
@@ -676,10 +686,10 @@ function buildMobileMonthCalendar(){
     '</button>';
   }
 
-  html += '</div></div>' +
+  html += '</div></div>' + (calendarReadOnly() ? '' :
     '<button type="button" class="mobile-calendar-add" id="mobileCalendarAddBtn" aria-label="Nova reserva"' +
     (getSelectedCarInfo() ? '' : ' disabled title="Selecione um veículo específico no filtro acima para criar uma reserva."') +
-    '>+</button>';
+    '>+</button>');
   return html;
 }
 
@@ -756,7 +766,9 @@ function renderMobileCalendar(){
   calPrevBtn.setAttribute('aria-label', isDay ? 'Dia anterior' : 'Mês anterior');
   calNextBtn.setAttribute('aria-label', isDay ? 'Próximo dia' : 'Próximo mês');
   calendarDragHint.classList.toggle('hidden', !isDay);
-  if(isDay){
+  if(isDay && calendarReadOnly()){
+    calendarDragHint.textContent = CALENDAR_READ_ONLY_HINT;
+  }else if(isDay){
     calendarDragHint.textContent = getSelectedCarInfo()
       ? 'Toque em um horário ou arraste para selecionar o período.'
       : 'Selecione um veículo específico para criar uma reserva por aqui.';
@@ -786,6 +798,7 @@ function renderMobileCalendar(){
 }
 
 function renderMainCalendar(){
+  calendarGrid.classList.toggle('calendar-read-only', calendarReadOnly());
   if(isMobileCalendar()){
     renderMobileCalendar();
     return;
@@ -794,7 +807,7 @@ function renderMainCalendar(){
   calPrevBtn.setAttribute('aria-label', 'Semana anterior');
   calNextBtn.setAttribute('aria-label', 'Próxima semana');
   calendarDragHint.classList.remove('hidden');
-  calendarDragHint.textContent = getSelectedCarInfo()
+  calendarDragHint.textContent = calendarReadOnly() ? CALENDAR_READ_ONLY_HINT : getSelectedCarInfo()
     ? 'Clique em um horário ou arraste na mesma coluna para selecionar o período da reserva.'
     : 'Selecione um veículo específico no filtro acima para criar uma reserva por aqui.';
   calMonthLabelText.textContent = formatWeekLabel(calWeekStartISO);
@@ -987,6 +1000,9 @@ calendarGrid.addEventListener('pointerdown', function(event){
 
   const slot = event.target.closest('.week-time-slot');
   if(!slot || slot.getAttribute('data-disabled') === '1' || event.button !== 0) return;
+  // Perfil Portaria: calendário só para consulta - selecionar horário é o
+  // começo de uma reserva.
+  if(calendarReadOnly()) return;
   const mobileTap = isMobileCalendar() && mobileCalendarMode === 'day';
   if(!mobileTap) event.preventDefault();
   calendarDragState = {
@@ -1137,7 +1153,7 @@ function showDayDetails(iso, focusReservationId){
       const isPassenger = currentUser && isPassageiro(reservation, currentUser);
       const participant = isCreator || isPassenger;
       const vagas = getVagasRestantes(reservation);
-      const canJoin = currentUser && !participant && vagas > 0 && reservationCanAcceptPassengers(reservation);
+      const canJoin = currentUser && !calendarReadOnly() && !participant && vagas > 0 && reservationCanAcceptPassengers(reservation);
       const focusedClass = String(reservation.id) === String(focusReservationId) ? ' focused' : '';
       const actionsHTML = canJoin
         ? '<button type="button" class="join-ride-btn" data-id="' + escapeHTML(reservation.id) + '">Entrar nessa carona</button>'
@@ -1148,9 +1164,11 @@ function showDayDetails(iso, focusReservationId){
     });
   }
 
-  html += '<div class="day-actions"><button type="button" class="reserve-day-btn" id="reserveThisDayBtn"' +
-    (info ? '' : ' disabled title="Selecione um veículo específico no filtro acima para criar uma reserva."') +
-    '>Criar reserva neste dia</button></div>';
+  if(!calendarReadOnly()){
+    html += '<div class="day-actions"><button type="button" class="reserve-day-btn" id="reserveThisDayBtn"' +
+      (info ? '' : ' disabled title="Selecione um veículo específico no filtro acima para criar uma reserva."') +
+      '>Criar reserva neste dia</button></div>';
+  }
   calendarDayDetails.innerHTML = html;
   calendarDayDetails.classList.remove('hidden');
   if(focusReservationId){

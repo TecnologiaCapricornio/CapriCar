@@ -19,6 +19,8 @@ function openJoinConfirmModal(id, origin){
     showLogin();
     return;
   }
+  // Perfil Portaria não entra de carona (ver js/profiles.js).
+  if(!canMakeReservations(currentUser)) return;
 
   const reserva = getReservations().find(r => String(r.id) === String(id));
   if(!reserva) return;
@@ -268,6 +270,8 @@ function openQuickReserveModal(dataIda, selectedRange){
     showLogin();
     return;
   }
+  // Perfil Portaria: só consulta, não reserva (ver js/profiles.js).
+  if(!canMakeReservations(currentUser)) return;
 
   // Mesma trava de CNH da tela "Nova Reserva" - avisa já ao tentar abrir o
   // atalho pelo calendário, em vez de deixar preencher o formulário inteiro.

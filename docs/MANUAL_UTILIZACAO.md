@@ -43,11 +43,13 @@ Depois de entrar, o topo da tela mostra as abas disponíveis:
 - **Caronas Disponíveis** — entrar como passageiro em uma reserva de outra
   pessoa;
 - **Calendário** — visão semanal de todas as reservas por local/veículo;
-- **Checklist** — só aparece para quem tem a permissão "Checklist": revisar,
+- **Checklist** — só aparece para os perfis Gestão e Portaria: revisar,
   aprovar, corrigir e arquivar os checklists de retirada/devolução de todas as
   reservas, e registrar retirada/devolução em nome de outra pessoa;
-- **Gestão** — só aparece para quem tem alguma permissão de gestão
-  (seção 10).
+- **Gestão** — só aparece para os perfis Gestão e Portaria (seção 10).
+
+O perfil **Portaria** vê apenas Calendário, Checklist e Gestão (só a lista de
+Reservas, para consulta).
 
 Veículos de uso restrito a um grupo (seção 10.7) só aparecem para os membros
 desse grupo — para as demais pessoas eles não existem nas listas, no
@@ -222,10 +224,16 @@ periódicos (reserva se aproximando, CNH vencendo, manutenção vencendo).
 
 ## 10. Painel de Gestão
 
-Aparece como aba "Gestão" para administradores e para quem tem alguma
-permissão específica de gestão. Cada aba abaixo só é visível para quem tem a
-permissão correspondente. (O Checklist tem aba própria no topo da tela — ver
-seção 2.)
+Aparece como aba "Gestão" para administradores e para quem tem o perfil
+Gestão ou Portaria. O acesso de cada conta vem do seu perfil (seção 10.6):
+
+| Perfil | O que acessa |
+|---|---|
+| **Usuário** (padrão de toda conta nova) | Faz reservas, entra de carona e cadastra a própria CNH. Não vê a Gestão. |
+| **Gestão** | Tudo: todas as abas do Painel de Gestão e a aba Checklist. |
+| **Portaria** | Só as abas Calendário, Checklist e a lista de Reservas da Gestão, esta só para consulta (sem editar, cancelar ou criar). Registra retirada/devolução pelo Checklist. Não faz reservas, não entra de carona e não cadastra CNH. |
+
+(O Checklist tem aba própria no topo da tela — ver seção 2.)
 
 ### 10.1 Reservas
 
@@ -292,10 +300,11 @@ está perto de vencer.
 
 ### 10.6 Usuários
 
-Cadastro de contas: criar, editar, conceder/revogar as permissões acima uma
-a uma, importar usuários do Microsoft Entra ID em massa, buscar/filtrar por
-permissão, aplicar ações em lote (desativar, excluir ou ajustar permissões
-de vários usuários de uma vez) e consultar a CNH de qualquer usuário. A
+Cadastro de contas: criar, editar, escolher o perfil de acesso (Usuário,
+Gestão ou Portaria — ver a tabela no início da seção 10), importar usuários
+do Microsoft Entra ID em massa (entram como Usuário), buscar/filtrar por
+perfil, aplicar ações em lote (desativar, excluir ou alterar o perfil de
+vários usuários de uma vez) e consultar a CNH de qualquer usuário. A
 conta principal de administrador não pode ser desativada nem excluída, e
 uma conta de administrador só pode ser editada por outro administrador.
 
@@ -380,9 +389,8 @@ Ele provavelmente é de uso restrito a um grupo do qual você não faz parte
 (seção 10.7). Fale com a gestão da frota se precisar usá-lo.
 
 **Não consigo ver a aba Gestão.**
-Ela só aparece para quem é administrador ou tem pelo menos uma permissão de
-gestão concedida. Peça ao administrador para verificar suas permissões
-(seção 10.6).
+Ela só aparece para quem é administrador ou tem o perfil Gestão ou
+Portaria. Peça ao administrador para verificar o seu perfil (seção 10.6).
 
 **Registrei uma quilometragem errada por engano.**
 Se for menor que o esperado, o próprio sistema já pergunta se você confirma

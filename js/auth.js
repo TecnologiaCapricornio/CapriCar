@@ -45,6 +45,7 @@ function normalizeSystemUser(account){
     role:account.role === 'admin' ? 'admin' : 'user',
     active:account.active !== false,
     authProvider:account.authProvider === 'entra' ? 'entra' : 'local',
+    perfil:account.role === 'admin' ? 'gestao' : normalizeProfile(account.perfil),
     permissions:normalizeUserPermissions(account.permissions),
     // Só vem preenchido para quem tem a permissão "Usuários" (o servidor já
     // filtra) - null/undefined aqui só significa "sem CNH cadastrada ou sem
@@ -82,6 +83,7 @@ function accountToSession(account){
     email:account.email || '',
     isAdmin:account.role === 'admin',
     role:account.role,
+    perfil:account.role === 'admin' ? 'gestao' : normalizeProfile(account.perfil),
     permissions:normalizeUserPermissions(account.permissions),
     // Ids dos grupos do usuário - decidem quais veículos restritos ele pode
     // reservar (ver js/vehicle-access.js).
@@ -100,10 +102,23 @@ function hasManagementPermission(permission){
   return !!(user && user.permissions && user.permissions[permission] === true);
 }
 
+// Perfil Portaria (ver js/profiles.js): só Checklist, Calendário e a lista
+// de Reservas da Gestão, esta só para consulta.
+function isPortaria(){
+  return isPortariaUser(getCurrentUser());
+}
+
+// Lista de reservas da Gestão: quem gerencia reservas, ou a Portaria (só
+// consulta - sem editar, cancelar nem criar; ver renderAdminTab).
+function canViewReservationsList(){
+  return canManageReservations() || isPortaria();
+}
+
 // Aba "Gestão". O Checklist tem aba própria (ver canManageChecklist) e não
-// conta aqui: quem só tem essa permissão não vê o painel de gestão.
+// conta aqui: quem só tem essa permissão não vê o painel de gestão. A
+// Portaria vê a Gestão só com a lista de Reservas.
 function canAccessManagement(){
-  return isAdmin() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'groups', 'integrations'].some(hasManagementPermission);
+  return isAdmin() || isPortaria() || ['reservations', 'branches', 'fleet', 'maintenance', 'blocks', 'reports', 'audit', 'rules', 'users', 'groups', 'integrations'].some(hasManagementPermission);
 }
 
 function canManageReservations(){
@@ -180,7 +195,7 @@ function canAccessAdminSection(section){
   // "Relatórios" (filtros, resumo, exportação) continua exigindo "reports"
   // à parte, no bloco genérico abaixo.
   if(section === 'reservas'){
-    return hasManagementPermission('reservations') || hasManagementPermission('reports');
+    return hasManagementPermission('reservations') || hasManagementPermission('reports') || isPortaria();
   }
   const permissionBySection = {
     locais:'branches',
@@ -237,6 +252,8 @@ function configureManagementPanel(){
   const newReservationBtn = document.getElementById('adminNovaReservaBtn');
   if(newReservationBtn){
     newReservationBtn.textContent = 'Nova reserva';
+    // A Portaria vê a lista de reservas só para consulta.
+    newReservationBtn.classList.toggle('hidden', !canManageReservations());
   }
 }
 
@@ -274,14 +291,22 @@ function showApp(user){
   // Reservas" (e "Nova Reserva", que já barra o admin ao clicar - ver
   // switchTab abaixo) ficariam sempre vazias/bloqueadas pra essa conta.
   if(minhasTabBtn) minhasTabBtn.classList.toggle('hidden', isAdmin());
+  // Portaria: só Checklist, Calendário e Gestão (lista de Reservas). Sem
+  // reservar, sem caronas e sem CNH própria.
+  const portaria = isPortaria();
+  PORTARIA_HIDDEN_TABS.forEach(tab => {
+    const button = tabsNav.querySelector('.tab-btn[data-tab="' + tab + '"]');
+    if(button) button.classList.toggle('hidden', portaria || (tab === 'minhas' && isAdmin()));
+  });
+  if(profileMenuCnhBtn) profileMenuCnhBtn.classList.toggle('hidden', isAdmin() || portaria);
   configureManagementPanel();
-  switchTab(isAdmin() ? 'admin' : 'minhas');
+  switchTab(isAdmin() ? 'admin' : (portaria ? 'calendario' : 'minhas'));
   renderMyReservations();
   renderCarSelector();
   renderMainCalendar();
   renderAvailableRides();
   initializeNotifications();
-  loadDriverLicense();
+  if(!portaria) loadDriverLicense();
 }
 
 function showLogin(){
@@ -520,7 +545,11 @@ async function refreshTabFromServer(tabName, refreshSequence){
   }
 }
 
+// Abas que o perfil Portaria não usa.
+const PORTARIA_HIDDEN_TABS = ['minhas', 'caronas', 'nova'];
+
 function switchTab(tabName){
+  if(isPortaria() && PORTARIA_HIDDEN_TABS.includes(tabName)) tabName = 'calendario';
   if(tabName === 'admin' && !canAccessManagement()) return;
   if(tabName === 'checklist' && !canManageChecklist()) return;
   if(tabName === 'nova'){
