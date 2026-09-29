@@ -26,7 +26,7 @@ COPY js ./js
 COPY css ./css
 COPY assets ./assets
 COPY db ./db
-COPY index.html logo.png bg.jpg ./
+COPY index.html ./
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
 # server/uploads (fotos de retirada/devolução; a e-CNH não usa disco) e backups/ são

@@ -15,3 +15,4 @@ config.yml
 ~$*.docx
 .claude/
 Claude outputs/
+docker-compose.override.yml
