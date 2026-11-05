@@ -211,7 +211,7 @@ async function main(){
         username,
         nome:displayName,
         password:'1234567',
-        permissions:{ reservations:false, branches:false, fleet:false, blocks:false, reports:false }
+        perfil:'usuario'
       }
     });
     assert.equal(weakPassword.response.status, 400);
@@ -223,7 +223,7 @@ async function main(){
         username,
         nome:displayName,
         password:temporaryUserPassword,
-        permissions:{ reservations:false, branches:false, fleet:false, blocks:false, reports:false }
+        perfil:'usuario'
       }
     });
     assert.equal(created.response.status, 201, created.body && created.body.error);
@@ -256,7 +256,7 @@ async function main(){
         username,
         nome:displayName,
         password:temporaryUserPassword,
-        permissions:{}
+        perfil:'usuario'
       }
     });
     assert.equal(duplicate.response.status, 409);
@@ -531,13 +531,93 @@ async function main(){
     );
     assert.equal(deleteVehicleWithReservation.response.status, 409);
 
+    // Perfis de acesso (migração 036): Usuário / Gestão / Portaria.
+    const invalidProfile = await request(`/api/users/${createdUserId}`, {
+      method:'PATCH',
+      headers:auth(admin.cookie),
+      body:{ nome:displayName, perfil:'superusuario' }
+    });
+    assert.equal(invalidProfile.response.status, 400);
+
+    const toPortaria = await request(`/api/users/${createdUserId}`, {
+      method:'PATCH',
+      headers:auth(admin.cookie),
+      body:{ nome:displayName, perfil:'portaria' }
+    });
+    assert.equal(toPortaria.response.status, 200, toPortaria.body && toPortaria.body.error);
+    assert.equal(toPortaria.body.user.perfil, 'portaria');
+    assert.equal(toPortaria.body.user.permissions.checklist, true);
+    assert.equal(toPortaria.body.user.permissions.reservations, false);
+    assert.equal(toPortaria.body.user.permissions.users, false);
+
+    // A sessão já aberta passa a valer como Portaria (o perfil é relido a
+    // cada requisição).
+    const portariaList = await request('/api/reservations', { headers:auth(testUser.cookie) });
+    assert.equal(portariaList.response.status, 200);
+    const portariaOwn = (portariaList.body.reservations || []).find(item => String(item.id) === reservationId);
+    assert.ok(portariaOwn);
+
+    const portariaCreate = await request('/api/reservations/sync', {
+      method:'POST',
+      headers:auth(testUser.cookie),
+      body:{ changes:[{ type:'upsert', reservation:{ ...ownReservation, id:`${reservationId}-portaria` } }] }
+    });
+    assert.equal(portariaCreate.response.status, 403);
+
+    const portariaEdit = await request('/api/reservations/sync', {
+      method:'POST',
+      headers:auth(testUser.cookie),
+      body:{ changes:[{ type:'upsert', reservation:{ ...portariaOwn, motivo:'Alterado pela portaria' } }] }
+    });
+    assert.equal(portariaEdit.response.status, 403);
+
+    const portariaCancel = await request('/api/reservations/sync', {
+      method:'POST',
+      headers:auth(testUser.cookie),
+      body:{ changes:[{ type:'delete', id:reservationId }] }
+    });
+    assert.equal(portariaCancel.response.status, 403);
+
+    const portariaCnhUpload = await request('/api/profile/cnh/e-cnh', {
+      method:'POST',
+      headers:auth(testUser.cookie, { 'Content-Type':'application/pdf' }),
+      body:'%PDF-1.4 teste'
+    });
+    assert.equal(portariaCnhUpload.response.status, 403);
+    const portariaCnhRead = await request('/api/profile/cnh', { headers:auth(testUser.cookie) });
+    assert.equal(portariaCnhRead.response.status, 200);
+
+    const portariaRideWatch = await request('/api/ride-watches', {
+      method:'POST',
+      headers:auth(testUser.cookie),
+      body:{}
+    });
+    assert.equal(portariaRideWatch.response.status, 403);
+
+    const portariaUsers = await request('/api/users', { headers:auth(testUser.cookie) });
+    assert.equal(portariaUsers.response.status, 403);
+
+    const bulkBackToUser = await request('/api/users/bulk/profile', {
+      method:'POST',
+      headers:auth(admin.cookie),
+      body:{ userIds:[createdUserId], perfil:'usuario' }
+    });
+    assert.equal(bulkBackToUser.response.status, 200);
+    assert.equal(bulkBackToUser.body.processed, 1);
+    const usersAfterBulk = await request('/api/users', { headers:auth(admin.cookie) });
+    const backToUser = usersAfterBulk.body.users.find(item => String(item.id) === String(createdUserId));
+    assert.equal(backToUser.perfil, 'usuario');
+    assert.equal(backToUser.permissions.checklist, false);
+    const adminListed = usersAfterBulk.body.users.find(item => item.role === 'admin');
+    assert.equal(adminListed.perfil, 'gestao');
+
     const deactivate = await request(`/api/users/${createdUserId}`, {
       method:'PATCH',
       headers:auth(admin.cookie),
       body:{
         nome:displayName,
         active:false,
-        permissions:{ reservations:false, branches:false, fleet:false, blocks:false, reports:false }
+        perfil:'usuario'
       }
     });
     assert.equal(deactivate.response.status, 200);
@@ -587,7 +667,7 @@ async function main(){
       item.details.includes('Justificativa:')
     ));
 
-    console.log('33 verificações integradas de API e segurança passaram.');
+    console.log('46 verificações integradas de API e segurança passaram.');
   }finally{
     await cleanup();
     await closePool();

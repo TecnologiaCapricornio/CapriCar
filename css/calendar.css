@@ -290,6 +290,15 @@
     background:var(--surface-sunken);
   }
 
+  /* Perfil Portaria: calendário só para consulta. */
+  .calendar-read-only .week-time-slot{
+    cursor:default;
+  }
+
+  .calendar-read-only .week-time-slot:hover{
+    background:transparent;
+  }
+
   .week-reservation-event{
     /* Cor por veículo (js/calendar.js define --event-accent/--event-bg
        inline com var(--cat-N) quando o local tem mais de um veículo e

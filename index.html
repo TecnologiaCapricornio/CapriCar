@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="css/variables.css?v=20260927-1">
   <link rel="stylesheet" href="css/base.css?v=20260927-1">
   <link rel="stylesheet" href="css/components.css?v=20260927-1">
-  <link rel="stylesheet" href="css/calendar.css?v=20260927-1">
-  <link rel="stylesheet" href="css/admin.css?v=20260927-1">
+  <link rel="stylesheet" href="css/calendar.css?v=20260929-2">
+  <link rel="stylesheet" href="css/admin.css?v=20260929-2">
   <link rel="stylesheet" href="css/responsive.css?v=20260927-1">
   <link rel="stylesheet" href="css/themes.css?v=20260927-1">
 </head>
@@ -1339,28 +1339,14 @@
                       autocomplete="off">
                   </div>
                 </div>
-                <div class="form-hint" id="userAccountPasswordHint">A senha é obrigatória no primeiro cadastro.</div>
                 <div class="field">
-                  <label>Permissões adicionais</label>
-                  <div class="permission-grid">
-                    <label class="permission-option"><input type="checkbox" id="permissionReservations">
-                      Reservas</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionBranches"> Locais</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionFleet"> Veículos</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionBlocks"> Bloqueios</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionMaintenance">
-                      Manutenção</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionUsers"> Usuários</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionGroups"> Grupos</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionRules"> Regras</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionIntegrations">
-                      Integrações</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionReports"> Relatórios</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionAudit"> Auditoria</label>
-                    <label class="permission-option"><input type="checkbox" id="permissionChecklist"> Checklist</label>
-                  </div>
-                  <div class="form-hint">Sem permissões adicionais, a conta terá somente o acesso comum para reservar
-                    veículos.</div>
+                  <label for="userAccountProfile">Perfil</label>
+                  <select id="userAccountProfile">
+                    <option value="usuario">Usuário</option>
+                    <option value="gestao">Gestão</option>
+                    <option value="portaria">Portaria</option>
+                  </select>
+                  <div class="form-hint profile-description" id="userAccountProfileDescription" aria-live="polite"></div>
                 </div>
                 <div class="error-msg" role="alert" id="userAccountError"></div>
                 <div class="user-form-actions">
@@ -1388,21 +1374,12 @@
                   autocomplete="off">
               </div>
               <div class="field">
-                <label for="userAccountsPermissionFilter">Permissão</label>
+                <label for="userAccountsPermissionFilter">Perfil</label>
                 <select id="userAccountsPermissionFilter">
-                  <option value="">Todas</option>
-                  <option value="reservations">Reservas</option>
-                  <option value="branches">Locais</option>
-                  <option value="fleet">Veículos</option>
-                  <option value="blocks">Bloqueios</option>
-                  <option value="maintenance">Manutenção</option>
-                  <option value="users">Usuários</option>
-                  <option value="groups">Grupos</option>
-                  <option value="rules">Regras</option>
-                  <option value="integrations">Integrações</option>
-                  <option value="reports">Relatórios</option>
-                  <option value="audit">Auditoria</option>
-                  <option value="checklist">Checklist</option>
+                  <option value="">Todos</option>
+                  <option value="usuario">Usuário</option>
+                  <option value="gestao">Gestão</option>
+                  <option value="portaria">Portaria</option>
                 </select>
               </div>
               <div class="field">
@@ -1420,7 +1397,7 @@
                 <span id="userBulkCount">0 selecionado(s)</span>
               </label>
               <div class="user-bulk-actions">
-                <button type="button" class="secondary-btn" id="userBulkPermissionsBtn" disabled>Ajustar permissões</button>
+                <button type="button" class="secondary-btn" id="userBulkPermissionsBtn" disabled>Alterar perfil</button>
                 <button type="button" class="secondary-btn" id="userBulkDeactivateBtn" disabled>Desativar</button>
                 <button type="button" class="delete-btn" id="userBulkDeleteBtn" disabled>Excluir</button>
               </div>
@@ -2004,30 +1981,20 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="userEditProfile">Perfil</label>
+          <select id="userEditProfile">
+            <option value="usuario">Usuário</option>
+            <option value="gestao">Gestão</option>
+            <option value="portaria">Portaria</option>
+          </select>
+          <div class="form-hint profile-description" id="userEditProfileDescription" aria-live="polite"></div>
+          <div class="form-hint hidden" id="userEditProfileAdminHint">A conta de administrador tem acesso total e não muda de perfil.</div>
+        </div>
+
         <!-- Fora da .row: o aviso vale para o cadastro inteiro, não só para o
              campo de senha, então ocupa a largura toda do modal. -->
         <div class="form-hint" id="userEditPasswordHint">Deixe a senha vazia para manter a atual.</div>
-
-        <div class="field">
-          <label>Permissões adicionais</label>
-          <div class="permission-grid">
-            <label class="permission-option"><input type="checkbox" id="editPermissionReservations">
-              Reservas</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionBranches"> Locais</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionFleet"> Veículos</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionBlocks"> Bloqueios</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionMaintenance">
-              Manutenção</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionUsers"> Usuários</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionGroups"> Grupos</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionRules"> Regras</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionIntegrations">
-              Integrações</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionReports"> Relatórios</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionAudit"> Auditoria</label>
-            <label class="permission-option"><input type="checkbox" id="editPermissionChecklist"> Checklist</label>
-          </div>
-        </div>
 
         <div class="error-msg" role="alert" id="userEditError"></div>
         <div class="user-form-actions">
@@ -2073,7 +2040,7 @@
       </div>
 
       <div class="field">
-        <label>Permissões</label>
+        <label>Perfil</label>
         <div class="user-permissions" id="userViewPermissions"></div>
       </div>
 
@@ -2135,31 +2102,21 @@
   <div class="modal-overlay hidden" id="userBulkPermissionsModal">
     <div class="modal-card user-delete-card" role="dialog" aria-modal="true" aria-labelledby="userBulkPermissionsTitle">
       <button type="button" class="modal-close" id="userBulkPermissionsCloseBtn" aria-label="Fechar">&times;</button>
-      <h3 id="userBulkPermissionsTitle">Ajustar permissões em massa</h3>
+      <h3 id="userBulkPermissionsTitle">Alterar perfil em massa</h3>
       <p>
-        As permissões marcadas abaixo substituirão as permissões atuais de todos os usuários selecionados.
+        O perfil escolhido abaixo substituirá o perfil atual de todos os usuários selecionados.
       </p>
       <div class="quick-reserve-summary user-delete-summary" id="userBulkPermissionsSummary"></div>
       <form id="userBulkPermissionsForm" novalidate>
         <div class="field">
-          <label>Permissões</label>
-          <div class="permission-grid">
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionReservations">
-              Reservas</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionBranches"> Locais</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionFleet"> Veículos</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionBlocks"> Bloqueios</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionMaintenance">
-              Manutenção</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionUsers"> Usuários</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionGroups"> Grupos</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionRules"> Regras</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionIntegrations">
-              Integrações</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionReports"> Relatórios</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionAudit"> Auditoria</label>
-            <label class="permission-option"><input type="checkbox" id="bulkPermissionChecklist"> Checklist</label>
-          </div>
+          <label for="userBulkProfile">Perfil</label>
+          <select id="userBulkProfile">
+            <option value="">Selecione o perfil</option>
+            <option value="usuario">Usuário</option>
+            <option value="gestao">Gestão</option>
+            <option value="portaria">Portaria</option>
+          </select>
+          <div class="form-hint profile-description" id="userBulkProfileDescription" aria-live="polite"></div>
         </div>
         <div class="error-msg" role="alert" id="userBulkPermissionsError"></div>
         <div class="fleet-edit-actions">
@@ -2411,6 +2368,7 @@
   <script src="js/styled-select.js?v=20260902-1"></script>
   <script src="js/dialogs.js?v=20260831-2"></script>
   <script src="js/api.js?v=20260927-1"></script>
+  <script src="js/profiles.js?v=20260929-1"></script>
   <script src="js/vehicle-access.js?v=20260927-1"></script>
   <script src="js/storage.js?v=20260903-2"></script>
   <script src="js/vehicle-recommendation.js?v=20260902-3"></script>
@@ -2419,13 +2377,13 @@
   <script src="js/seat-map.js?v=20260918-15"></script>
   <script src="js/rides.js?v=20260903-1"></script>
   <script src="js/reservations.js?v=20260927-1"></script>
-  <script src="js/calendar.js?v=20260927-1"></script>
-  <script src="js/modals.js?v=20260903-2"></script>
-  <script src="js/admin.js?v=20260927-1"></script>
+  <script src="js/calendar.js?v=20260929-2"></script>
+  <script src="js/modals.js?v=20260929-2"></script>
+  <script src="js/admin.js?v=20260929-1"></script>
   <script src="js/xlsx-export.js?v=20260729-1"></script>
   <script src="js/management-operations.js?v=20260927-1"></script>
   <script src="js/management-config.js?v=20260927-1"></script>
-  <script src="js/management-users.js?v=20260927-1"></script>
+  <script src="js/management-users.js?v=20260929-2"></script>
   <script src="js/management-groups.js?v=20260927-1"></script>
   <script src="js/management-integrations.js?v=20260927-1"></script>
   <!-- Depois de management-integrations.js: a prévia lê o REMINDER_FIELDS
@@ -2441,7 +2399,7 @@
   <!-- Depois de modals.js (usa createDatePicker sob demanda) e antes de
        auth.js, que chama loadDriverLicense() ao abrir o app. -->
   <script src="js/driver-license.js?v=20260927-1"></script>
-  <script src="js/auth.js?v=20260927-1"></script>
+  <script src="js/auth.js?v=20260929-1"></script>
   <script src="js/app.js?v=20260903-1"></script>
 
 </body>

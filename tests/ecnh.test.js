@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const { verifyPdfSignature, readTLV, decodeOid, TRUSTED_ROOT_FINGERPRINTS } = require('../server/ecnh/signature');
 const { cnhNumberIsValid, parseBrazilianDate, namesMatch, validateFields } = require('../server/ecnh');
-const { findLabels, fieldBoxes } = require('../server/ecnh/card-reader');
+const { findLabels, fieldBoxes, overviewValue } = require('../server/ecnh/card-reader');
 
 // PDFs sintéticos (sem dado pessoal), assinados por uma AC de teste - ver
 // tests/fixtures/ecnh/generate-fixtures.js.
@@ -226,4 +226,74 @@ test('caixas de valor ficam abaixo dos rótulos e dentro da imagem', () => {
   }
   assert.ok(boxes.numero.left + boxes.numero.width <= 495, 'registro não invade a validade');
   assert.ok(boxes.validade.left + boxes.validade.width <= 726, 'validade não invade a 1ª habilitação');
+});
+
+/* ---------------- Modelo novo (nacional, com MRZ) ---------------- */
+
+// Rótulos da frente do modelo novo, nas posições reais em 963x680 (sem dado
+// pessoal): VALIDADE fica ACIMA do registro, e não à direita dele.
+const NEW_LAYOUT_WORDS = [
+  word('2', 183, 177, 208, 187),
+  word('NOME', 214, 178, 247, 187),
+  word('E', 252, 178, 256, 187),
+  word('SOBRENOME', 261, 178, 330, 187),
+  word('1º', 798, 178, 807, 186),
+  word('HABILITAÇÃO', 812, 176, 883, 189),
+  word('4a', 453, 289, 466, 298),
+  word('DATA', 472, 290, 498, 299),
+  word('EMISSÃO', 502, 288, 550, 299),
+  word('4b', 629, 288, 642, 298),
+  word('VALIDADE', 649, 289, 701, 298),
+  word('ACC', 819, 289, 840, 298),
+  word('4d', 453, 399, 466, 409),
+  word('CPF', 471, 400, 490, 409),
+  word('5', 648, 399, 654, 409),
+  word('Nº', 660, 400, 671, 408),
+  word('REGISTRO', 676, 400, 728, 409),
+  word('9', 828, 399, 834, 409),
+  word('CAT', 842, 400, 860, 408),
+  word('HAB', 864, 400, 885, 408),
+  // Valores dentro das molduras: mais altos que os rótulos, não entram na linha.
+  word('00000000000', 633, 402, 757, 442),
+  word('HABILITAÇÃO', 382, 127, 511, 165)
+];
+
+const right = box => box.left + box.width;
+const contains = (box, x0, x1) => box.left <= x0 && right(box) >= x1;
+
+test('modelo novo: rótulos encontrados e cada caixa fica sob o próprio rótulo', () => {
+  const labels = findLabels(NEW_LAYOUT_WORDS);
+  assert.ok(labels);
+  const boxes = fieldBoxes(labels, 963, 680);
+  for(const box of Object.values(boxes)){
+    assert.ok(box.left >= 0 && box.top >= 0 && box.width > 20 && box.height > 0);
+    assert.ok(right(box) <= 963 && box.top + box.height <= 680);
+  }
+  // Onde os valores estão impressos no modelo novo.
+  assert.ok(contains(boxes.nome, 179, 510), 'nome inteiro, desde a 1ª letra');
+  assert.ok(right(boxes.nome) < 794, 'nome não invade a data da 1ª habilitação');
+  assert.ok(contains(boxes.numero, 645, 757), 'número de registro inteiro');
+  assert.ok(right(boxes.numero) < 828, 'registro não invade a categoria');
+  assert.ok(contains(boxes.validade, 615, 715), 'validade inteira');
+  assert.ok(right(boxes.validade) < 777, 'validade não invade o ACC');
+  assert.ok(boxes.validade.top > 298 && boxes.numero.top > 409, 'caixas abaixo dos rótulos');
+  assert.ok(contains(boxes.categoria, 828, 837), 'categoria');
+});
+
+test('modelo antigo: caixas continuam as mesmas de antes', () => {
+  // Valores calculados pela versão anterior (só modelo antigo) de fieldBoxes.
+  assert.deepEqual(fieldBoxes(findLabels(LAYOUT_WORDS), 963, 680), {
+    nome:{ left:156, top:172, width:759, height:40 },
+    numero:{ left:151, top:616, width:314, height:40 },
+    validade:{ left:480, top:616, width:201, height:40 },
+    categoria:{ left:808, top:548, width:109, height:40 }
+  });
+});
+
+test('valor da passada geral: só palavras dentro da caixa e confiáveis', () => {
+  const rect = { left:814, top:412, width:96, height:40 };
+  const at = (text, x0, confidence) => ({ text, x0, y0:420, x1:x0 + 9, y1:433, confidence });
+  assert.equal(overviewValue([at('B', 828, 91), at('X', 700, 99)], rect), 'B');
+  assert.equal(overviewValue([at('B', 828, 40)], rect), null);
+  assert.equal(overviewValue([at('X', 700, 99)], rect), null);
 });

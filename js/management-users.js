@@ -1,7 +1,7 @@
-/* Gestão — usuários e permissões */
+/* Gestão — usuários e perfis de acesso */
 
 /* =========================================================
-   Usuários e permissões
+   Usuários e perfis de acesso
    ========================================================= */
 const userAccountForm = document.getElementById('userAccountForm');
 const userAccountNameInput = document.getElementById('userAccountName');
@@ -32,34 +32,37 @@ const userBulkPermissionsForm = document.getElementById('userBulkPermissionsForm
 const userBulkPermissionsSummary = document.getElementById('userBulkPermissionsSummary');
 const userBulkPermissionsError = document.getElementById('userBulkPermissionsError');
 const userBulkPermissionsSubmitBtn = document.getElementById('userBulkPermissionsSubmitBtn');
-const userPermissionInputs = {
-  reservations:document.getElementById('permissionReservations'),
-  branches:document.getElementById('permissionBranches'),
-  fleet:document.getElementById('permissionFleet'),
-  maintenance:document.getElementById('permissionMaintenance'),
-  blocks:document.getElementById('permissionBlocks'),
-  reports:document.getElementById('permissionReports'),
-  audit:document.getElementById('permissionAudit'),
-  rules:document.getElementById('permissionRules'),
-  users:document.getElementById('permissionUsers'),
-  groups:document.getElementById('permissionGroups'),
-  integrations:document.getElementById('permissionIntegrations'),
-  checklist:document.getElementById('permissionChecklist')
-};
-const bulkPermissionInputs = {
-  reservations:document.getElementById('bulkPermissionReservations'),
-  branches:document.getElementById('bulkPermissionBranches'),
-  fleet:document.getElementById('bulkPermissionFleet'),
-  maintenance:document.getElementById('bulkPermissionMaintenance'),
-  blocks:document.getElementById('bulkPermissionBlocks'),
-  reports:document.getElementById('bulkPermissionReports'),
-  audit:document.getElementById('bulkPermissionAudit'),
-  rules:document.getElementById('bulkPermissionRules'),
-  users:document.getElementById('bulkPermissionUsers'),
-  groups:document.getElementById('bulkPermissionGroups'),
-  integrations:document.getElementById('bulkPermissionIntegrations'),
-  checklist:document.getElementById('bulkPermissionChecklist')
-};
+// Perfil de acesso (ver js/profiles.js) - um combo com os três perfis no
+// cadastro, na edição e na alteração em massa; a descrição do perfil
+// escolhido aparece logo abaixo e acompanha a troca.
+function checkedProfile(selectId){
+  const select = document.getElementById(selectId);
+  return select && select.value ? normalizeProfile(select.value) : '';
+}
+
+function updateProfileDescription(selectId){
+  const select = document.getElementById(selectId);
+  const description = document.getElementById(selectId + 'Description');
+  if(!select || !description) return;
+  description.textContent = select.value ? PROFILE_DESCRIPTIONS[normalizeProfile(select.value)] : '';
+  description.classList.toggle('hidden', !select.value);
+}
+
+function setCheckedProfile(selectId, profile, disabled){
+  const select = document.getElementById(selectId);
+  if(!select) return;
+  select.value = profile || '';
+  select.disabled = !!disabled;
+  updateProfileDescription(selectId);
+}
+
+['userAccountProfile', 'userEditProfile', 'userBulkProfile'].forEach(selectId => {
+  const select = document.getElementById(selectId);
+  if(select) select.addEventListener('change', () => updateProfileDescription(selectId));
+});
+setCheckedProfile('userAccountProfile', 'usuario');
+setCheckedProfile('userBulkProfile', '');
+
 let userDeleteId = null;
 let userDeleteMode = 'single'; // 'single' | 'bulk'
 let userSearchTerm = '';
@@ -76,37 +79,6 @@ const MS_LOGO_SVG =
     '<rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#ffb900"></rect>' +
   '</svg>';
 
-const USER_PERMISSION_LABELS = {
-  reservations:'Reservas',
-  branches: 'Locais',
-  fleet:'Veículos',
-  maintenance:'Manutenção',
-  blocks:'Bloqueios',
-  audit:'Auditoria',
-  reports:'Relatórios',
-  rules:'Regras',
-  integrations:'Integrações',
-  users:'Usuários',
-  groups:'Grupos',
-  checklist:'Checklist'
-};
-
-function selectedUserPermissions(){
-  const permissions = {};
-  Object.keys(userPermissionInputs).forEach(key => {
-    permissions[key] = userPermissionInputs[key].checked;
-  });
-  return permissions;
-}
-
-function selectedBulkPermissions(){
-  const permissions = {};
-  Object.keys(bulkPermissionInputs).forEach(key => {
-    permissions[key] = bulkPermissionInputs[key].checked;
-  });
-  return permissions;
-}
-
 function bulkSummaryMessage(summary, verb){
   let message = summary.processed + ' usuário(s) ' + verb;
   if(summary.skipped) message += ', ' + summary.skipped + ' ignorado(s)';
@@ -119,6 +91,7 @@ function bulkSummaryMessage(summary, verb){
 // ficava ambíguo se o envio ia criar alguém ou alterar quem estava carregado.
 function resetUserAccountForm(){
   userAccountForm.reset();
+  setCheckedProfile('userAccountProfile', 'usuario');
   userAccountError.textContent = '';
 }
 
@@ -166,9 +139,8 @@ function openBulkDeleteModal(){
 }
 
 function permissionBadges(account){
-  if(account.role === 'admin') return '<span>Acesso total</span>';
-  const granted = Object.keys(USER_PERMISSION_LABELS).filter(key => account.permissions[key]);
-  return granted.map(key => '<span>' + escapeHTML(USER_PERMISSION_LABELS[key]) + '</span>').join('');
+  if(account.role === 'admin') return '<span>Administrador · acesso total</span>';
+  return '<span>' + escapeHTML(profileLabel(account.perfil)) + '</span>';
 }
 
 function sortedAccounts(){
@@ -204,7 +176,7 @@ function filteredAccounts(){
       account.nome.toLowerCase().includes(term) || account.username.toLowerCase().includes(term));
   }
   if(userPermissionFilter){
-    accounts = accounts.filter(account => account.permissions && account.permissions[userPermissionFilter]);
+    accounts = accounts.filter(account => userProfile(account) === userPermissionFilter);
   }
   return accounts;
 }
@@ -327,8 +299,7 @@ function renderUserManagement(){
           method:'PATCH',
           body:{
             nome:account.nome,
-            active:!account.active,
-            permissions:account.permissions
+            active:!account.active
           }
         });
         const index = accounts.findIndex(item => String(item.id) === String(account.id));
@@ -476,6 +447,7 @@ userBulkDeactivateBtn.addEventListener('click', async function(){
 function closeUserBulkPermissionsModal(){
   userBulkPermissionsModal.classList.add('hidden');
   userBulkPermissionsForm.reset();
+  setCheckedProfile('userBulkProfile', '');
   userBulkPermissionsError.textContent = '';
   userBulkPermissionsSubmitBtn.disabled = false;
   userBulkPermissionsSubmitBtn.textContent = 'Aplicar a todos';
@@ -484,10 +456,11 @@ function closeUserBulkPermissionsModal(){
 function openUserBulkPermissionsModal(){
   if(!canManageUsers() || !selectedUserIds.size) return;
   userBulkPermissionsForm.reset();
+  setCheckedProfile('userBulkProfile', '');
   userBulkPermissionsError.textContent = '';
   userBulkPermissionsSummary.innerHTML =
     '<strong>' + selectedUserIds.size + ' usuário(s) selecionado(s)</strong>' +
-    '<small>As permissões marcadas substituirão as permissões atuais de cada usuário.</small>';
+    '<small>O perfil escolhido substituirá o perfil atual de cada usuário.</small>';
   userBulkPermissionsModal.classList.remove('hidden');
 }
 
@@ -509,16 +482,23 @@ userBulkPermissionsForm.addEventListener('submit', async function(e){
   userBulkPermissionsSubmitBtn.disabled = true;
   userBulkPermissionsSubmitBtn.textContent = 'Aplicando...';
   try{
-    const summary = await apiRequest('/api/users/bulk/permissions', {
+    const perfil = checkedProfile('userBulkProfile');
+    if(!perfil){
+      userBulkPermissionsError.textContent = 'Selecione o perfil.';
+      userBulkPermissionsSubmitBtn.disabled = false;
+      userBulkPermissionsSubmitBtn.textContent = 'Aplicar a todos';
+      return;
+    }
+    const summary = await apiRequest('/api/users/bulk/profile', {
       method:'POST',
-      body:{ userIds:Array.from(selectedUserIds), permissions:selectedBulkPermissions() }
+      body:{ userIds:Array.from(selectedUserIds), perfil:perfil }
     });
     await hydrateDatabaseState();
     selectedUserIds.clear();
     closeUserBulkPermissionsModal();
     renderUserManagement();
     await showSiteAlert(bulkSummaryMessage(summary, 'atualizado(s)'), {
-      title:'Permissões em massa',
+      title:'Perfil em massa',
       type:summary.errors && summary.errors.length ? 'warning' : 'success'
     });
   }catch(error){
@@ -569,7 +549,7 @@ userAccountForm.addEventListener('submit', async function(e){
         email:email,
         password:password,
         centroCusto:userAccountCostCenterInput.value.trim(),
-        permissions:selectedUserPermissions()
+        perfil:checkedProfile('userAccountProfile') || 'usuario'
       }
     });
     accounts.push(normalizeSystemUser(result.user));
@@ -597,35 +577,15 @@ const userEditError = document.getElementById('userEditError');
 const userEditCloseBtn = document.getElementById('userEditCloseBtn');
 const userEditCancelBtn = document.getElementById('userEditCancelBtn');
 
-const userEditPermissionInputs = {
-  reservations:document.getElementById('editPermissionReservations'),
-  branches:document.getElementById('editPermissionBranches'),
-  fleet:document.getElementById('editPermissionFleet'),
-  maintenance:document.getElementById('editPermissionMaintenance'),
-  blocks:document.getElementById('editPermissionBlocks'),
-  audit:document.getElementById('editPermissionAudit'),
-  reports:document.getElementById('editPermissionReports'),
-  rules:document.getElementById('editPermissionRules'),
-  integrations:document.getElementById('editPermissionIntegrations'),
-  users:document.getElementById('editPermissionUsers'),
-  groups:document.getElementById('editPermissionGroups'),
-  checklist:document.getElementById('editPermissionChecklist')
-};
+const userEditProfileAdminHint = document.getElementById('userEditProfileAdminHint');
 
 let userEditingId = null;
-
-function selectedUserEditPermissions(){
-  const permissions = {};
-  Object.keys(userEditPermissionInputs).forEach(key => {
-    permissions[key] = userEditPermissionInputs[key].checked;
-  });
-  return permissions;
-}
 
 function closeUserEditModal(){
   userEditingId = null;
   userEditModal.classList.add('hidden');
   userEditForm.reset();
+  setCheckedProfile('userEditProfile', 'usuario');
   userEditError.textContent = '';
 }
 
@@ -635,7 +595,7 @@ function openUserEditModal(accountId){
   if(!account || (account.role === 'admin' && !isAdmin())) return;
 
   // Conta vinda do Entra ID: nome, e-mail e senha são governados lá, então
-  // aqui só as permissões podem mudar.
+  // aqui só o perfil e o centro de custo podem mudar.
   const isEntra = account.authProvider === 'entra';
 
   userEditingId = account.id;
@@ -653,12 +613,9 @@ function openUserEditModal(accountId){
     ? 'Conta gerenciada pelo Microsoft Entra ID — nome, e-mail, usuário e senha não podem ser alterados aqui.'
     : 'Deixe a senha vazia para manter a atual.';
 
-  // Admin tem tudo por definição, e não por marcação - por isso as caixas
-  // aparecem marcadas e travadas.
-  Object.keys(userEditPermissionInputs).forEach(key => {
-    userEditPermissionInputs[key].checked = account.role === 'admin' || account.permissions[key] === true;
-    userEditPermissionInputs[key].disabled = account.role === 'admin';
-  });
+  // Admin tem tudo por definição: aparece como Gestão, travado.
+  setCheckedProfile('userEditProfile', userProfile(account), account.role === 'admin');
+  if(userEditProfileAdminHint) userEditProfileAdminHint.classList.toggle('hidden', account.role !== 'admin');
 
   userEditError.textContent = '';
   userEditModal.classList.remove('hidden');
@@ -719,9 +676,9 @@ if(userEditForm){
       const body = {
         nome:nome,
         email:email,
-        centroCusto:userEditCostCenterInput.value.trim(),
-        permissions:editing.role === 'admin' ? editing.permissions : selectedUserEditPermissions()
+        centroCusto:userEditCostCenterInput.value.trim()
       };
+      if(editing.role !== 'admin') body.perfil = checkedProfile('userEditProfile') || userProfile(editing);
       if(!isEntra) body.username = username;
       if(!isEntra && password) body.password = password;
 

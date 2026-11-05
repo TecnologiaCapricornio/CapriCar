@@ -356,6 +356,11 @@
   border-color:color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
+/* Perfil de acesso: descrição do perfil escolhido, logo abaixo do combo. */
+.profile-description{
+  margin-top:6px;
+}
+
 .user-form-actions{
   display:flex;
   justify-content:flex-end;

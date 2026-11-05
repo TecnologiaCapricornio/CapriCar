@@ -637,7 +637,8 @@ function renderAdminReservationItem(res){
   const extraStatusBadgeHTML = reservationHasOperationReport(res)
     ? '<span class="operation-report-badge" title="Avarias ou fotos registradas">Avaria/foto</span>'
     : '';
-  const actionsHTML =
+  // Portaria (ver canViewReservationsList): lista só para consulta, sem ações.
+  const actionsHTML = !canManageReservations() ? '' :
     (!completed && !operacao.retirada ? '<button type="button" class="edit-btn admin-edit-btn" data-id="' + escapeHTML(res.id) + '">Editar</button>' : '') +
     (!completed && operacao.retirada && !operacao.devolucao ? '<button type="button" class="delete-btn admin-force-close-btn" data-id="' + escapeHTML(res.id) + '">Encerrar administrativamente</button>' : '') +
     (!completed && !operacao.retirada ? '<button class="delete-btn admin-delete-btn" data-id="' + escapeHTML(res.id) + '">Cancelar</button>' : '');
@@ -649,7 +650,7 @@ function renderAdminReservationItem(res){
 }
 
 function renderAdminTab(){
-  if(!canManageReservations()) return;
+  if(!canViewReservationsList()) return;
 
   const localFiltro = adminFiltroLocal.value;
   const carroFiltro = adminFiltroCarro.value;
