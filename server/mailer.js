@@ -140,4 +140,12 @@ async function sendTestMail(settings, to){
   });
 }
 
-module.exports = { sendMail, sendTestMail, buildGraphMailPayload };
+// A senha salva só pode ser usada com o mesmo servidor em que foi cadastrada.
+// Sem essa checagem, quem altera host/porta no teste recebe a senha por um
+// servidor qualquer.
+function storedPasswordApplies(stored, target){
+  return !!stored && stored.host === target.host && Number(stored.port) === Number(target.port) &&
+    stored.security === target.security && (stored.username || '') === (target.username || '');
+}
+
+module.exports = { sendMail, sendTestMail, buildGraphMailPayload, storedPasswordApplies };

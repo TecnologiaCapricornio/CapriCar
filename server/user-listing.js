@@ -1,6 +1,7 @@
 const { query } = require('./db');
 const { publicUser } = require('./auth');
 const { getLicensesForUsers, licenseStatus } = require('./driver-licenses');
+const { todaySaoPaulo } = require('./validation');
 
 // Listagem de usuários da gestão, compartilhada por GET /api/users e pelo
 // GET /api/state/bootstrap. A tela Gestão › Usuários lê o bootstrap e reenvia
@@ -15,15 +16,6 @@ const USER_SELECT = `
          cost_center, created_at, updated_at
     FROM users
    WHERE deleted_at IS NULL`;
-
-function todaySaoPaulo(){
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone:'America/Sao_Paulo',
-    year:'numeric',
-    month:'2-digit',
-    day:'2-digit'
-  }).format(new Date());
-}
 
 async function listManagedUsers(){
   const result = await query(USER_SELECT + " ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name");

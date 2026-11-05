@@ -670,6 +670,7 @@ function validateCollection(name, value, context){
 
 module.exports = {
   ValidationError,
+  todaySaoPaulo,
   validateCollection,
   validateBranches,
   validateVehicles,

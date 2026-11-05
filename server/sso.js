@@ -137,13 +137,17 @@ function sanitizeUsername(candidate){
 
 async function findAvailableUsername(client, baseCandidate, objectId){
   const base = sanitizeUsername(baseCandidate) || 'usuario';
-  const existing = await client.query('SELECT username, auth_provider FROM users WHERE LOWER(username) = $1', [base]);
+  const existing = await client.query(
+    'SELECT username, auth_provider, entra_object_id FROM users WHERE LOWER(username) = $1',
+    [base]
+  );
   const row = existing.rows[0];
   if(!row) return base;
   // So reutiliza o username se ja pertencer a esse mesmo principal do Entra
-  // (reimportacao); colidir com uma conta local nunca deve herdar o acesso
+  // (reimportacao); colidir com uma conta local ou com outro usuario Entra
+  // (mesmo nome antes do @, em outro dominio) nunca deve herdar o acesso
   // dela, entao geramos um username alternativo derivado do oid.
-  if(row.auth_provider === 'entra') return base;
+  if(row.auth_provider === 'entra' && String(row.entra_object_id) === String(objectId)) return base;
   const suffix = String(objectId || '').replace(/-/g, '').slice(0, 6);
   return (base.slice(0, 33) + '-' + suffix).slice(0, 40);
 }
@@ -275,6 +279,7 @@ module.exports = {
   acquireTokenFromCode,
   getGraphAppToken,
   resolveOrCreateSsoUser,
+  findAvailableUsername,
   importSsoUsers,
   resolveSsoConfig,
   normalizeCostCenterAttribute

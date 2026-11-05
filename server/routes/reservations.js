@@ -242,6 +242,11 @@ router.post('/sync', async (req, res) => {
   const cnhReminderTasks = [];
 
   await withTransaction(async client => {
+    // Trava a linha de veículos antes de ler as reservas: sem isso, duas
+    // sincronizações simultâneas leem "carro livre" e gravam as duas.
+    await client.query(
+      "SELECT 1 FROM application_state WHERE collection_name = 'vehicles' FOR UPDATE"
+    );
     const current = await listAllReservations(client);
     const currentById = new Map(current.map(item => [String(item.id), item]));
     const nextById = new Map(currentById);

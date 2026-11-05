@@ -1,7 +1,8 @@
 const express = require('express');
 const { query, withTransaction } = require('../db');
 const { hashPassword, createSessionToken } = require('../security');
-const { publicUser, requirePermission } = require('../auth');
+const { publicUser, requirePermission, permissionsFromRow } = require('../auth');
+const { accountChangeRefusal } = require('../user-guards');
 const { isValidEmail } = require('../validation');
 const { importSsoUsers, resolveSsoConfig } = require('../sso');
 const { listManagedUsers } = require('../user-listing');
@@ -57,17 +58,21 @@ async function deactivateUserCore(client, actorId, targetId){
   return { ok:true };
 }
 
-async function deleteUserCore(client, actorId, targetId, justification){
-  if(String(targetId) === String(actorId)) return { ok:false, reason:'Não é possível excluir a própria conta.' };
+// Usada pela exclusão de um usuário e pela do lote. O hash de senha
+// inutilizável chega pronto (um por pedido, não um por usuário).
+async function deleteUserCore(client, actorId, targetId, justification, disabledPasswordHash){
+  if(String(targetId) === String(actorId)){
+    return { ok:false, status:409, reason:'Você não pode excluir a própria conta.' };
+  }
   const locked = await client.query(
     'SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE',
     [targetId]
   );
   const current = locked.rows[0];
-  if(!current) return { ok:false, reason:'Usuário não encontrado ou já excluído.' };
-  if(current.role === 'admin') return { ok:false, reason:'Conta de administrador não pode ser excluída.' };
-
-  const disabledPasswordHash = await hashPassword(createSessionToken());
+  if(!current) return { ok:false, status:404, reason:'Usuário não encontrado ou já excluído.' };
+  if(current.role === 'admin'){
+    return { ok:false, status:409, reason:'A conta principal de administrador não pode ser excluída.' };
+  }
 
   await client.query(
     `UPDATE audit_logs
@@ -227,10 +232,11 @@ router.post('/bulk/delete', async (req, res) => {
   }
 
   const summary = { processed:0, skipped:0, errors:[] };
+  const disabledPasswordHash = await hashPassword(createSessionToken());
   for(const id of userIds){
     try{
       await withTransaction(async client => {
-        const result = await deleteUserCore(client, req.user.id, id, justification);
+        const result = await deleteUserCore(client, req.user.id, id, justification, disabledPasswordHash);
         if(result.ok) summary.processed++;
         else { summary.skipped++; summary.errors.push({ id, reason:result.reason }); }
       });
@@ -364,6 +370,18 @@ router.patch('/:id', async (req, res) => {
       });
     }
     const isAdminAccount = current.role === 'admin';
+    // Perfil: só muda quando veio no corpo (PATCH parcial - ex.: ativar/
+    // desativar - mantém o atual). A conta admin é sempre Gestão.
+    const profile = isAdminAccount ? 'gestao' : (requestedProfileValue || normalizeProfile(current.profile));
+    const permissions = permissionsForProfile(isAdminAccount ? 'gestao' : profile);
+    const currentPermissions = permissionsFromRow(current);
+    const permissionsChanged = Object.keys(permissions).some(key => permissions[key] !== currentPermissions[key]);
+    const refusal = accountChangeRefusal(req.user, current, {
+      isSelf:String(current.id) === String(req.user.id),
+      permissionsChanged,
+      passwordChanged:!!password
+    });
+    if(refusal) throw Object.assign(new Error(refusal), { status:403 });
     // O username de contas Entra é derivado do UPN no provisionamento (ver
     // sso.js) - mudar aqui destoaria do que o Entra manda no próximo login.
     if(current.auth_provider === 'entra' && usernameWasSent && requestedUsername !== current.username){
@@ -390,10 +408,6 @@ router.patch('/:id', async (req, res) => {
     // Campo opcional: só sobrescreve quando veio no corpo, para um PATCH
     // parcial (ex.: só permissões) não apagar o centro de custo.
     const costCenter = costCenterWasSent ? (requestedCostCenter || null) : current.cost_center;
-    // Perfil: só muda quando veio no corpo (PATCH parcial - ex.: ativar/
-    // desativar - mantém o atual). A conta admin é sempre Gestão.
-    const profile = isAdminAccount ? 'gestao' : (requestedProfileValue || normalizeProfile(current.profile));
-    const permissions = permissionsForProfile(isAdminAccount ? 'gestao' : profile);
     const updated = await client.query(
       `UPDATE users
           SET display_name = $2,
@@ -460,84 +474,11 @@ router.delete('/:id', async (req, res) => {
       error:'Informe uma justificativa válida, entre 5 e 500 caracteres.'
     });
   }
-  if(String(req.params.id) === String(req.user.id)){
-    return res.status(409).json({ error:'Você não pode excluir a própria conta.' });
-  }
   const disabledPasswordHash = await hashPassword(createSessionToken());
-
-  const deleted = await withTransaction(async client => {
-    const locked = await client.query(
-      'SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE',
-      [req.params.id]
-    );
-    const current = locked.rows[0];
-    if(!current) return null;
-    if(current.role === 'admin'){
-      throw Object.assign(new Error('A conta principal de administrador não pode ser excluída.'), {
-        status:409
-      });
-    }
-
-    await client.query(
-      `UPDATE audit_logs
-          SET details = jsonb_set(
-            COALESCE(details, '{}'::jsonb),
-            '{originalUser}',
-            to_jsonb($2::text),
-            true
-          )
-        WHERE actor_id = $1
-          AND NOT (COALESCE(details, '{}'::jsonb) ? 'originalUser')`,
-      [current.id, current.display_name]
-    );
-    await audit(client, req.user.id, 'excluiu definitivamente', current.id, {
-      description:
-        `${current.display_name} (@${current.username}) · Justificativa: ${justification}`,
-      justification,
-      deletedUser:{
-        id:current.id,
-        username:current.username,
-        displayName:current.display_name,
-        role:current.role
-      }
-    });
-    await client.query('DELETE FROM user_sessions WHERE user_id = $1', [current.id]);
-    await client.query(
-      `UPDATE users
-          SET username = $2,
-              display_name = 'Usuário excluído',
-              password_hash = $3,
-              active = FALSE,
-              can_manage_reservations = FALSE,
-              can_manage_branches = FALSE,
-              can_manage_fleet = FALSE,
-              can_manage_maintenance = FALSE,
-              can_manage_blocks = FALSE,
-              can_view_reports = FALSE,
-              can_view_audit = FALSE,
-              can_manage_rules = FALSE,
-              can_manage_users = FALSE,
-              can_manage_groups = FALSE,
-              can_manage_integrations = FALSE,
-              can_manage_checklist = FALSE,
-              profile = 'usuario',
-              deleted_at = NOW(),
-              deleted_by = $4,
-              deletion_reason = $5,
-              updated_at = NOW()
-        WHERE id = $1`,
-      [
-        current.id,
-        `deleted_${String(current.id).replace(/-/g, '')}`,
-        disabledPasswordHash,
-        req.user.id,
-        justification
-      ]
-    );
-    return current;
-  });
-
-  if(!deleted) return res.status(404).json({ error:'Usuário não encontrado ou já excluído.' });
+  const result = await withTransaction(client =>
+    deleteUserCore(client, req.user.id, req.params.id, justification, disabledPasswordHash)
+  );
+  if(!result.ok) return res.status(result.status).json({ error:result.reason });
   res.json({ ok:true });
 });
 

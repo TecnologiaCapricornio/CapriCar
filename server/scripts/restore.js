@@ -1,5 +1,4 @@
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { databaseConfig } = require('../config');
 const { runPostgresTool } = require('./postgres-tool');
@@ -27,12 +26,24 @@ async function restoreBackup(){
 
   let restorePath = backupPath;
   let temporaryPath = null;
+  // O arquivo decifrado (banco inteiro em texto puro) fica na pasta de
+  // backups, nunca no diretório temporário do sistema, e é apagado também
+  // se a restauração for interrompida.
+  const removeTemporary = () => {
+    if(temporaryPath && fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+  };
   if(backupPath.endsWith('.enc')){
     const encryptionKey = String(process.env.BACKUP_ENCRYPTION_KEY || '').trim();
     if(!encryptionKey){
       throw new Error('Este backup está criptografado. Defina BACKUP_ENCRYPTION_KEY no .env para restaurá-lo.');
     }
-    temporaryPath = path.join(os.tmpdir(), `capricar-restore-${Date.now()}.backup`);
+    temporaryPath = path.join(path.dirname(backupPath), `restore-tmp-${Date.now()}.backup`);
+    for(const signal of ['SIGINT', 'SIGTERM']){
+      process.once(signal, () => {
+        removeTemporary();
+        process.exit(1);
+      });
+    }
     await decryptFile(backupPath, temporaryPath, encryptionKey);
     restorePath = temporaryPath;
   }
@@ -56,7 +67,7 @@ async function restoreBackup(){
       stdio:'inherit'
     });
   }finally{
-    if(temporaryPath && fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+    removeTemporary();
   }
   return backupPath;
 }
