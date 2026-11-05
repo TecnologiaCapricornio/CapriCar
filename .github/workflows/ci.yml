@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm runlint
+        run: npm run lint
 
       - name: Testes
         run: npm test
@@ -92,10 +92,10 @@ jobs:
         run: npm ci
 
       - name: Aplicar migrations
-        run: npm rundb:migrate
+        run: npm run db:migrate
 
       - name: Carga inicial (usuário admin etc.)
-        run: npm rundb:seed
+        run: npm run db:seed
 
       - name: Iniciar servidor
         # Em segundo plano: o teste de integração (tests/api-integration.test.js)
@@ -116,7 +116,7 @@ jobs:
           exit 1
 
       - name: Testes de integração
-        run: npm runtest:integration
+        run: npm run test:integration
 
       - name: Logs do servidor (se algo falhar antes daqui)
         if: failure()
