@@ -21,6 +21,12 @@ data:
   PGDATABASE: "capricar"
   PGUSER: "capricar_app"
 
+  # O Ingress termina o HTTPS e repassa em HTTP: sem isso o app compara a
+  # origem das requisições com http:// e recusa todo POST/PUT/PATCH/DELETE
+  # (ver server/index.js e server/config.js). Seguro porque o app só é
+  # alcançável pelo Service, atrás do Ingress.
+  TRUST_PROXY: "true"
+
   SESSION_TTL_HOURS: "12"
   # Vai atrás de HTTPS (o Ingress cuida disso) - deixe true em produção.
   SESSION_COOKIE_SECURE: "true"

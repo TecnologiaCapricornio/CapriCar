@@ -26,23 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: pnpm
+          cache: npm
 
       - name: Instalar dependências
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Lint
-        run: pnpm run lint
+        run: npm runlint
 
       - name: Testes
-        run: pnpm test
+        run: npm test
 
       - name: Conferir numeração das migrations
         # Migration duplicada ou fora de ordem quebra o deploy silenciosamente:
@@ -87,28 +83,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: pnpm
+          cache: npm
 
       - name: Instalar dependências
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Aplicar migrations
-        run: pnpm run db:migrate
+        run: npm rundb:migrate
 
       - name: Carga inicial (usuário admin etc.)
-        run: pnpm run db:seed
+        run: npm rundb:seed
 
       - name: Iniciar servidor
         # Em segundo plano: o teste de integração (tests/api-integration.test.js)
         # fala com http://127.0.0.1:3000 por HTTP, não sobe o servidor sozinho.
-        run: nohup pnpm start > server.log 2>&1 &
+        run: nohup npm start > server.log 2>&1 &
 
       - name: Aguardar servidor responder
         run: |
@@ -124,7 +116,7 @@ jobs:
           exit 1
 
       - name: Testes de integração
-        run: pnpm run test:integration
+        run: npm runtest:integration
 
       - name: Logs do servidor (se algo falhar antes daqui)
         if: failure()

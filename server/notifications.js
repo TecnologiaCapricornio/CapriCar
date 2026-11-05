@@ -1,5 +1,5 @@
 const { query } = require('./db');
-const { listReservationsForUser } = require('./reservations-store');
+const { listReservationsForUser, normalizeName } = require('./reservations-store');
 
 let notificationSchemaReady;
 
@@ -51,10 +51,6 @@ function ensureNotificationsTable(executor){
     });
   }
   return notificationSchemaReady;
-}
-
-function normalizeName(value){
-  return String(value || '').trim().toLocaleLowerCase('pt-BR');
 }
 
 function reservationStart(reservation){

@@ -5,7 +5,7 @@ const { encryptSecret, decryptSecret } = require('../secrets');
 const { isValidEmail } = require('../validation');
 const { ssoConfig } = require('../config');
 const { normalizeCostCenterAttribute } = require('../sso');
-const { sendTestMail } = require('../mailer');
+const { sendTestMail, storedPasswordApplies } = require('../mailer');
 const {
   sweepEmailReminders,
   sweepDriverLicenseReminders,
@@ -203,9 +203,12 @@ router.post('/smtp/test', async (req, res) => {
 
   if(!password){
     const current = await readCollection('smtp');
-    if(current && current.passwordEncrypted){
+    if(current && current.passwordEncrypted && storedPasswordApplies(current, { host, port, security, username })){
       password = await decryptSecret(current.passwordEncrypted);
     }
+  }
+  if(username && !password){
+    return res.status(400).json({ error:'Informe a senha para testar este servidor.' });
   }
 
   try{

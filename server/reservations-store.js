@@ -443,8 +443,18 @@ async function persistReservation(client, reservation, actor, options){
   return { id:reservationId, legacyId, reservationNumber };
 }
 
-async function loadReservationData(executor){
+// Janela das telas de lista (GET /api/reservations, agenda, avisos do sininho):
+// reservas encerradas que terminaram antes desta data ficam de fora. As ainda
+// abertas (sem devolução) entram sempre, para continuar aparecendo os atrasos.
+const LIST_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+
+function listWindowStart(now = Date.now()){
+  return new Date(now - LIST_WINDOW_MS);
+}
+
+async function loadReservationData(executor, options){
   const run = executor && typeof executor.query === 'function' ? executor.query.bind(executor) : query;
+  const since = options && options.since;
   const reservations = await run(
     `SELECT r.*, b.name AS branch_name,
             v.code AS vehicle_code, v.plate, v.brand, v.model, v.capacity,
@@ -458,7 +468,9 @@ async function loadReservationData(executor){
        LEFT JOIN users archiver_retirada ON archiver_retirada.id = r.checklist_archived_retirada_by
        LEFT JOIN users archiver_devolucao ON archiver_devolucao.id = r.checklist_archived_devolucao_by
       WHERE r.status <> 'cancelled'
-      ORDER BY r.starts_at, r.reservation_number`
+        ${since ? "AND (r.ends_at >= $1 OR r.status NOT IN ('completed', 'administratively_closed'))" : ''}
+      ORDER BY r.starts_at, r.reservation_number`,
+    since ? [since] : []
   );
   const ids = reservations.rows.map(row => row.id);
   if(!ids.length) return { rows:[], passengers:new Map(), operations:new Map(), photos:new Map() };
@@ -623,7 +635,7 @@ async function loadVehiclesIndex(executor){
 }
 
 async function listReservationsForUser(user, executor){
-  const data = await loadReservationData(executor);
+  const data = await loadReservationData(executor, { since:listWindowStart() });
   const manager = canViewAllReservations(user);
   const vehiclesIndex = manager ? null : await loadVehiclesIndex(executor);
   const output = [];
@@ -811,6 +823,7 @@ async function migrateLegacyReservations(){
 module.exports = {
   canViewAllReservations,
   listReservationsForUser,
+  listWindowStart,
   publicReservationVisible,
   listAllReservations,
   persistReservation,
